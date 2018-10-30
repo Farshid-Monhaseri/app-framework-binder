@@ -71,7 +71,7 @@ static void clientContextRefresh (afb_req_t request) {
 static void clientContextCheck (afb_req_t request) {
 
     json_object *jresp = json_object_new_object();
-    json_object_object_add(jresp, "isvalid", json_object_new_boolean (TRUE));
+    json_object_object_add(jresp, "isvalid", json_object_new_boolean (1));
 
     afb_req_success(request, jresp, NULL);
 }
