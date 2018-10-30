@@ -40,6 +40,10 @@
 #include "jobs.h"
 #include "process-name.h"
 
+#if !defined(DEFAULT_SUPERVISOR_INTERFACE)
+#  define DEFAULT_SUPERVISOR_INTERFACE NULL
+#endif
+
 /* the main config */
 struct afs_config *main_config;
 
@@ -99,9 +103,16 @@ static struct afb_hsrv *start_http_server()
 	NOTICE("Waiting port=%d rootdir=%s", main_config->httpdPort, main_config->rootdir);
 	NOTICE("Browser URL= http://localhost:%d", main_config->httpdPort);
 
-	rc = afb_hsrv_start(hsrv, (uint16_t) main_config->httpdPort, 15);
+	rc = afb_hsrv_start(hsrv, 15);
 	if (!rc) {
 		ERROR("starting of httpd failed");
+		afb_hsrv_put(hsrv);
+		return NULL;
+	}
+
+	rc = afb_hsrv_add_interface_tcp(hsrv, DEFAULT_SUPERVISOR_INTERFACE, (uint16_t) main_config->httpdPort);
+	if (!rc) {
+		ERROR("setting interface failed");
 		afb_hsrv_put(hsrv);
 		return NULL;
 	}

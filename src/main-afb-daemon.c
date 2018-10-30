@@ -67,6 +67,10 @@
 #include "jobs.h"
 #include "sig-monitor.h"
 
+#if !defined(DEFAULT_BINDER_INTERFACE)
+#  define DEFAULT_BINDER_INTERFACE NULL
+#endif
+
 /*
    if SELF_PGROUP == 0 the launched command is the group leader
    if SELF_PGROUP != 0 afb-daemon is the group leader
@@ -371,9 +375,16 @@ static struct afb_hsrv *start_http_server()
 	NOTICE("Waiting port=%d rootdir=%s", http_port, rootdir);
 	NOTICE("Browser URL= http://localhost:%d", http_port);
 
-	rc = afb_hsrv_start(hsrv, (uint16_t) http_port, 15);
+	rc = afb_hsrv_start(hsrv, 15);
 	if (!rc) {
 		ERROR("starting of httpd failed");
+		afb_hsrv_put(hsrv);
+		return NULL;
+	}
+
+	rc = afb_hsrv_add_interface_tcp(hsrv, DEFAULT_BINDER_INTERFACE, (uint16_t) http_port);
+	if (!rc) {
+		ERROR("setting interface failed");
 		afb_hsrv_put(hsrv);
 		return NULL;
 	}

@@ -25,6 +25,8 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <netdb.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 
 #include <json-c/json.h>
@@ -39,6 +41,7 @@
 #include "afb-hreq.h"
 #include "afb-hsrv.h"
 #include "afb-fdev.h"
+#include "afb-socket.h"
 #include "fdev.h"
 #include "verbose.h"
 #include "locale-root.h"
@@ -49,6 +52,12 @@
 #define JSON_CONTENT  "application/json"
 #define FORM_CONTENT  MHD_HTTP_POST_ENCODING_MULTIPART_FORMDATA
 
+struct hsrv_itf {
+	struct hsrv_itf *next;
+	struct afb_hsrv *hsrv;
+	struct fdev *fdev;
+	char uri[1];
+};
 
 struct hsrv_handler {
 	struct hsrv_handler *next;
@@ -67,6 +76,7 @@ struct hsrv_alias {
 struct afb_hsrv {
 	unsigned refcount;
 	struct hsrv_handler *handlers;
+	struct hsrv_itf *interfaces;
 	struct MHD_Daemon *httpd;
 	struct fdev *fdev;
 	char *cache_to;
@@ -413,34 +423,39 @@ int afb_hsrv_set_cache_timeout(struct afb_hsrv *hsrv, int duration)
 	return 1;
 }
 
-int afb_hsrv_start(struct afb_hsrv *hsrv, uint16_t port, unsigned int connection_timeout)
+int afb_hsrv_start(struct afb_hsrv *hsrv, unsigned int connection_timeout)
 {
 	struct fdev *fdev;
 	struct MHD_Daemon *httpd;
 	const union MHD_DaemonInfo *info;
 
 	httpd = MHD_start_daemon(
-		MHD_USE_EPOLL | MHD_ALLOW_UPGRADE | MHD_USE_TCP_FASTOPEN | MHD_USE_DEBUG | MHD_ALLOW_SUSPEND_RESUME,
-		port,				/* port */
-		new_client_handler, NULL,	/* Tcp Accept call back + extra attribute */
-		access_handler, hsrv,	/* Http Request Call back + extra attribute */
-		MHD_OPTION_NOTIFY_COMPLETED, end_handler, hsrv,
-		MHD_OPTION_CONNECTION_TIMEOUT, connection_timeout,
-		MHD_OPTION_END);	/* options-end */
+			MHD_USE_EPOLL
+			| MHD_ALLOW_UPGRADE
+			| MHD_USE_TCP_FASTOPEN
+			| MHD_USE_NO_LISTEN_SOCKET
+			| MHD_USE_DEBUG
+			| MHD_ALLOW_SUSPEND_RESUME,
+			0,				/* port */
+			new_client_handler, NULL,	/* Tcp Accept call back + extra attribute */
+			access_handler, hsrv,	/* Http Request Call back + extra attribute */
+			MHD_OPTION_NOTIFY_COMPLETED, end_handler, hsrv,
+			MHD_OPTION_CONNECTION_TIMEOUT, connection_timeout,
+			MHD_OPTION_END);	/* options-end */
 
 	if (httpd == NULL) {
-		ERROR("httpStart invalid httpd port: %d", (int)port);
+		ERROR("httpStart invalid httpd");
 		return 0;
 	}
 
-	info = MHD_get_daemon_info(httpd, MHD_DAEMON_INFO_EPOLL_FD_LINUX_ONLY);
+	info = MHD_get_daemon_info(httpd, MHD_DAEMON_INFO_EPOLL_FD);
 	if (info == NULL) {
 		MHD_stop_daemon(httpd);
 		ERROR("httpStart no pollfd");
 		return 0;
 	}
 
-	fdev = afb_fdev_create(info->listen_fd);
+	fdev = afb_fdev_create(info->epoll_fd);
 	if (fdev == NULL) {
 		MHD_stop_daemon(httpd);
 		ERROR("connection to events for httpd failed");
@@ -483,3 +498,89 @@ void afb_hsrv_put(struct afb_hsrv *hsrv)
 	}
 }
 
+static int hsrv_itf_connect(struct hsrv_itf *itf);
+
+static void hsrv_itf_callback(void *closure, uint32_t revents, struct fdev *fdev)
+{
+	struct hsrv_itf *itf = closure;
+	int fd, sts;
+	struct sockaddr addr;
+	socklen_t lenaddr;
+
+	if ((revents & EPOLLHUP) != 0) {
+		ERROR("disconnection for server %s: %m", itf->uri);
+		hsrv_itf_connect(itf);
+		fdev_unref(fdev);
+	} else if ((revents & EPOLLIN) != 0) {
+		lenaddr = (socklen_t)sizeof addr;
+		fd = accept(fdev_fd(fdev), &addr, &lenaddr);
+		if (fd < 0)
+			ERROR("can't accept connection to %s: %m", itf->uri);
+		else {
+			sts = MHD_add_connection(itf->hsrv->httpd, fd, &addr, lenaddr);
+			if (sts != MHD_YES) {
+				ERROR("can't add incoming connection to %s: %m", itf->uri);
+				close(fd);
+			}
+		}
+	}
+}
+
+static int hsrv_itf_connect(struct hsrv_itf *itf)
+{
+	struct sockaddr addr;
+	socklen_t lenaddr;
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+	int rgni;
+
+	itf->fdev = afb_socket_open_fdev(itf->uri, 1);
+	if (!itf->fdev) {
+		ERROR("can't create socket %s", itf->uri);
+		return 0;
+	}
+	fdev_set_events(itf->fdev, EPOLLIN);
+	fdev_set_callback(itf->fdev, hsrv_itf_callback, itf);
+	lenaddr = (socklen_t)sizeof addr;
+	getsockname(fdev_fd(itf->fdev), &addr, &lenaddr);
+	rgni = getnameinfo(&addr, lenaddr, hbuf, sizeof hbuf, sbuf, sizeof sbuf, NI_NUMERICSERV);
+	if (rgni != 0) {
+		ERROR("getnameinfo returned %d: %s", rgni, gai_strerror(rgni));
+		hbuf[0] = sbuf[0] = '?';
+		hbuf[1] = sbuf[1] = 0;
+	}
+	NOTICE("Listening interface %s:%s", hbuf, sbuf);
+	return 1;
+}
+
+int afb_hsrv_add_interface(struct afb_hsrv *hsrv, const char *uri)
+{
+	struct hsrv_itf *itf;
+
+	itf = malloc(sizeof *itf + strlen(uri));
+	if (itf == NULL)
+		return -1;
+
+	itf->hsrv = hsrv;
+	itf->fdev = NULL;
+	strcpy(itf->uri, uri);
+	itf->next = hsrv->interfaces;
+	hsrv->interfaces = itf;
+	return hsrv_itf_connect(itf);
+}
+
+int afb_hsrv_add_interface_tcp(struct afb_hsrv *hsrv, const char *itf, uint16_t port)
+{
+	int rc;
+	char buffer[1024];
+
+	if (itf == NULL) {
+		itf = "*"; /* awaiting getifaddrs impl */
+	}
+	rc = snprintf(buffer, sizeof buffer, "tcp:%s:%d", itf, (int)port);
+	if (rc < 0 || rc >= (int)sizeof buffer) {
+		if (rc > 0)
+			errno = EINVAL;
+		return 0;
+	}
+	return afb_hsrv_add_interface(hsrv, buffer);
+}
