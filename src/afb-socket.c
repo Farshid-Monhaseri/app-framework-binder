@@ -165,7 +165,7 @@ static int open_tcp(const char *spec, int server)
 	struct addrinfo hint, *rai, *iai;
 
 	/* scan the uri */
-	tail = strchr(spec, '/');
+	tail = strchrnul(spec, '/');
 	service = strchr(spec, ':');
 	if (tail == NULL || service == NULL || tail < service) {
 		errno = EINVAL;
