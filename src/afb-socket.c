@@ -178,6 +178,11 @@ static int open_tcp(const char *spec, int server)
 	memset(&hint, 0, sizeof hint);
 	hint.ai_family = AF_INET;
 	hint.ai_socktype = SOCK_STREAM;
+	if (server) {
+		hint.ai_flags = AI_PASSIVE;
+		if (host[0] == 0 || (host[0] == '*' && host[1] == 0))
+			host = NULL;
+	}
 	rc = getaddrinfo(host, service, &hint, &rai);
 	if (rc != 0) {
 		errno = EINVAL;
