@@ -116,6 +116,21 @@ static int addenv_realpath(const char *name, const char *path)
 	return p ? addenv(name, p) : -1;
 }
 
+/**
+ * Tiny helper around addenv that export an integer
+ *
+ * @param name name of the variable to set
+ * @param value the integer value to export
+ *
+ * @return 0 in case of success or -1 in case of error (with errno set to ENOMEM)
+ */
+static int addenv_int(const char *name, int value)
+{
+	char buffer[64];
+	snprintf(buffer, sizeof buffer, "%d", value);
+	return addenv(name, buffer);
+}
+
 /*----------------------------------------------------------
  |   helpers for handling list of arguments
  +--------------------------------------------------------- */
@@ -526,7 +541,7 @@ static int execute_command()
 		ERROR("port->txt failed");
 	}
 	else {
-		/* instanciate arguments and environment */
+		/* instantiate arguments and environment */
 		token = afb_session_initial_token();
 		args = instanciate_command_args(exec, port, token);
 		if (args && instanciate_environ(port, token) >= 0) {
@@ -667,7 +682,8 @@ static void start(int signum, void *arg)
 	settings = NULL;
 	token = rootapi = tracesvc = traceditf = tracereq =
 		traceapi = traceevt = traceses = traceglob = NULL;
-	no_httpd = http_port = 0;
+	no_httpd = 0;
+	http_port = -1;
 	rc = wrap_json_unpack(main_config, "{"
 			"ss ss s?s"
 			"si si si"
@@ -707,6 +723,12 @@ static void start(int signum, void *arg)
 		exit(1);
 	}
 
+	/* initialize session handling */
+	if (afb_session_init(max_session_count, session_timeout, token)) {
+		ERROR("initialisation of session manager failed");
+		goto error;
+	}
+
 	/* set the directories */
 	mkdir(workdir, S_IRWXU | S_IRGRP | S_IXGRP);
 	if (chdir(workdir) < 0) {
@@ -719,16 +741,29 @@ static void start(int signum, void *arg)
 	}
 	if (addenv_realpath("AFB_WORKDIR", "."     /* resolved by realpath */)
 	 || addenv_realpath("AFB_ROOTDIR", rootdir /* relative to current directory */)) {
-		ERROR("can't set environment");
+		ERROR("can't set DIR environment");
 		goto error;
+	}
+
+	/* setup HTTP */
+	if (!no_httpd) {
+		if (http_port < 0) {
+			ERROR("no port is defined");
+			goto error;
+		}
+		if (http_port == 0) {
+			ERROR("random port is not implemented");
+			goto error;
+		}
+		if (addenv_int("AFB_PORT", http_port)
+		 || addenv("AFB_TOKEN", afb_session_initial_token())) {
+			ERROR("can't set HTTP environment");
+			goto error;
+		}
 	}
 
 	/* configure the daemon */
 	afb_export_set_config(settings);
-	if (afb_session_init(max_session_count, session_timeout, token)) {
-		ERROR("initialisation of session manager failed");
-		goto error;
-	}
 	main_apiset = afb_apiset_create("main", api_timeout);
 	if (!main_apiset) {
 		ERROR("can't create main api set");
@@ -794,11 +829,6 @@ static void start(int signum, void *arg)
 	/* start the HTTP server */
 	afb_debug("start-http");
 	if (!no_httpd) {
-		if (http_port <= 0) {
-			ERROR("no port is defined");
-			goto error;
-		}
-
 		if (!afb_hreq_init_cookie(http_port, rootapi, session_timeout)) {
 			ERROR("initialisation of HTTP cookies failed");
 			goto error;
