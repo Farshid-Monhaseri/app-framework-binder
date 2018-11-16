@@ -158,7 +158,7 @@ static int open_unix(const char *spec, int server)
  *
  * @return the file descriptor number of the socket or -1 in case of error
  */
-static int open_tcp(const char *spec, int server)
+static int open_tcp(const char *spec, int server, int reuseaddr)
 {
 	int rc, fd;
 	const char *service, *host, *tail;
@@ -195,6 +195,10 @@ static int open_tcp(const char *spec, int server)
 		fd = socket(iai->ai_family, iai->ai_socktype, iai->ai_protocol);
 		if (fd >= 0) {
 			if (server) {
+				if (reuseaddr) {
+					rc = 1;
+					setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &rc, sizeof rc);
+				}
 				rc = bind(fd, iai->ai_addr, iai->ai_addrlen);
 			} else {
 				rc = connect(fd, iai->ai_addr, iai->ai_addrlen);
@@ -267,7 +271,7 @@ static struct entry *get_entry(const char *uri, int *offset)
  */
 static int open_uri(const char *uri, int server)
 {
-	int fd, rc, offset;
+	int fd, offset;
 	struct entry *e;
 	const char *api;
 
@@ -286,7 +290,7 @@ static int open_uri(const char *uri, int server)
 		fd = open_unix(uri, server);
 		break;
 	case Type_Inet:
-		fd = open_tcp(uri, server);
+		fd = open_tcp(uri, server, !e->noreuseaddr);
 		break;
 	case Type_Systemd:
 		if (server)
@@ -308,10 +312,6 @@ static int open_uri(const char *uri, int server)
 	fcntl(fd, F_SETFD, FD_CLOEXEC);
 	fcntl(fd, F_SETFL, O_NONBLOCK);
 	if (server) {
-		if (!e->noreuseaddr) {
-			rc = 1;
-			setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &rc, sizeof rc);
-		}
 		if (!e->nolisten)
 			listen(fd, BACKLOG);
 	}
