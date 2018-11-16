@@ -1172,7 +1172,7 @@ static void listener_of_events(void *closure, const char *event, int eventid, st
 	/* search the handler */
 	handler = export->event_handlers;
 	while (handler) {
-		if (fnmatch(handler->pattern, event, 0)) {
+		if (!fnmatch(handler->pattern, event, 0)) {
 			if (!(export->hooksvc & afb_hook_flag_api_on_event_handler))
 				handler->callback(handler->closure, event, object, to_api_x3(export));
 			else {
