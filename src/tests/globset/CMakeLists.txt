@@ -16,16 +16,8 @@
 # limitations under the License.
 ###########################################################################
 
+add_executable(test-globset test-globset.c)
+target_include_directories(test-globset PRIVATE ../..)
+target_link_libraries(test-globset afb-lib ${link_libraries})
+add_test(NAME globset COMMAND test-globset)
 
-PKG_CHECK_MODULES(check check)
-if(check_FOUND)
-	INCLUDE_DIRECTORIES(${INCLUDE_DIRS} ${check_INCLUDE_DIRS})
-	SET(link_libraries ${link_libraries} ${check_LDFLAGS})
-	add_subdirectory(session)
-	add_subdirectory(apiset)
-	add_subdirectory(apiv3)
-	add_subdirectory(wrap-json)
-	add_subdirectory(globset)
-else(check_FOUND)
-	MESSAGE(WARNING "check not found! no test!")
-endif(check_FOUND)

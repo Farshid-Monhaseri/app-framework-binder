@@ -50,30 +50,13 @@
 #include "afb-calls.h"
 #include "jobs.h"
 #include "verbose.h"
+#include "globset.h"
 #include "sig-monitor.h"
 #include "wrap-json.h"
 
 /*************************************************************************
  * internal types
  ************************************************************************/
-
-/*
- * structure for handling events
- */
-struct event_handler
-{
-	/* link to the next event handler of the list */
-	struct event_handler *next;
-
-	/* function to call on the case of the event */
-	void (*callback)(void *, const char*, struct json_object*, struct afb_api_x3*);
-
-	/* closure for the callback */
-	void *closure;
-
-	/* the handled pattern */
-	char pattern[1];
-};
 
 /*
  * Actually supported versions
@@ -138,7 +121,7 @@ struct afb_export
 	struct afb_evt_listener *listener;
 
 	/* event handler list */
-	struct event_handler *event_handlers;
+	struct globset *event_handlers;
 
 	/* creator if any */
 	struct afb_export *creator;
@@ -1161,7 +1144,8 @@ static const struct afb_api_x3_itf hooked_api_x3_itf = {
  */
 static void listener_of_events(void *closure, const char *event, int eventid, struct json_object *object)
 {
-	struct event_handler *handler;
+	const struct globset_handler *handler;
+	void (*callback)(void *, const char*, struct json_object*, struct afb_api_x3*);
 	struct afb_export *export = from_api_x3(closure);
 
 	/* hook the event before */
@@ -1170,25 +1154,23 @@ static void listener_of_events(void *closure, const char *event, int eventid, st
 
 	/* transmit to specific handlers */
 	/* search the handler */
-	handler = export->event_handlers;
-	while (handler) {
-		if (!fnmatch(handler->pattern, event, 0)) {
-			if (!(export->hooksvc & afb_hook_flag_api_on_event_handler))
-				handler->callback(handler->closure, event, object, to_api_x3(export));
-			else {
-				afb_hook_api_on_event_handler_before(export, event, eventid, object, handler->pattern);
-				handler->callback(handler->closure, event, object, to_api_x3(export));
-				afb_hook_api_on_event_handler_after(export, event, eventid, object, handler->pattern);
-			}
+	handler = export->event_handlers ? globset_match(export->event_handlers, event) : NULL;
+	if (handler) {
+		callback = handler->callback;
+		if (!(export->hooksvc & afb_hook_flag_api_on_event_handler))
+			callback(handler->closure, event, object, to_api_x3(export));
+		else {
+			afb_hook_api_on_event_handler_before(export, event, eventid, object, handler->pattern);
+			callback(handler->closure, event, object, to_api_x3(export));
+			afb_hook_api_on_event_handler_after(export, event, eventid, object, handler->pattern);
 		}
-		handler = handler->next;
+	} else {
+		/* transmit to default handler */
+		if (export->on_any_event_v3)
+			export->on_any_event_v3(to_api_x3(export), event, object);
+		else if (export->on_any_event_v12)
+			export->on_any_event_v12(event, object);
 	}
-
-	/* transmit to default handler */
-	if (export->on_any_event_v3)
-		export->on_any_event_v3(to_api_x3(export), event, object);
-	else if (export->on_any_event_v12)
-		export->on_any_event_v12(event, object);
 
 	/* hook the event after */
 	if (export->hooksvc & afb_hook_flag_api_on_event)
@@ -1220,40 +1202,32 @@ int afb_export_event_handler_add(
 			void *closure)
 {
 	int rc;
-	struct event_handler *handler, **previous;
 
+	/* ensure the listener */
 	rc = ensure_listener(export);
 	if (rc < 0)
 		return rc;
 
-	/* search the handler */
-	previous = &export->event_handlers;
-	while ((handler = *previous) && strcasecmp(handler->pattern, pattern))
-		previous = &handler->next;
+	/* ensure the globset for event handling */
+	if (!export->event_handlers) {
+		export->event_handlers = globset_create();
+		if (!export->event_handlers)
+			goto oom_error;
+	}
 
-	/* error if found */
-	if (handler) {
+	/* add the handler */
+	rc = globset_add(export->event_handlers, pattern, callback, closure);
+	if (rc == 0)
+		return 0;
+
+	if (errno == EEXIST) {
 		ERROR("[API %s] event handler %s already exists", export->api.apiname, pattern);
-		errno = EEXIST;
 		return -1;
 	}
 
-	/* create the event */
-	handler = malloc(strlen(pattern) + sizeof * handler);
-	if (!handler) {
-		ERROR("[API %s] can't allocate event handler %s", export->api.apiname, pattern);
-		errno = ENOMEM;
-		return -1;
-	}
-
-	/* init and record */
-	handler->next = NULL;
-	handler->callback = callback;
-	handler->closure = closure;
-	strcpy(handler->pattern, pattern);
-	*previous = handler;
-
-	return 0;
+oom_error:
+	ERROR("[API %s] can't allocate event handler %s", export->api.apiname, pattern);
+	return -1;
 }
 
 int afb_export_event_handler_del(
@@ -1261,27 +1235,13 @@ int afb_export_event_handler_del(
 			const char *pattern,
 			void **closure)
 {
-	struct event_handler *handler, **previous;
+	if (export->event_handlers
+	&& !globset_del(export->event_handlers, pattern, closure))
+		return 0;
 
-	/* search the handler */
-	previous = &export->event_handlers;
-	while ((handler = *previous) && strcasecmp(handler->pattern, pattern))
-		previous = &handler->next;
-
-	/* error if found */
-	if (!handler) {
-		ERROR("[API %s] event handler %s already exists", export->api.apiname, pattern);
-		errno = ENOENT;
-		return -1;
-	}
-
-	/* remove the found event */
-	if (closure)
-		*closure = handler->closure;
-
-	*previous = handler->next;
-	free(handler);
-	return 0;
+	ERROR("[API %s] event handler %s not found", export->api.apiname, pattern);
+	errno = ENOENT;
+	return -1;
 }
 
 /******************************************************************************
@@ -1346,13 +1306,9 @@ void afb_export_unref(struct afb_export *export)
 
 void afb_export_destroy(struct afb_export *export)
 {
-	struct event_handler *handler;
-
 	if (export) {
-		while ((handler = export->event_handlers)) {
-			export->event_handlers = handler->next;
-			free(handler);
-		}
+		if (export->event_handlers)
+			globset_destroy(export->event_handlers);
 		if (export->listener != NULL)
 			afb_evt_listener_unref(export->listener);
 		afb_session_unref(export->session);

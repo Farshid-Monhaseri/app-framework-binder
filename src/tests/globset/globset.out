@@ -1,0 +1,30 @@
+match [kilil]: NOT FOUND
+search [kilil]: NOT FOUND
+add [kilil]: 0, Success
+match [kilil]: found by kilil
+search [kilil]: found 
+match [kil]: NOT FOUND
+del [error]: -1, No such file or directory
+add [kilil]: -1, File exists
+del [kilil]: 0, Success
+add [kilil]: 0, Success
+add [kilil]: -1, File exists
+add [kil*]: 0, Success
+match [kilil]: found by kilil
+match [kililo]: found by kil*
+add [*/*]: 0, Success
+match [ryjt]: NOT FOUND
+match [rthetrfh]: NOT FOUND
+match [trhzrt/rztyrt]: found by */*
+add [zer*o*]: 0, Success
+match [zero]: found by zer*o*
+match [zerksdjfhkjdsffbhqkdbfdozz]: found by zer*o*
+match [zer/o]: found by zer*o*
+add [a*]: 0, Success
+add [az*]: 0, Success
+add [aze*]: 0, Success
+match [alij]: found by a*
+match [azdfbgfhnb]: found by az*
+match [az]: found by az*
+match [azefgnjfghn,dfnh]: found by aze*
+match [qsd]: NOT FOUND

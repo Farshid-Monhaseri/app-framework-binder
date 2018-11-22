@@ -67,6 +67,7 @@ SET(AFB_LIB_SOURCES
 	fdev.c
 	fdev-epoll.c
 	fdev-systemd.c
+	globset.c
 	jobs.c
 	locale-root.c
 	pearson.c
