@@ -96,10 +96,10 @@ struct json_object;
 "
 #else
 #  if AFB_BINDING_VERSION == 1
-#    pragma GCC warning "Using binding version 1, consider to switch to version 3"
+#    warning "Using binding version 1, consider to switch to version 3"
 #  endif
 #  if AFB_BINDING_VERSION == 2
-#    pragma GCC warning "Using binding version 2, consider to switch to version 3"
+#    warning "Using binding version 2, consider to switch to version 3"
 #  endif
 #endif
 
