@@ -126,7 +126,7 @@ ENDIF()
 ###########################################
 # build and install libafbwsc
 ###########################################
-ADD_LIBRARY(afbwsc SHARED afb-ws.c afb-ws-client.c afb-wsj1.c websock.c afb-proto-ws.c fdev.c fdev-systemd.c)
+ADD_LIBRARY(afbwsc SHARED afb-ws.c afb-ws-client.c afb-wsj1.c websock.c afb-proto-ws.c fdev.c fdev-systemd.c verbose.c)
 SET_TARGET_PROPERTIES(afbwsc PROPERTIES
 	VERSION ${LIBAFBWSC_VERSION}
 	SOVERSION ${LIBAFBWSC_SOVERSION})

@@ -235,6 +235,7 @@ static struct client_event *client_event_search(struct afb_stub_ws *stubws, uint
 	while (ev != NULL && (ev->id != eventid || 0 != strcmp(afb_evt_event_x2_fullname(ev->event), name)))
 		ev = ev->next;
 
+	DEBUG("searching event %s[%d]: %s", name, eventid, ev ? "found" : "not found");
 	return ev;
 }
 
