@@ -1,0 +1,55 @@
+type: books
+books:
+-
+    id: app_framework_binder
+    title: Application Framework Binder
+    description: Application Framework Binder documentation
+    keywords:
+    author: "IotBzh"
+    version: master
+    chapters:
+    - url: "%lang%/afb-overview.md"
+      name: Overview
+    - url: "%lang%/afb-daemon-vocabulary.md"
+      name: Binder daemon vocabulary
+    - url: "%lang%/afb-binding-writing.md"
+      name: How to write a binding ?
+    - name: Binder references
+      children:
+          - url: "%lang%/reference-v3/types-and-globals.md"
+            name: Types and globals
+          - url: "%lang%/reference-v3/macro-log.md"
+            name: Macros for logging
+          - url: "%lang%/reference-v3/func-api.md"
+            name: Functions of class afb_api
+          - url: "%lang%/reference-v3/func-req.md"
+            name: Functions of class afb_req
+          - url: "%lang%/reference-v3/func-event.md"
+            name: Functions of class afb_event
+          - url: "%lang%/reference-v3/func-daemon.md"
+            name: Functions of class afb_daemon
+          - url: "%lang%/reference-v3/func-service.md"
+            name: Functions of class afb_service
+    - url: "%lang%/afb-events-guide.md"
+      name: Binder events guide
+    - url: "%lang%/afb-application-writing.md"
+      name: Binder Application writing guide
+    - name: Annexes
+      children:
+          - url: "%lang%/afb-migration-to-binding-v3.md"
+            name: Migration to bindings v3
+          - url: "%lang%/protocol-x-afb-ws-json1.md"
+            name: WebSocket protocol x-afb-ws-json1
+          - url: "%lang%/afb-desktop-package.md"
+            name: Installing the binder on a desktop
+          - url: "%lang%/afb-daemon-options.md"
+            name: Options of afb-daemon
+          - url: "%lang%/afb-daemon-debugging.md"
+            name: Debugging binder and bindings
+          - url: "%lang%/legacy/afb-migration-v1-to-v2.md"
+            name: LEGACY Migration from v1 to v2
+          - url: "%lang%/legacy/afb-binding-v2-references.md"
+            name: LEGACY Binding V2 references
+    - url: "%lang%/REVISIONS.md"
+      name: Document revision
+
