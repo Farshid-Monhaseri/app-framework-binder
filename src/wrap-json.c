@@ -288,7 +288,7 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 			goto truncated;
 		if (!strchr(top->acc, c))
 			goto invalid_character;
-		d = skip(++d);
+		d = skip(d + 1);
 		switch(c) {
 		case 's':
 			nullable = 0;
@@ -300,24 +300,24 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 				if (strs[nstr].str)
 					notnull = 1;
 				if (*d == '?') {
-					d = skip(++d);
+					d = skip(d + 1);
 					nullable = 1;
 				}
 				switch(*d) {
-				case '%': strs[nstr].sz = va_arg(args, size_t); d = skip(++d); break;
-				case '#': strs[nstr].sz = (size_t)va_arg(args, int); d = skip(++d); break;
+				case '%': strs[nstr].sz = va_arg(args, size_t); d = skip(d + 1); break;
+				case '#': strs[nstr].sz = (size_t)va_arg(args, int); d = skip(d + 1); break;
 				default: strs[nstr].sz = strs[nstr].str ? strlen(strs[nstr].str) : 0; break;
 				}
 				sz += strs[nstr++].sz;
 				if (*d == '?') {
-					d = skip(++d);
+					d = skip(d + 1);
 					nullable = 1;
 				}
 				if (*d != '+')
 					break;
 				if (nstr >= STRCOUNT)
 					goto too_long;
-				d = skip(++d);
+				d = skip(d + 1);
 			}
 			if (*d == '*')
 				nullable = 1;
@@ -369,7 +369,7 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 		case 'O':
 			obj = va_arg(args, struct json_object*);
 			if (*d == '?')
-				d = skip(++d);
+				d = skip(d + 1);
 			else if (*d != '*' && !obj)
 				goto null_object;
 			if (c == 'O')
@@ -392,7 +392,7 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 					goto out_of_memory;
 			}
 			if (*d == '?')
-				d = skip(++d);
+				d = skip(d + 1);
 			else if (*d != '*' && !obj) {
 				obj = json_object_new_string_len(d, 0);
 				if (!obj)
@@ -441,7 +441,7 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 			if (obj || *d != '*')
 				json_object_array_add(top->cont, obj);
 			if (*d == '*')
-				d = skip(++d);
+				d = skip(d + 1);
 			break;
 		case '}':
 			if (!obj)
@@ -454,7 +454,7 @@ int wrap_json_vpack(struct json_object **result, const char *desc, va_list args)
 			if (obj || *d != '*')
 				json_object_object_add(top->cont, json_object_get_string(top->key), obj);
 			if (*d == '*')
-				d = skip(++d);
+				d = skip(d + 1);
 			json_object_put(top->key);
 			top->key = NULL;
 			top->acc = pack_accept_key;
@@ -549,7 +549,7 @@ static int vunpack(struct json_object *object, const char *desc, va_list args, i
 			goto truncated;
 		if (!strchr(acc, c))
 			goto invalid_character;
-		d = skip(++d);
+		d = skip(d + 1);
 		switch(c) {
 		case 's':
 			if (xacc[0] == '}') {
@@ -561,7 +561,7 @@ static int vunpack(struct json_object *object, const char *desc, va_list args, i
 					optionnal = 0;
 				else {
 					optionnal = 1;
-					d = skip(++d);
+					d = skip(d + 1);
 				}
 				if (ignore)
 					ignore++;
@@ -591,7 +591,7 @@ static int vunpack(struct json_object *object, const char *desc, va_list args, i
 					*ps = json_object_get_string(obj);
 			}
 			if (*d == '%') {
-				d = skip(++d);
+				d = skip(d + 1);
 				if (store) {
 					pz = va_arg(args, size_t *);
 					if (!ignore && pz)
@@ -1254,6 +1254,7 @@ int wrap_json_contains(struct json_object *x, struct json_object *y)
 #if !defined(JSON_C_TO_STRING_NOSLASHESCAPE)
 #define JSON_C_TO_STRING_NOSLASHESCAPE 0
 #endif
+#define j2t(o) json_object_to_json_string_ext((o), JSON_C_TO_STRING_NOSLASHESCAPE)
 
 void tclone(struct json_object *object)
 {
@@ -1261,12 +1262,12 @@ void tclone(struct json_object *object)
 
 	o = wrap_json_clone(object);
 	if (!wrap_json_equal(object, o))
-		printf("ERROR in clone or equal: %s VERSUS %s\n", json_object_to_json_string_ext(object, JSON_C_TO_STRING_NOSLASHESCAPE), json_object_to_json_string_ext(o, JSON_C_TO_STRING_NOSLASHESCAPE));
+		printf("ERROR in clone or equal: %s VERSUS %s\n", j2t(object), j2t(o));
 	json_object_put(o);
 
 	o = wrap_json_clone_deep(object);
 	if (!wrap_json_equal(object, o))
-		printf("ERROR in clone_deep or equal: %s VERSUS %s\n", json_object_to_json_string_ext(object, JSON_C_TO_STRING_NOSLASHESCAPE), json_object_to_json_string_ext(o, JSON_C_TO_STRING_NOSLASHESCAPE));
+		printf("ERROR in clone_deep or equal: %s VERSUS %s\n", j2t(object), j2t(o));
 	json_object_put(o);
 }
 
@@ -1280,7 +1281,7 @@ void p(const char *desc, ...)
 	rc = wrap_json_vpack(&result, desc, args);
 	va_end(args);
 	if (!rc)
-		printf("  SUCCESS %s\n\n", json_object_to_json_string_ext(result, JSON_C_TO_STRING_NOSLASHESCAPE));
+		printf("  SUCCESS %s\n\n", j2t(result));
 	else
 		printf("  ERROR[char %d err %d] %s\n\n", wrap_json_get_error_position(rc), wrap_json_get_error_code(rc), wrap_json_get_error_string(rc));
 	tclone(result);
@@ -1334,8 +1335,8 @@ void u(const char *value, const char *desc, ...)
 			case 'I': printf(" I:%lld", *va_arg(args, int64_t*)); k = m&1; break;
 			case 'f': printf(" f:%f", *va_arg(args, double*)); k = m&1; break;
 			case 'F': printf(" F:%f", *va_arg(args, double*)); k = m&1; break;
-			case 'o': printf(" o:%s", json_object_to_json_string_ext(*va_arg(args, struct json_object**), JSON_C_TO_STRING_NOSLASHESCAPE)); k = m&1; break;
-			case 'O': o = *va_arg(args, struct json_object**); printf(" O:%s", json_object_to_json_string_ext(o, JSON_C_TO_STRING_NOSLASHESCAPE)); json_object_put(o); k = m&1; break;
+			case 'o': printf(" o:%s", j2t(*va_arg(args, struct json_object**))); k = m&1; break;
+			case 'O': o = *va_arg(args, struct json_object**); printf(" O:%s", j2t(o)); json_object_put(o); k = m&1; break;
 			case 'y':
 			case 'Y': {
 				uint8_t *p = *va_arg(args, uint8_t**);
