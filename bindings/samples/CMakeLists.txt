@@ -32,18 +32,6 @@ INSTALL(TARGETS authLogin
         LIBRARY DESTINATION ${binding_install_dir})
 
 ##################################################
-# ave
-##################################################
-ADD_LIBRARY(ave MODULE ave.c)
-SET_TARGET_PROPERTIES(ave PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(ave ${link_libraries})
-INSTALL(TARGETS ave
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
 # DemoContext
 ##################################################
 ADD_LIBRARY(demoContext MODULE DemoContext.c)
@@ -68,18 +56,6 @@ INSTALL(TARGETS demoPost
         LIBRARY DESTINATION ${binding_install_dir})
 
 ##################################################
-# HelloWorld
-##################################################
-ADD_LIBRARY(helloWorld MODULE HelloWorld.c)
-SET_TARGET_PROPERTIES(helloWorld PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(helloWorld ${link_libraries})
-INSTALL(TARGETS helloWorld
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
 # tic-tac-toe
 ##################################################
 ADD_LIBRARY(tic-tac-toe MODULE tic-tac-toe.c)
@@ -89,18 +65,6 @@ SET_TARGET_PROPERTIES(tic-tac-toe PROPERTIES
 )
 TARGET_LINK_LIBRARIES(tic-tac-toe ${link_libraries})
 INSTALL(TARGETS tic-tac-toe
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# hi3
-##################################################
-ADD_LIBRARY(hi3 MODULE hi3.c)
-SET_TARGET_PROPERTIES(hi3 PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(hi3 ${link_libraries})
-INSTALL(TARGETS hi3
         LIBRARY DESTINATION ${binding_install_dir})
 
 ##################################################
