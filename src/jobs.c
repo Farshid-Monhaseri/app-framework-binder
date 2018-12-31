@@ -52,6 +52,8 @@
 #define EVENT_TIMEOUT_TOP  	((uint64_t)-1)
 #define EVENT_TIMEOUT_CHILD	((uint64_t)10000)
 
+struct thread;
+
 /** Internal shortcut for callback */
 typedef void (*job_cb_t)(int, void*);
 
@@ -75,6 +77,7 @@ struct evloop
 	struct sd_event *sdev; /**< the systemd event loop */
 	pthread_cond_t  cond;  /**< condition */
 	struct fdev *fdev;     /**< handling of events */
+	struct thread *holder; /**< holder of the evloop */
 };
 
 #define EVLOOP_STATE_WAIT           1U
@@ -302,6 +305,7 @@ static void evloop_run(int signum, void *arg)
 	if (!signum) {
 		current_evloop = el;
 		__atomic_store_n(&el->state, EVLOOP_STATE_LOCK|EVLOOP_STATE_RUN|EVLOOP_STATE_WAIT, __ATOMIC_RELAXED);
+		__atomic_store_n(&el->holder, current_thread, __ATOMIC_RELAXED);
 		se = el->sdev;
 		rc = sd_event_prepare(se);
 		if (rc < 0) {
@@ -381,6 +385,7 @@ static void thread_run(volatile struct thread *me)
 		/* release the event loop */
 		if (current_evloop) {
 			__atomic_and_fetch(&current_evloop->state, ~EVLOOP_STATE_LOCK, __ATOMIC_RELAXED);
+			__atomic_store_n(&current_evloop->holder, NULL, __ATOMIC_RELAXED);
 			current_evloop = NULL;
 		}
 
@@ -406,6 +411,7 @@ static void thread_run(volatile struct thread *me)
 			if (el->sdev && !__atomic_load_n(&el->state, __ATOMIC_RELAXED)) {
 				/* run the events */
 				__atomic_store_n(&el->state, EVLOOP_STATE_LOCK|EVLOOP_STATE_RUN|EVLOOP_STATE_WAIT, __ATOMIC_RELAXED);
+				__atomic_store_n(&el->holder, me, __ATOMIC_RELAXED);
 				current_evloop = el;
 				pthread_mutex_unlock(&mutex);
 				sig_monitor(0, evloop_run, el);
@@ -444,6 +450,7 @@ static void thread_run(volatile struct thread *me)
 	/* release the event loop */
 	if (current_evloop) {
 		__atomic_and_fetch(&current_evloop->state, ~EVLOOP_STATE_LOCK, __ATOMIC_RELAXED);
+		__atomic_store_n(&el->holder, NULL, __ATOMIC_RELAXED);
 		current_evloop = NULL;
 	}
 
@@ -652,6 +659,41 @@ int jobs_enter(
 }
 
 /**
+ * Internal callback for evloop management.
+ * The effect of this function is hidden: it exits
+ * the waiting poll if any. Then it wakes up a thread
+ * awaiting the evloop using signal.
+ */
+static int on_evloop_efd(sd_event_source *s, int fd, uint32_t revents, void *userdata)
+{
+	uint64_t x;
+	struct evloop *evloop = userdata;
+	read(evloop->efd, &x, sizeof x);
+	pthread_mutex_lock(&mutex);
+	pthread_cond_broadcast(&evloop->cond);
+	pthread_mutex_unlock(&mutex);
+	return 1;
+}
+
+/**
+ * unlock the event loop if needed by sending
+ * an event.
+ * @param el the event loop to unlock
+ * @param wait wait the unlocked state of the event loop
+ */
+static void unlock_evloop(struct evloop *el, int wait)
+{
+	/* wait for a modifiable event loop */
+	while (__atomic_load_n(&el->state, __ATOMIC_RELAXED) & EVLOOP_STATE_WAIT) {
+		uint64_t x = 1;
+		write(el->efd, &x, sizeof x);
+		if (!wait)
+			break;
+		pthread_cond_wait(&el->cond, &mutex);
+	}
+}
+
+/**
  * Unlocks the execution flow designed by 'jobloop'.
  * @param jobloop indication of the flow to unlock
  * @return 0 in case of success of -1 on error
@@ -659,6 +701,7 @@ int jobs_enter(
 int jobs_leave(struct jobloop *jobloop)
 {
 	struct thread *t;
+	int i;
 
 	pthread_mutex_lock(&mutex);
 	t = threads;
@@ -670,6 +713,15 @@ int jobs_leave(struct jobloop *jobloop)
 		t->stop = 1;
 		if (t->waits)
 			pthread_cond_broadcast(&cond);
+		else {
+			i = (int)(sizeof evloop / sizeof *evloop);
+			while(i) {
+				if (evloop[--i].holder == t) {
+					unlock_evloop(&evloop[i], 0);
+					break;
+				}
+			}
+		}
 	}
 	pthread_mutex_unlock(&mutex);
 	return -!t;
@@ -703,23 +755,6 @@ int jobs_call(
 	return do_sync(group, timeout, call_cb, &sync);
 }
 
-/**
- * Internal callback for evloop management.
- * The effect of this function is hidden: it exits
- * the waiting poll if any. Then it wakes up a thread
- * awaiting the evloop using signal.
- */
-static int on_evloop_efd(sd_event_source *s, int fd, uint32_t revents, void *userdata)
-{
-	uint64_t x;
-	struct evloop *evloop = userdata;
-	read(evloop->efd, &x, sizeof x);
-	pthread_mutex_lock(&mutex);
-	pthread_cond_broadcast(&evloop->cond);
-	pthread_mutex_unlock(&mutex);
-	return 1;
-}
-
 /* temporary hack */
 #if !defined(REMOVE_SYSTEMD_EVENT)
 __attribute__((unused))
@@ -736,7 +771,6 @@ static void evloop_callback(void *arg, uint32_t event, struct fdev *fdev)
 static struct sd_event *get_sd_event_locked()
 {
 	struct evloop *el;
-	uint64_t x;
 	int rc;
 
 	/* creates the evloop on need */
@@ -791,18 +825,17 @@ error1:
 
 	/* attach the event loop to the current thread */
 	if (current_evloop != el) {
-		if (current_evloop)
+		if (current_evloop) {
 			__atomic_and_fetch(&current_evloop->state, ~EVLOOP_STATE_LOCK, __ATOMIC_RELAXED);
+			__atomic_store_n(&current_evloop->holder, NULL, __ATOMIC_RELAXED);
+		}
 		current_evloop = el;
 		__atomic_or_fetch(&el->state, EVLOOP_STATE_LOCK, __ATOMIC_RELAXED);
+		__atomic_store_n(&el->holder, current_thread, __ATOMIC_RELAXED);
 	}
 
 	/* wait for a modifiable event loop */
-	while (__atomic_load_n(&el->state, __ATOMIC_RELAXED) & EVLOOP_STATE_WAIT) {
-		x = 1;
-		write(el->efd, &x, sizeof x);
-		pthread_cond_wait(&el->cond, &mutex);
-	}
+	unlock_evloop(el, 1);
 
 	return el->sdev;
 }
@@ -901,7 +934,9 @@ int jobs_start(int allowed_count, int start_count, int waiter_count, void (*star
 	remains--;
 
 	/* run until end */
+	running++;
 	thread_run(&me);
+	running--;
 	rc = 0;
 error:
 	pthread_mutex_unlock(&mutex);
