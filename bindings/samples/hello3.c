@@ -19,6 +19,8 @@
 #include <string.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <math.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -29,7 +31,7 @@
 #include <afb/afb-binding.h>
 
 #if !defined(APINAME)
-#define APINAME "hello3"
+#define APINAME "hello"
 #endif
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -618,6 +620,79 @@ static void locale (afb_req_t request)
 	}
 }
 
+static void in_after (afb_req_t request)
+{
+	int rc;
+	const char *ts, *ty;
+	char *te;
+	double td;
+	struct timespec t;
+	void (*calling)(afb_req_t);
+
+	/* get the type */
+	ty = afb_req_value(request, "type") ?: "call";
+	if (strcmp(ty, "call") && strcmp(ty, "callsync")
+	 && strcmp(ty, "subcall") && strcmp(ty, "subcallsync"))
+		return afb_req_reply(request, NULL, "invalid", "bad type");
+
+	/* get the delay */
+	ts = afb_req_value(request, "delay");
+	if (!ts)
+		return afb_req_reply(request, NULL, "invalid", "no delay");
+	td = strtod(ts, &te);
+	if (*te || td < 0 || td > 3e6) /* a month is the biggest accepted */
+		return afb_req_reply(request, NULL, "invalid", "bad delay");
+
+	/* wait for that time */
+	if (td > 0) {
+		t.tv_nsec = (long)(1e6 * modf(td, &td));
+		t.tv_sec = (time_t)td;
+		do {
+			rc = nanosleep(&t, &t);
+		} while (rc != 0 && errno == EINTR);
+
+		if (rc)
+			return afb_req_reply(request, NULL, "error", "sleep failed");
+	}
+
+	/* do the call */
+	if (!strcmp(ty, "subcallsync"))
+		subcall(request);
+	else if (!strcmp(ty, "subcall"))
+		subcallsync(request);
+	else if (!strcmp(ty, "callsync"))
+		callsync(request);
+	else
+		call(request);
+}
+
+static void *thread_after (void *closure)
+{
+	afb_req_t request = closure;
+	in_after (request);
+	afb_req_unref(request);
+	return NULL;
+}
+
+static void after (afb_req_t request)
+{
+	int rc;
+	pthread_t tid;
+	pthread_attr_t attr;
+
+	afb_req_addref(request);
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	rc =pthread_create(&tid, &attr, thread_after, request);
+	pthread_attr_destroy(&attr);
+
+	if (rc != 0) {
+		afb_req_unref(request);
+		afb_req_reply(request, NULL, "cant-start", NULL);
+	}
+}
+
 static void api (afb_req_t request);
 
 /**
@@ -735,6 +810,7 @@ static const struct afb_verb_v3 verbs[]= {
   { .verb="setctx",      .callback=setctx, .vcbdata = (void*)(intptr_t)1 },
   { .verb="setctxif",    .callback=setctx, .vcbdata = (void*)(intptr_t)0 },
   { .verb="getctx",      .callback=getctx },
+  { .verb="checktok",    .callback=ok, .session=AFB_SESSION_CHECK },
   { .verb="reftok",      .callback=ok, .session=AFB_SESSION_CHECK | AFB_SESSION_REFRESH },
   { .verb="info",        .callback=info },
   { .verb="eventloop",   .callback=eventloop },
@@ -749,6 +825,7 @@ static const struct afb_verb_v3 verbs[]= {
   { .verb="mutebug",     .callback=mutebug},
   { .verb="queue",       .callback=queue},
   { .verb="settings",    .callback=settings},
+  { .verb="after",       .callback=after},
   { .verb=NULL}
 };
 

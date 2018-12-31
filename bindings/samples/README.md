@@ -9,6 +9,6 @@ The provide examples here are:
 * DemoContext (context): as AuthLogin with use of LOA
 * DemoPost (post): shows how to use HTTP to transfer files
 * tic-tac-toe (tictactoe): example explain in the documentation
-* hello3 (hello3): toolset for exhaustive use of the binder API v3
+* hello3 (hello): toolset for exhaustive use of the binder API v3
 * hello2 (hello2): toolset for use of the binder API v2 (legacy)
 
