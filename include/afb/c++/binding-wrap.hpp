@@ -571,6 +571,40 @@ constexpr afb_verb_t verb(
 	return r;
 }
 
+#if AFB_BINDING_VERSION >= 3
+void __afb__verb__cb__for__global__(afb_req_t r)
+{
+	void *vcbdata;
+	void (*callback)(req);
+
+	vcbdata = afb_req_get_vcbdata(r);
+	callback = reinterpret_cast<void(*)(req)>(vcbdata);
+	callback(req(r));
+}
+
+constexpr afb_verb_t verb(
+	const char *name,
+	void (&callback)(req),
+	const char *info = nullptr,
+	uint16_t session = 0,
+	const afb_auth *auth = nullptr
+	,
+	bool glob = false,
+	void *vcbdata = nullptr
+)
+{
+	return verb(
+		name,
+		__afb__verb__cb__for__global__,
+		info,
+		session,
+		auth,
+		glob,
+		reinterpret_cast<void*>(&callback)
+	);
+}
+#endif
+
 constexpr afb_verb_t verbend()
 {
 	afb_verb_t r = verb(nullptr, nullptr);

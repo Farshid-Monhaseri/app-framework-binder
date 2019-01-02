@@ -6,11 +6,10 @@
 
 afb::event event_login, event_logout;
 
-void login(afb_req_t r)
+void login(afb::req req)
 {
 	json_object *args, *user, *passwd;
 	char *usr;
-	afb::req req(r);
 
 	args = req.json();
 	if (!json_object_object_get_ex(args, "user", &user)
@@ -33,11 +32,10 @@ void login(afb_req_t r)
 	}
 }
 
-void action(afb_req_t r)
+void action(afb::req req)
 {
 	json_object *args, *val;
 	char *usr;
-	afb::req req(r);
 
 	args = req.json();
 //	usr = (char*)req.context_get();
@@ -57,10 +55,9 @@ usr = nullptr;
 	req.success(json_object_get(args));
 }
 
-void logout(afb_req_t r)
+void logout(afb::req req)
 {
 	char *usr;
-	afb::req req(r);
 
 //	usr = (char*)req.context_get();
 usr = nullptr;
