@@ -192,8 +192,8 @@ extern const struct afb_binding_v3 afbBindingV3;
 
 # define AFB_API_VERBOSE_V3(api,level,...) \
 		do { if(level <= AFB_VERBOSITY_LEVEL_ERROR) \
-			afb_api_v3_verbose(api,level,__FILE__,__LINE__,NULL,__VA_ARGS__); \
-		else afb_api_v3_verbose(api,level,__FILE__,__LINE__,NULL); } while(0)
+			afb_api_x3_verbose(api,level,__FILE__,__LINE__,NULL,__VA_ARGS__); \
+		else afb_api_x3_verbose(api,level,__FILE__,__LINE__,NULL); } while(0)
 
 # define AFB_REQ_VERBOSE_V3(req,level,...) \
 		do { if(level <= AFB_VERBOSITY_LEVEL_ERROR) \
@@ -203,7 +203,7 @@ extern const struct afb_binding_v3 afbBindingV3;
 #elif defined(AFB_BINDING_PRAGMA_NO_VERBOSE_DETAILS)
 
 # define AFB_API_VERBOSE_V3(api,level,...) \
-	afb_api_v3_verbose(api,level,NULL,0,NULL,__VA_ARGS__)
+	afb_api_x3_verbose(api,level,NULL,0,NULL,__VA_ARGS__)
 
 # define AFB_REQ_VERBOSE_V3(req,level,...) \
 	afb_req_x2_verbose(req,level,NULL,0,NULL,__VA_ARGS__)
@@ -219,9 +219,9 @@ extern const struct afb_binding_v3 afbBindingV3;
 #endif
 
 #define _AFB_API_LOGGING_V3_(api,llevel,...) \
-        do{ if(AFB_SYSLOG_MASK_WANT((api)->logmask,(llevel))) AFB_API_VERBOSE_V3((api),(llevel),__VA_ARGS__); }while(0)
+        do{ if(afb_api_wants_log_level((api),(llevel))) AFB_API_VERBOSE_V3((api),(llevel),__VA_ARGS__); }while(0)
 #define _AFB_REQ_LOGGING_V3_(req,llevel,...) \
-        do{ if(AFB_SYSLOG_MASK_WANT((req)->api->logmask,(llevel))) AFB_REQ_VERBOSE_V3((req),(llevel),__VA_ARGS__); }while(0)
+        do{ if(afb_req_wants_log_level((req),(llevel))) AFB_REQ_VERBOSE_V3((req),(llevel),__VA_ARGS__); }while(0)
 
 #define AFB_API_ERROR_V3(api,...)		_AFB_API_LOGGING_V3_(api,AFB_SYSLOG_LEVEL_ERROR,__VA_ARGS__)
 #define AFB_API_WARNING_V3(api,...)		_AFB_API_LOGGING_V3_(api,AFB_SYSLOG_LEVEL_WARNING,__VA_ARGS__)

@@ -303,6 +303,7 @@
 #define afb_api_x3_set_userdata		afb_api_set_userdata
 #define afb_api_x3_wants_log_level	afb_api_wants_log_level
 
+#define afb_api_x3_vverbose		afb_api_vverbose
 #define afb_api_x3_verbose		afb_api_verbose
 #define afb_api_x3_get_event_loop	afb_api_get_event_loop
 #define afb_api_x3_get_user_bus		afb_api_get_user_bus
