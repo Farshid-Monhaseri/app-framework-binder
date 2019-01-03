@@ -83,20 +83,11 @@ EOF
 
 %dir %{_libdir}
 %dir %{_libdir}/afb
-%{_libdir}/afb/afb-dbus-binding.so
-%{_libdir}/afb/authLogin.so
 %{_libdir}/libafbwsc.so.1
 %{_libdir}/libafbwsc.so.1.1
 
 #app-framework-binder demo
-%{_libdir}/afb/demoContext.so
-%{_libdir}/afb/demoPost.so
-%{_libdir}/afb/helloWorld.so
-%{_libdir}/afb/tic-tac-toe.so
-%{_libdir}/afb/ave.so
-%{_libdir}/afb/hello2.so
-%{_libdir}/afb/hello3.so
-%{_libdir}/afb/hi3.so
+%{_libdir}/afb/*.so
 %config(noreplace) %{_sysconfdir}/profile.d/AGL-%{name}.sh
 
 #app-framework-binder monitoring

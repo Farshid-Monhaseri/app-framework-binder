@@ -1,11 +1,6 @@
 /opt/AGL/lib/*/libafbwsc.so.1.1
 /opt/AGL/lib/*/libafbwsc.so.1
-/opt/AGL/lib/*/afb/authLogin.so
-/opt/AGL/lib/*/afb/demoPost.so
-/opt/AGL/lib/*/afb/afb-dbus-binding.so
-/opt/AGL/lib/*/afb/tic-tac-toe.so
-/opt/AGL/lib/*/afb/helloWorld.so
-/opt/AGL/lib/*/afb/demoContext.so
+/opt/AGL/lib/*/afb/*.so
 /opt/AGL/bin/afb-json2c
 /opt/AGL/bin/afb-daemon
 /opt/AGL/bin/afb-exprefs
