@@ -28,8 +28,8 @@
 #endif
 
 /* check the version */
-#if AFB_BINDING_VERSION < 2
-# error "AFB_BINDING_VERSION must be at least 2 but 3 is prefered"
+#if AFB_BINDING_VERSION < 3
+# error "AFB_BINDING_VERSION must be at least 3"
 #endif
 
 /* get C definitions of bindings */
@@ -76,17 +76,9 @@ bool wants_notices();
 bool wants_infos();
 bool wants_debugs();
 
-#if AFB_BINDING_VERSION >= 3
 void call(const char *api, const char *verb, struct json_object *args, void (*callback)(void*closure, int iserror, struct json_object *result, afb_api_t api), void *closure);
 
 template <class T> void call(const char *api, const char *verb, struct json_object *args, void (*callback)(T*closure, int iserror, struct json_object *result, afb_api_t api), T *closure);
-
-bool callsync(const char *api, const char *verb, struct json_object *args, struct json_object *&result);
-#else
-void call(const char *api, const char *verb, struct json_object *args, void (*callback)(void*closure, int iserror, struct json_object *result), void *closure);
-
-template <class T> void call(const char *api, const char *verb, struct json_object *args, void (*callback)(T*closure, int iserror, struct json_object *result), T *closure);
-#endif
 
 bool callsync(const char *api, const char *verb, struct json_object *args, struct json_object *&result);
 
@@ -197,13 +189,11 @@ public:
 
 	bool subcallsync(const char *api, const char *verb, json_object *args, struct json_object *&result) const;
 
-#if AFB_BINDING_VERSION >= 3
 	void subcall(const char *api, const char *verb, json_object *args, int flags, void (*callback)(void *closure, json_object *object, const char *error, const char *info, afb_req_t req), void *closure) const;
 
 	template <class T> void subcall(const char *api, const char *verb, json_object *args, int flags, void (*callback)(T *closure, json_object *object, const char *error, const char *info, afb_req_t req), T *closure) const;
 
 	bool subcallsync(const char *api, const char *verb, json_object *args, int flags, struct json_object *&object, char *&error, char *&info) const;
-#endif
 
 	void verbose(int level, const char *file, int line, const char * func, const char *fmt, va_list args) const;
 
@@ -254,11 +244,7 @@ inline afb_event_t event::operator->() const { return event_; }
 inline event::operator bool() const { return is_valid(); }
 inline bool event::is_valid() const { return afb_event_is_valid(event_); }
 
-#if AFB_BINDING_VERSION >= 3
 inline void event::invalidate() { event_ = nullptr; }
-#else
-inline void event::invalidate() { event_ = { nullptr, nullptr }; }
-#endif
 
 inline int event::broadcast(json_object *object) const { return afb_event_broadcast(event_, object); }
 inline int event::push(json_object *object) const { return afb_event_push(event_, object); }
@@ -336,19 +322,11 @@ inline void req::failf(const char *error, const char *info, ...) const
 template < class T >
 inline T *req::context() const
 {
-#if AFB_BINDING_VERSION >= 3
 	T* (*creater)(void*) = [](){return new T();};
 	void (*freer)(T*) = [](T*t){delete t;};
 	return reinterpret_cast<T*>(afb_req_context(req_, 0,
 			reinterpret_cast<void *(*)(void*)>(creater),
 			reinterpret_cast<void (*)(void*)>(freer), nullptr));
-#else
-	T* (*creater)() = [](){return new T();};
-	void (*freer)(T*) = [](T*t){delete t;};
-	return reinterpret_cast<T*>(afb_req_context(req_,
-			reinterpret_cast<void *(*)()>(creater),
-			reinterpret_cast<void (*)(void*)>(freer)));
-#endif
 }
 
 inline void req::addref() const { afb_req_addref(req_); }
@@ -362,12 +340,6 @@ inline bool req::session_set_LOA(unsigned level) const { return !afb_req_session
 inline bool req::subscribe(const event &event) const { return !afb_req_subscribe(req_, event); }
 
 inline bool req::unsubscribe(const event &event) const { return !afb_req_unsubscribe(req_, event); }
-
-
-
-
-
-#if AFB_BINDING_VERSION >= 3
 
 inline void req::subcall(const char *api, const char *verb, json_object *args, int flags, void (*callback)(void *closure, json_object *result, const char *error, const char *info, afb_req_t req), void *closure) const
 {
@@ -385,15 +357,9 @@ inline bool req::subcallsync(const char *api, const char *verb, json_object *arg
 	return !afb_req_subcall_sync(req_, api, verb, args, flags, &object, &error, &info);
 }
 
-#endif
-
 inline void req::subcall(const char *api, const char *verb, json_object *args, void (*callback)(void *closure, int iserror, json_object *result, afb_req_t req), void *closure) const
 {
-#if AFB_BINDING_VERSION >= 3
 	afb_req_subcall_legacy(req_, api, verb, args, callback, closure);
-#else
-	afb_req_subcall_req(req_, api, verb, args, callback, closure);
-#endif
 }
 
 template <class T>
@@ -404,11 +370,7 @@ inline void req::subcall(const char *api, const char *verb, json_object *args, v
 
 inline bool req::subcallsync(const char *api, const char *verb, json_object *args, struct json_object *&result) const
 {
-#if AFB_BINDING_VERSION >= 3
 	return !afb_req_subcall_sync_legacy(req_, api, verb, args, &result);
-#else
-	return !afb_req_subcall_sync(req_, api, verb, args, &result);
-#endif
 }
 
 inline void req::verbose(int level, const char *file, int line, const char * func, const char *fmt, va_list args) const
@@ -472,13 +434,8 @@ inline int require_api(const char *apiname, bool initialized)
 inline int add_alias(const char *apiname, const char *aliasname)
 	{ return afb_daemon_add_alias(apiname, aliasname); }
 
-#if AFB_BINDING_VERSION >= 3
 inline int logmask()
 	{ return afb_get_logmask(); }
-#else
-inline int logmask()
-	{ return (1 << (1 + afb_get_verbosity() + AFB_SYSLOG_LEVEL_ERROR)) - 1; }
-#endif
 
 inline bool wants_errors()
 	{ return AFB_SYSLOG_MASK_WANT_ERROR(logmask()); }
@@ -495,7 +452,6 @@ inline bool wants_infos()
 inline bool wants_debugs()
 	{ return AFB_SYSLOG_MASK_WANT_DEBUG(logmask()); }
 
-#if AFB_BINDING_VERSION >= 3
 inline void call(const char *api, const char *verb, struct json_object *args, void (*callback)(void*closure, struct json_object *result, const char *error, const char *info, afb_api_t api), void *closure)
 {
 	afb_service_call(api, verb, args, callback, closure);
@@ -511,23 +467,6 @@ inline bool callsync(const char *api, const char *verb, struct json_object *args
 {
 	return !!afb_service_call_sync(api, verb, args, &result, &error, &info);
 }
-#else
-inline void call(const char *api, const char *verb, struct json_object *args, void (*callback)(void*closure, int iserror, struct json_object *result), void *closure)
-{
-	afb_service_call(api, verb, args, callback, closure);
-}
-
-template <class T>
-inline void call(const char *api, const char *verb, struct json_object *args, void (*callback)(T*closure, int iserror, struct json_object *result), T *closure)
-{
-	afb_service_call(api, verb, args, reinterpret_cast<void(*)(void*,int,json_object*)>(callback), reinterpret_cast<void*>(closure));
-}
-
-inline bool callsync(const char *api, const char *verb, struct json_object *args, struct json_object *&result)
-{
-	return !!afb_service_call_sync(api, verb, args, &result);
-}
-#endif
 
 /*************************************************************************/
 /* declaration of the binding's authorization s                          */
@@ -616,28 +555,19 @@ constexpr afb_verb_t verb(
 	void (*callback)(afb_req_t),
 	const char *info = nullptr,
 	uint16_t session = 0,
-	const afb_auth *auth = nullptr
-#if AFB_BINDING_VERSION >= 3
-	,
+	const afb_auth *auth = nullptr,
 	bool glob = false,
 	void *vcbdata = nullptr
-#endif
 )
 {
-#if AFB_BINDING_VERSION >= 3
 	afb_verb_t r = { 0, 0, 0, 0, 0, 0, 0 };
-#else
-	afb_verb_t r = { 0, 0, 0, 0, 0 };
-#endif
 	r.verb = name;
 	r.callback = callback;
 	r.info = info;
 	r.session = session;
 	r.auth = auth;
-#if AFB_BINDING_VERSION >= 3
 	r.glob = (unsigned)glob;
 	r.vcbdata = vcbdata;
-#endif
 	return r;
 }
 
@@ -651,27 +581,15 @@ constexpr afb_binding_t binding(
 	const char *name,
 	const afb_verb_t *verbs,
 	const char *info = nullptr,
-#if AFB_BINDING_VERSION >= 3
 	int (*init)(afb_api_t) = nullptr,
 	const char *specification = nullptr,
 	void (*onevent)(afb_api_t, const char*, struct json_object*) = nullptr,
 	bool noconcurrency = false,
 	int (*preinit)(afb_api_t) = nullptr,
 	void *userdata = nullptr
-#else
-	int (*init)() = nullptr,
-	const char *specification = nullptr,
-	void (*onevent)(const char*, struct json_object*) = nullptr,
-	bool noconcurrency = false,
-	int (*preinit)() = nullptr
-#endif
 )
 {
-#if AFB_BINDING_VERSION >= 3
 	afb_binding_t r = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-#else
-	afb_binding_t r = { 0, 0, 0, 0, 0, 0, 0, 0 };
-#endif
 	r.api = name;
 	r.specification = specification;
 	r.info = info;
@@ -680,9 +598,7 @@ constexpr afb_binding_t binding(
 	r.init = init;
 	r.onevent = onevent;
 	r.noconcurrency = noconcurrency ? 1 : 0;
-#if AFB_BINDING_VERSION >= 3
 	r.userdata = userdata;
-#endif
 	return r;
 };
 
