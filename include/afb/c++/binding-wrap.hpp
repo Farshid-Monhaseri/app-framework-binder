@@ -91,18 +91,19 @@ class event
 {
 	afb_event_t event_;
 public:
-	event() { invalidate(); }
+	event();
 	event(afb_event_t e);
 	event(const event &other);
+	event(event &&other);
+	~event();
 	event &operator=(const event &other);
+	event &operator=(event &&other);
 
 	operator afb_event_t() const;
 	afb_event_t operator->() const;
 
 	operator bool() const;
 	bool is_valid() const;
-
-	void invalidate();
 
 	int broadcast(json_object *object) const;
 	int push(json_object *object) const;
@@ -234,9 +235,13 @@ public:
 /*************************************************************************/
 
 /* events */
-inline event::event(afb_event_t e) : event_(e) { }
-inline event::event(const event &other) : event_(other.event_) { }
+inline event::event() : event_{nullptr} { }
+inline event::event(afb_event_t e) : event_{e} { }
+inline event::event(event &&other) : event_{other.event_} { other.event_ = nullptr; }
+inline event::event(const event &other) : event_{other.event_} { addref(); }
+inline event::~event() { unref(); }
 inline event &event::operator=(const event &other) { event_ = other.event_; return *this; }
+inline event &event::operator=(event &&other) { event_ = other.event_; other.event_ = nullptr; return *this;}
 
 inline event::operator afb_event_t() const { return event_; }
 inline afb_event_t event::operator->() const { return event_; }
@@ -244,12 +249,10 @@ inline afb_event_t event::operator->() const { return event_; }
 inline event::operator bool() const { return is_valid(); }
 inline bool event::is_valid() const { return afb_event_is_valid(event_); }
 
-inline void event::invalidate() { event_ = nullptr; }
-
 inline int event::broadcast(json_object *object) const { return afb_event_broadcast(event_, object); }
 inline int event::push(json_object *object) const { return afb_event_push(event_, object); }
 
-inline void event::unref() { afb_event_unref(event_); invalidate(); }
+inline void event::unref() { if (event_) { afb_event_unref(event_); } event_ = nullptr; }
 inline void event::addref() { afb_event_addref(event_); }
 inline const char *event::name() const { return afb_event_name(event_); }
 
