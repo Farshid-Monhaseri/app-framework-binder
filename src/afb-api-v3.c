@@ -158,21 +158,22 @@ struct json_object *afb_api_v3_make_description_openAPIv3(struct afb_api_v3 *api
 	json_object_object_add(i, "version", json_object_new_string("0.0.0"));
 	json_object_object_add(i, "description", json_object_new_string(api->info));
 
+	buffer[0] = '/';
+	buffer[sizeof buffer - 1] = 0;
+
 	p = json_object_new_object();
 	json_object_object_add(r, "paths", p);
 	iter = api->verbs;
 	end = iter + api->count;
 	while (iter != end) {
 		verb = *iter++;
-		buffer[0] = '/';
-		strncpy(buffer + 1, verb->verb, sizeof buffer - 1);
+		strncpy(buffer + 1, verb->verb, sizeof buffer - 2);
 		json_object_object_add(p, buffer, describe_verb_v3(verb));
 	}
 	verb = api->verbsv3;
 	if (verb)
 		while(verb->verb) {
-			buffer[0] = '/';
-			strncpy(buffer + 1, verb->verb, sizeof buffer - 1);
+			strncpy(buffer + 1, verb->verb, sizeof buffer - 2);
 			json_object_object_add(p, buffer, describe_verb_v3(verb));
 			verb++;
 		}
