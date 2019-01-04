@@ -571,8 +571,7 @@ constexpr afb_verb_t verb(
 	return r;
 }
 
-#if AFB_BINDING_VERSION >= 3
-void __afb__verb__cb__for__global__(afb_req_t r)
+void __attribute__((weak)) __afb__verb__cb__for__global__(afb_req_t r)
 {
 	void *vcbdata;
 	void (*callback)(req);
@@ -587,8 +586,7 @@ constexpr afb_verb_t verb(
 	void (&callback)(req),
 	const char *info = nullptr,
 	uint16_t session = 0,
-	const afb_auth *auth = nullptr
-	,
+	const afb_auth *auth = nullptr,
 	bool glob = false,
 	void *vcbdata = nullptr
 )
@@ -600,10 +598,9 @@ constexpr afb_verb_t verb(
 		session,
 		auth,
 		glob,
-		reinterpret_cast<void*>(&callback)
+		(void*)(&callback)
 	);
 }
-#endif
 
 constexpr afb_verb_t verbend()
 {
