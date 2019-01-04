@@ -42,6 +42,7 @@ namespace afb {
 /* pre-declaration of classes                                            */
 /*************************************************************************/
 
+class api;
 class arg;
 class event;
 class req;
@@ -85,6 +86,92 @@ bool callsync(const char *api, const char *verb, struct json_object *args, struc
 /*************************************************************************/
 /* effective declaration of classes                                      */
 /*************************************************************************/
+
+/* apis */
+class api
+{
+protected:
+	afb_api_t api_;
+public:
+	using call_cb = void (*)(void *closure, struct json_object *object, const char *error, const char *info, afb_api_t api);
+	using queue_cb = void (*)(int signum, void *arg);
+	using event_cb = void (*)(void *, const char *, struct json_object *, afb_api_t);
+	using preinit_cb = int (*)(void *, afb_api_t);
+	using verb_cb = void (*)(afb_req_t req);
+	using onevent_cb = void (*)(afb_api_t api, const char *event, struct json_object *object);
+	using oninit_cb = int (*)(afb_api_t api);
+
+	api();
+	api(afb_api_t a);
+	api(const api &other) = delete;
+	api(api &&other);
+	~api();
+	api &operator=(const api &other) = delete;
+	api &operator=(api &&other);
+
+	operator afb_api_t() const;
+	afb_api_t operator->() const;
+
+	/* General functions */
+	const char *name() const;
+	void *get_userdata() const;
+	void set_userdata(void *value) const;
+	int require_api(const char *name, int initialized) const;
+	int require_api(const std::string &name, int initialized) const;
+
+	/* Verbosity functions */
+	int wants_log_level(int level) const;
+	void vverbose(int level, const char *file, int line, const char *func, const char *fmt, va_list args) const;
+	void verbose(int level, const char *file, int line, const char *func, const char *fmt, ...) const;
+
+	/* Data retrieval functions */
+	int rootdir_get_fd() const;
+	int rootdir_open_locale(const char *filename, int flags, const char *locale) const;
+	int rootdir_open_locale(const std::string &filename, int flags, const std::string &locale) const;
+	struct json_object *settings() const;
+
+	/* Calls and job functions */
+	void call(const char *apiname, const char *verb, struct json_object *args, call_cb callback, void *closure) const;
+	void call(const std::string &apiname, const std::string &verb, struct json_object *args, call_cb callback, void *closure) const;
+	int call_sync(const char *apiname, const char *verb, struct json_object *args, struct json_object **object, char **error, char **info) const;
+	int call_sync(const std::string &apiname, const std::string &verb, struct json_object *args, struct json_object **object, std::string &error, std::string &info) const;
+	int queue_job(queue_cb callback, void *argument, void *group, int timeout) const;
+
+	/* Event functions */
+	int broadcast_event(const char *name, struct json_object *object) const;
+	int broadcast_event(const std::string &name, struct json_object *object) const;
+	event make_event(const char *name) const;
+	event make_event(const std::string &name) const;
+	int event_handler_add(const char *pattern, event_cb callback, void *closure) const;
+	int event_handler_add(const std::string &pattern, event_cb callback, void *closure) const;
+	int event_handler_del(const char *pattern, void **closure) const;
+	int event_handler_del(const std::string &pattern, void **closure) const;
+
+	/* Systemd functions */
+	struct sd_event *get_event_loop() const;
+	struct sd_bus *get_user_bus() const;
+	struct sd_bus *get_system_bus() const;
+
+	/* Dynamic api functions */
+	api new_api(const char *apiname, const char *info, int noconcurrency, preinit_cb preinit, void *closure) const;
+	api new_api(const std::string &apiname, const std::string &info, int noconcurrency, preinit_cb preinit, void *closure) const;
+	int set_verbs(const struct afb_verb_v2 *verbs) const;
+	int set_verbs(const struct afb_verb_v3 *verbs) const;
+	int add_verb(const char *verb, const char *info, verb_cb callback, void *vcbdata, const struct afb_auth *auth, uint32_t session, int glob) const;
+	int add_verb(const std::string &verb, const std::string &info, verb_cb callback, void *vcbdata, const struct afb_auth *auth, uint32_t session, int glob) const;
+	int del_verb(const char *verb, void **vcbdata) const;
+	int del_verb(const std::string &verb, void **vcbdata) const;
+	int on_event(onevent_cb onevent) const;
+	int on_init(oninit_cb oninit) const;
+	int provide_class(const char *name) const;
+	int provide_class(const std::string &name) const;
+	int require_class(const char *name) const;
+	int require_class(const std::string &name) const;
+	void seal() const;
+	int delete_api() const;
+	int add_alias(const char *name, const char *as_name) const;
+	int add_alias(const std::string &name, const std::string &as_name) const;
+};
 
 /* events */
 class event
@@ -234,6 +321,74 @@ public:
 /* effective declaration of classes                                      */
 /*************************************************************************/
 
+/* apis */
+inline api::api() : api_{nullptr} { }
+inline api::api(afb_api_t a) : api_{a} { }
+inline api::api(api &&other) : api_{other.api_} { other.api_ = nullptr; }
+inline api::~api() { api_ = nullptr; }
+inline api &api::operator=(api &&other) { api_ = other.api_; other.api_ = nullptr; return *this;}
+inline api::operator afb_api_t() const { return api_; }
+inline afb_api_t api::operator->() const { return api_; }
+inline const char *api::name() const { return afb_api_name(api_); }
+inline void *api::get_userdata() const { return afb_api_get_userdata(api_); }
+inline void api::set_userdata(void *value) const { afb_api_set_userdata(api_, value); }
+inline int api::require_api(const char *name, int initialized) const { return afb_api_require_api(api_, name, initialized); }
+inline int api::require_api(const std::string& name, int initialized) const { return afb_api_require_api(api_, name.c_str(), initialized); }
+inline int api::wants_log_level(int level) const { return afb_api_wants_log_level(api_, level); }
+inline void api::vverbose(int level, const char *file, int line, const char *func, const char *fmt, va_list args) const { afb_api_vverbose(api_, level, file, line, func, fmt, args); }
+inline void api::verbose(int level, const char *file, int line, const char *func, const char *fmt, ...) const
+{
+	va_list args;
+	va_start(args, fmt);
+	vverbose(level, file, line, func, fmt, args);
+	va_end(args);
+}
+inline int api::rootdir_get_fd() const { return afb_api_rootdir_get_fd(api_); }
+inline int api::rootdir_open_locale(const char *filename, int flags, const char *locale) const { return afb_api_rootdir_open_locale(api_, filename, flags, locale); }
+inline int api::rootdir_open_locale(const std::string &filename, int flags, const std::string &locale) const { return afb_api_rootdir_open_locale(api_, filename.c_str(), flags, locale.c_str()); }
+inline struct json_object *api::settings() const { return afb_api_settings(api_); }
+inline void api::call(const char *apiname, const char *verb, struct json_object *args, call_cb callback, void *closure) const { afb_api_call(api_, apiname, verb, args, callback, closure); }
+inline void api::call(const std::string &apiname, const std::string &verb, struct json_object *args, call_cb callback, void *closure) const { afb_api_call(api_, apiname.c_str(), verb.c_str(), args, callback, closure); }
+inline int api::call_sync(const char *apiname, const char *verb, struct json_object *args, struct json_object **object, char **error, char **info) const { return afb_api_call_sync(api_, apiname, verb, args, object, error, info); }
+inline int api::call_sync(const std::string &apiname, const std::string &verb, struct json_object *args, struct json_object **object, std::string &error, std::string& info) const
+{
+	char *err, *inf;
+	int ret = afb_api_call_sync(api_, apiname.c_str(), verb.c_str(), args, object, &err, &inf);
+	error = err;
+	info = inf;
+	return ret;
+}
+inline int api::queue_job(queue_cb callback, void *argument, void *group, int timeout) const { return afb_api_queue_job(api_, callback, argument, group, timeout); }
+inline int api::broadcast_event(const char *name, struct json_object *object) const { return afb_api_broadcast_event(api_, name, object); }
+inline int api::broadcast_event(const std::string &name, struct json_object *object) const { return afb_api_broadcast_event(api_, name.c_str(), object); }
+inline event api::make_event(const char *name) const { return event(afb_api_make_event(api_, name)); }
+inline event api::make_event(const std::string &name) const { return event(afb_api_make_event(api_, name.c_str())); }
+inline int api::event_handler_add(const char *pattern, event_cb callback, void *closure) const { return afb_api_event_handler_add(api_, pattern, callback, closure); }
+inline int api::event_handler_add(const std::string &pattern, event_cb callback, void *closure) const { return afb_api_event_handler_add(api_, pattern.c_str(), callback, closure); }
+inline int api::event_handler_del(const char *pattern, void **closure) const { return afb_api_event_handler_del(api_, pattern, closure); }
+inline int api::event_handler_del(const std::string &pattern, void **closure) const { return afb_api_event_handler_del(api_, pattern.c_str(), closure); }
+inline struct sd_event *api::get_event_loop() const { return afb_api_get_event_loop(api_); }
+inline struct sd_bus *api::get_user_bus() const { return afb_api_get_user_bus(api_); }
+inline struct sd_bus *api::get_system_bus() const { return afb_api_get_system_bus(api_); }
+inline api api::new_api(const char *apiname, const char *info, int noconcurrency, preinit_cb preinit, void *closure) const { return api(afb_api_new_api(api_, apiname, info, noconcurrency, preinit, closure)); }
+inline api api::new_api(const std::string &apiname, const std::string &info, int noconcurrency, preinit_cb preinit, void *closure) const { return api(afb_api_new_api(api_, apiname.c_str(), info.c_str(), noconcurrency, preinit, closure)); }
+inline int api::set_verbs(const struct afb_verb_v2 *verbs) const { return afb_api_set_verbs_v2(api_, verbs); }
+inline int api::set_verbs(const struct afb_verb_v3 *verbs) const { return afb_api_set_verbs_v3(api_, verbs); }
+inline int api::add_verb(const char *verb, const char *info, verb_cb callback, void *vcbdata, const struct afb_auth *auth, uint32_t session, int glob) const { return afb_api_add_verb(api_, verb, info, callback, vcbdata, auth, session, glob); }
+inline int api::add_verb(const std::string &verb, const std::string &info, verb_cb callback, void *vcbdata, const struct afb_auth *auth, uint32_t session, int glob) const { return afb_api_add_verb(api_, verb.c_str(), info.c_str(), callback, vcbdata, auth, session, glob); }
+inline int api::del_verb(const char *verb, void **vcbdata) const { return afb_api_del_verb(api_, verb, vcbdata); }
+inline int api::del_verb(const std::string &verb, void **vcbdata) const { return afb_api_del_verb(api_, verb.c_str(), vcbdata); }
+inline int api::on_event(onevent_cb onevent) const { return afb_api_on_event(api_, onevent); }
+inline int api::on_init(oninit_cb oninit) const { return afb_api_on_init(api_, oninit); }
+inline int api::provide_class(const char *name) const { return afb_api_provide_class(api_, name); }
+inline int api::provide_class(const std::string &name) const { return afb_api_provide_class(api_, name.c_str()); }
+inline int api::require_class(const char *name) const { return afb_api_require_class(api_, name); }
+inline int api::require_class(const std::string &name) const { return afb_api_require_class(api_, name.c_str()); }
+inline void api::seal() const { afb_api_seal(api_); }
+inline int api::delete_api() const { return afb_api_delete_api(api_); }
+inline int api::add_alias(const char *name, const char *as_name) const { return afb_api_add_alias(api_, name, as_name); }
+inline int api::add_alias(const std::string &name, const std::string &as_name) const { return afb_api_add_alias(api_, name.c_str(), as_name.c_str()); }
+
 /* events */
 inline event::event() : event_{nullptr} { }
 inline event::event(afb_event_t e) : event_{e} { }
@@ -272,7 +427,6 @@ inline const char *arg::value() const { return arg_.value; }
 inline const char *arg::path() const { return arg_.path; }
 
 /* req(uests)s */
-
 
 inline req::req(afb_req_t r) : req_(r) {}
 inline req::req(const req &other) : req_(other.req_) {}
