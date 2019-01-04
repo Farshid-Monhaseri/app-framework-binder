@@ -15,5 +15,5 @@
  * limitations under the License.
  */
 #pragma once
-#include "binding-wrap.hpp"
-#include "binding-object.hpp"
+#include <afb/c++/binding-wrap.hpp>
+#include <afb/c++/binding-object.hpp>

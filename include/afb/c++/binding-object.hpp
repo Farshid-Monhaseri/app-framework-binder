@@ -17,7 +17,9 @@
  * limitations under the License.
  */
 
-#include "../afb-binding.h"
+extern "C" {
+#include <afb/afb-binding.h>
+}
 #include <cassert>
 #include <string>
 

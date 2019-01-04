@@ -34,7 +34,7 @@
 
 /* get C definitions of bindings */
 extern "C" {
-#include "afb-binding.h"
+#include <afb/afb-binding.h>
 }
 
 namespace afb {
