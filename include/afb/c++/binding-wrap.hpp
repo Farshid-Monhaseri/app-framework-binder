@@ -460,7 +460,7 @@ inline void call(const char *api, const char *verb, struct json_object *args, vo
 template <class T>
 inline void call(const char *api, const char *verb, struct json_object *args, void (*callback)(T*closure, struct json_object *result, const char *error, const char *info, afb_api_t api), T *closure)
 {
-	afb_service_call(api, verb, args, reinterpret_cast<void(*)(void*,int,json_object*,afb_api_t)>(callback), reinterpret_cast<void*>(closure));
+	afb_service_call(api, verb, args, reinterpret_cast<void(*)(void*,json_object*,const char*, const char*,afb_api_t)>(callback), reinterpret_cast<void*>(closure));
 }
 
 inline bool callsync(const char *api, const char *verb, struct json_object *args, struct json_object *&result, char *&error, char *&info)
