@@ -540,13 +540,19 @@ static int hsrv_itf_connect(struct hsrv_itf *itf)
 	}
 	fdev_set_events(itf->fdev, EPOLLIN);
 	fdev_set_callback(itf->fdev, hsrv_itf_callback, itf);
+	memset(&addr, 0, sizeof addr);
 	lenaddr = (socklen_t)sizeof addr;
 	getsockname(fdev_fd(itf->fdev), &addr, &lenaddr);
-	rgni = getnameinfo(&addr, lenaddr, hbuf, sizeof hbuf, sbuf, sizeof sbuf, NI_NUMERICSERV);
-	if (rgni != 0) {
-		ERROR("getnameinfo returned %d: %s", rgni, gai_strerror(rgni));
-		hbuf[0] = sbuf[0] = '?';
-		hbuf[1] = sbuf[1] = 0;
+	if (addr.sa_family == AF_INET && !((struct sockaddr_in*)&addr)->sin_addr.s_addr) {
+		strncpy(hbuf, "*", NI_MAXHOST);
+		sprintf(sbuf, "%d", (int)ntohs(((struct sockaddr_in*)&addr)->sin_port));
+	} else {
+		rgni = getnameinfo(&addr, lenaddr, hbuf, sizeof hbuf, sbuf, sizeof sbuf, NI_NUMERICSERV);
+		if (rgni != 0) {
+			ERROR("getnameinfo returned %d: %s", rgni, gai_strerror(rgni));
+			hbuf[0] = sbuf[0] = '?';
+			hbuf[1] = sbuf[1] = 0;
+		}
 	}
 	NOTICE("Listening interface %s:%s", hbuf, sbuf);
 	return 1;
