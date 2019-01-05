@@ -35,7 +35,6 @@
 #include "afb-ws.h"
 #include "afb-msg-json.h"
 #include "afb-proto-ws.h"
-#include "jobs.h"
 #include "fdev.h"
 #include "verbose.h"
 
@@ -161,7 +160,7 @@ struct afb_proto_ws
 	void (*on_hangup)(void *closure);
 
 	/* queuing facility for processing messages */
-	int (*queuing)(void (*process)(int s, void *c), void *closure);
+	int (*queuing)(struct afb_proto_ws *proto, void (*process)(int s, void *c), void *closure);
 };
 
 /******************* streaming objects **********************************/
@@ -348,7 +347,7 @@ static void queue_message_processing(struct afb_proto_ws *protows, char *data, s
 			binary->rb.head = data;
 			binary->rb.end = data + size;
 			if (!protows->queuing
-			 || protows->queuing(processing, binary) < 0)
+			 || protows->queuing(protows, processing, binary) < 0)
 				processing(0, binary);
 			return;
 		}
@@ -1068,7 +1067,7 @@ void afb_proto_ws_on_hangup(struct afb_proto_ws *protows, void (*on_hangup)(void
 	protows->on_hangup = on_hangup;
 }
 
-void afb_proto_ws_set_queuing(struct afb_proto_ws *protows, int (*queuing)(void (*)(int,void*), void*))
+void afb_proto_ws_set_queuing(struct afb_proto_ws *protows, int (*queuing)(struct afb_proto_ws*, void (*)(int,void*), void*))
 {
 	protows->queuing = queuing;
 }
