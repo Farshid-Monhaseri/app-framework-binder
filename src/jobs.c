@@ -162,6 +162,7 @@ static struct job *job_create(
 		job = malloc(sizeof *job);
 		pthread_mutex_lock(&mutex);
 		if (!job) {
+			ERROR("out of memory");
 			errno = ENOMEM;
 			goto end;
 		}
@@ -203,6 +204,7 @@ static void job_add(struct job *job)
 
 	/* queue the jobs */
 	*pjob = job;
+	remains--;
 }
 
 /**
@@ -214,6 +216,8 @@ static inline struct job *job_get()
 	struct job *job = first_job;
 	while (job && job->blocked)
 		job = job->next;
+	if (job)
+		remains++;
 	return job;
 }
 
@@ -431,29 +435,52 @@ static void monitored_wait_and_dispatch(int signum, void *arg)
 #endif
 
 /**
- * Main processing loop of threads processing jobs.
- * The loop must be called with the mutex locked
- * and it returns with the mutex locked.
- * @param me the description of the thread to use
- * TODO: how are timeout handled when reentering?
+ * Enter the thread
+ * @param me the description of the thread to enter
  */
-static void thread_run(volatile struct thread *me)
+static void thread_enter(volatile struct thread *me)
 {
-	struct thread **prv;
-	struct job *job;
-
 	/* initialize description of itself and link it in the list */
 	me->tid = pthread_self();
 	me->stop = 0;
 	me->waits = 0;
 	me->upper = current_thread;
-	if (!current_thread) {
-		started++;
-		sig_monitor_init_timeouts();
-	}
 	me->next = threads;
 	threads = (struct thread*)me;
 	current_thread = (struct thread*)me;
+}
+
+/**
+ * leave the thread
+ * @param me the description of the thread to leave
+ */
+static void thread_leave()
+{
+	struct thread **prv, *me;
+
+	/* unlink the current thread and cleanup */
+	me = current_thread;
+	prv = &threads;
+	while (*prv != me)
+		prv = &(*prv)->next;
+	*prv = me->next;
+
+	current_thread = me->upper;
+}
+
+/**
+ * Main processing loop of internal threads with processing jobs.
+ * The loop must be called with the mutex locked
+ * and it returns with the mutex locked.
+ * @param me the description of the thread to use
+ * TODO: how are timeout handled when reentering?
+ */
+static void thread_run_internal(volatile struct thread *me)
+{
+	struct job *job;
+
+	/* enter thread */
+	thread_enter(me);
 
 	/* loop until stopped */
 	while (!me->stop) {
@@ -464,7 +491,6 @@ static void thread_run(volatile struct thread *me)
 		job = job_get();
 		if (job) {
 			/* prepare running the job */
-			remains++; /* increases count of job that can wait */
 			job->blocked = 1; /* mark job as blocked */
 			me->job = job; /* record the job (only for terminate) */
 
@@ -476,9 +502,6 @@ static void thread_run(volatile struct thread *me)
 			/* release the run job */
 			job_release(job);
 #if !defined(REMOVE_SYSTEMD_EVENT)
-
-
-
 		/* no job, check event loop wait */
 		} else if (evloop_get()) {
 			if (evloop.state != 0) {
@@ -521,20 +544,44 @@ static void thread_run(volatile struct thread *me)
 #endif
 		}
 	}
-
-	/* release the event loop */
+	/* cleanup */
 	evloop_release();
+	thread_leave();
+}
 
-	/* unlink the current thread and cleanup */
-	prv = &threads;
-	while (*prv != me)
-		prv = &(*prv)->next;
-	*prv = me->next;
-	current_thread = me->upper;
-	if (!current_thread) {
-		sig_monitor_clean_timeouts();
-		started--;
-	}
+/**
+ * Main processing loop of external threads.
+ * The loop must be called with the mutex locked
+ * and it returns with the mutex locked.
+ * @param me the description of the thread to use
+ */
+static void thread_run_external(volatile struct thread *me)
+{
+	/* enter thread */
+	thread_enter(me);
+
+	/* loop until stopped */
+	me->waits = 1;
+	while (!me->stop)
+		pthread_cond_wait(&cond, &mutex);
+	me->waits = 0;
+	thread_leave();
+}
+
+/**
+ * Root for created threads.
+ */
+static void thread_main()
+{
+	struct thread me;
+
+	running++;
+	started++;
+	sig_monitor_init_timeouts();
+	thread_run_internal(&me);
+	sig_monitor_clean_timeouts();
+	started--;
+	running--;
 }
 
 /**
@@ -542,14 +589,10 @@ static void thread_run(volatile struct thread *me)
  * @param data not used
  * @return NULL
  */
-static void *thread_main(void *data)
+static void *thread_starter(void *data)
 {
-	struct thread me;
-
 	pthread_mutex_lock(&mutex);
-	running++;
-	thread_run(&me);
-	running--;
+	thread_main();
 	pthread_mutex_unlock(&mutex);
 	return NULL;
 }
@@ -563,7 +606,7 @@ static int start_one_thread()
 	pthread_t tid;
 	int rc;
 
-	rc = pthread_create(&tid, NULL, thread_main, NULL);
+	rc = pthread_create(&tid, NULL, thread_starter, NULL);
 	if (rc != 0) {
 		/* errno = rc; */
 		WARNING("not able to start thread: %m");
@@ -595,7 +638,6 @@ int jobs_queue(
 		void (*callback)(int, void*),
 		void *arg)
 {
-	const char *info;
 	struct job *job;
 	int rc;
 
@@ -603,16 +645,13 @@ int jobs_queue(
 
 	/* allocates the job */
 	job = job_create(group, timeout, callback, arg);
-	if (!job) {
-		errno = ENOMEM;
-		info = "out of memory";
+	if (!job)
 		goto error;
-	}
 
 	/* check availability */
-	if (remains == 0) {
+	if (remains <= 0) {
+		ERROR("can't process job with threads: too many jobs");
 		errno = EBUSY;
-		info = "too many jobs";
 		goto error2;
 	}
 
@@ -621,13 +660,12 @@ int jobs_queue(
 		/* all threads are busy and a new can be started */
 		rc = start_one_thread();
 		if (rc < 0 && started == 0) {
-			info = "can't start first thread";
+			ERROR("can't start initial thread: %m");
 			goto error2;
 		}
 	}
 
 	/* queues the job */
-	remains--;
 	job_add(job);
 
 	/* signal an existing job */
@@ -639,7 +677,6 @@ error2:
 	job->next = free_jobs;
 	free_jobs = job;
 error:
-	ERROR("can't process job with threads: %s, %m", info);
 	pthread_mutex_unlock(&mutex);
 	return -1;
 }
@@ -685,8 +722,6 @@ static int do_sync(
 	/* allocates the job */
 	job = job_create(group, timeout, sync_cb, sync);
 	if (!job) {
-		ERROR("out of memory");
-		errno = ENOMEM;
 		pthread_mutex_unlock(&mutex);
 		return -1;
 	}
@@ -695,7 +730,10 @@ static int do_sync(
 	job_add(job);
 
 	/* run until stopped */
-	thread_run(&sync->thread);
+	if (current_thread)
+		thread_run_internal(&sync->thread);
+	else
+		thread_run_external(&sync->thread);
 	pthread_mutex_unlock(&mutex);
 	return 0;
 }
@@ -935,7 +973,6 @@ struct fdev_epoll *jobs_get_fdev_epoll()
 int jobs_start(int allowed_count, int start_count, int waiter_count, void (*start)(int signum, void* arg), void *arg)
 {
 	int rc, launched;
-	struct thread me;
 	struct job *job;
 
 	assert(allowed_count >= 1);
@@ -965,9 +1002,9 @@ int jobs_start(int allowed_count, int start_count, int waiter_count, void (*star
 		sd_event_set_watchdog(get_sd_event_locked(), 1);
 #endif
 
-	/* start at least one thread */
-	launched = 0;
-	while ((launched + 1) < start_count) {
+	/* start at least one thread: the current one */
+	launched = 1;
+	while (launched < start_count) {
 		if (start_one_thread() != 0) {
 			ERROR("Not all threads can be started");
 			goto error;
@@ -977,18 +1014,12 @@ int jobs_start(int allowed_count, int start_count, int waiter_count, void (*star
 
 	/* queue the start job */
 	job = job_create(NULL, 0, start, arg);
-	if (!job) {
-		ERROR("out of memory");
-		errno = ENOMEM;
+	if (!job)
 		goto error;
-	}
 	job_add(job);
-	remains--;
 
 	/* run until end */
-	running++;
-	thread_run(&me);
-	running--;
+	thread_main();
 	rc = 0;
 error:
 	pthread_mutex_unlock(&mutex);
