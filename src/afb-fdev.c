@@ -17,8 +17,6 @@
 
 #include "fdev.h"
 
-#if !defined(REMOVE_SYSTEMD_EVENT)
-
 #include "afb-systemd.h"
 #include "fdev-systemd.h"
 
@@ -26,16 +24,3 @@ struct fdev *afb_fdev_create(int fd)
 {
 	return fdev_systemd_create(afb_systemd_get_event_loop(), fd);
 }
-
-#else
-
-#include "jobs.h"
-#include "fdev-epoll.h"
-
-struct fdev *afb_fdev_create(int fd)
-{
-	return fdev_epoll_add(jobs_get_fdev_epoll(), fd);
-}
-
-#endif
-

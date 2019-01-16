@@ -45,10 +45,6 @@
 #include "sig-monitor.h"
 #include "verbose.h"
 
-#if defined(REMOVE_SYSTEMD_EVENT)
-#include "fdev-epoll.h"
-#endif
-
 #define EVENT_TIMEOUT_TOP  	((uint64_t)-1)
 #define EVENT_TIMEOUT_CHILD	((uint64_t)10000)
 
@@ -130,11 +126,6 @@ static struct job *free_jobs;
 
 /* event loop */
 static struct evloop evloop;
-
-#if defined(REMOVE_SYSTEMD_EVENT)
-static struct fdev_epoll *fdevepoll;
-static int waitevt;
-#endif
 
 /**
  * Create a new job with the given parameters
@@ -272,23 +263,6 @@ static void job_cancel(int signum, void *arg)
 	job->callback(SIGABRT, job->arg);
 }
 
-#if defined(REMOVE_SYSTEMD_EVENT)
-/**
- * Gets a fdev_epoll item.
- * @return a fdev_epoll or NULL in case of error
- */
-static struct fdev_epoll *get_fdevepoll()
-{
-	struct fdev_epoll *result;
-
-	result = fdevepoll;
-	if (!result)
-		result = fdevepoll = fdev_epoll_create();
-
-	return result;
-}
-#endif
-
 /**
  * Monitored normal callback for events.
  * This function is called by the monitor
@@ -417,23 +391,6 @@ static void evloop_acquire()
 	}
 }
 
-#if defined(REMOVE_SYSTEMD_EVENT)
-/**
- * Monitored normal loop for waiting events.
- * @param signum 0 on normal flow or the number
- *               of the signal that interrupted the normal
- *               flow
- * @param arg     the events to run
- */
-static void monitored_wait_and_dispatch(int signum, void *arg)
-{
-	struct fdev_epoll *fdev_epoll = arg;
-	if (!signum) {
-		fdev_epoll_wait_and_dispatch(fdev_epoll, -1);
-	}
-}
-#endif
-
 /**
  * Enter the thread
  * @param me the description of the thread to enter
@@ -501,7 +458,6 @@ static void thread_run_internal(volatile struct thread *me)
 
 			/* release the run job */
 			job_release(job);
-#if !defined(REMOVE_SYSTEMD_EVENT)
 		/* no job, check event loop wait */
 		} else if (evloop_get()) {
 			if (evloop.state != 0) {
@@ -524,24 +480,6 @@ static void thread_run_internal(volatile struct thread *me)
 			pthread_cond_wait(&cond, &mutex);
 			me->waits = 0;
 			running++;
-#else
-		} else if (waitevt) {
-			/* no job and not events */
-			running--;
-			if (!running)
-				ERROR("Entering job deep sleep! Check your bindings.");
-			me->waits = 1;
-			pthread_cond_wait(&cond, &mutex);
-			me->waits = 0;
-			running++;
-		} else {
-			/* wait for events */
-			waitevt = 1;
-			pthread_mutex_unlock(&mutex);
-			sig_monitor(0, monitored_wait_and_dispatch, get_fdevepoll());
-			pthread_mutex_lock(&mutex);
-			waitevt = 0;
-#endif
 		}
 	}
 	/* cleanup */
@@ -833,15 +771,6 @@ static int on_evloop_efd(sd_event_source *s, int fd, uint32_t revents, void *use
 	return 1;
 }
 
-/* temporary hack */
-#if !defined(REMOVE_SYSTEMD_EVENT)
-__attribute__((unused))
-#endif
-static void evloop_callback(void *arg, uint32_t event, struct fdev *fdev)
-{
-	sig_monitor(0, evloop_run, arg);
-}
-
 /**
  * Gets a sd_event item for the current thread.
  * @return a sd_event or NULL in case of error
@@ -870,7 +799,6 @@ static struct sd_event *get_sd_event_locked()
 		rc = sd_event_add_io(evloop.sdev, NULL, evloop.efd, EPOLLIN, on_evloop_efd, NULL);
 		if (rc < 0) {
 			ERROR("can't register eventfd");
-#if !defined(REMOVE_SYSTEMD_EVENT)
 			sd_event_unref(evloop.sdev);
 			evloop.sdev = NULL;
 error2:
@@ -878,25 +806,6 @@ error2:
 error1:
 			return NULL;
 		}
-#else
-			goto error3;
-		}
-		/* handle the event loop */
-		evloop.fdev = fdev_epoll_add(get_fdevepoll(), sd_event_get_fd(evloop.sdev));
-		if (!evloop.fdev) {
-			ERROR("can't create fdev");
-error3:
-			sd_event_unref(evloop.sdev);
-error2:
-			close(evloop.efd);
-error1:
-			memset(&evloop, 0, sizeof evloop);
-			return NULL;
-		}
-		fdev_set_autoclose(evloop.fdev, 0);
-		fdev_set_events(evloop.fdev, EPOLLIN);
-		fdev_set_callback(evloop.fdev, evloop_callback, NULL);
-#endif
 	}
 
 	/* acquire the event loop */
@@ -944,23 +853,6 @@ struct sd_event *jobs_get_sd_event()
 
 	return result;
 }
-
-#if defined(REMOVE_SYSTEMD_EVENT)
-/**
- * Gets the fdev_epoll item.
- * @return a fdev_epoll or NULL in case of error
- */
-struct fdev_epoll *jobs_get_fdev_epoll()
-{
-	struct fdev_epoll *result;
-
-	pthread_mutex_lock(&mutex);
-	result = get_fdevepoll();
-	pthread_mutex_unlock(&mutex);
-
-	return result;
-}
-#endif
 
 /**
  * Enter the jobs processing loop.

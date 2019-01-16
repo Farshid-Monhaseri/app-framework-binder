@@ -48,10 +48,5 @@ extern int jobs_start(
 		void (*start)(int signum, void* arg),
 		void *arg);
 
-#if !defined(REMOVE_SYSTEMD_EVENT)
 struct sd_event;
 extern struct sd_event *jobs_get_sd_event();
-#else
-struct fdev_epoll;
-extern struct fdev_epoll *jobs_get_fdev_epoll();
-#endif
