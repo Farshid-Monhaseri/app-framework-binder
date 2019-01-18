@@ -299,3 +299,8 @@ void sig_monitor(int timeout, void (*function)(int sig, void*), void *arg)
 	else
 		function(0, arg);
 }
+
+void sig_monitor_dumpstack()
+{
+	return dumpstack(1, 0);
+}

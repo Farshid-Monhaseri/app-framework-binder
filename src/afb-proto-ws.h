@@ -61,7 +61,7 @@ extern int afb_proto_ws_is_server(struct afb_proto_ws *protows);
 extern void afb_proto_ws_hangup(struct afb_proto_ws *protows);
 
 extern void afb_proto_ws_on_hangup(struct afb_proto_ws *protows, void (*on_hangup)(void *closure));
-extern void afb_proto_ws_set_queuing(struct afb_proto_ws *protows, int (*queuing)(void (*)(int,void*), void*));
+extern void afb_proto_ws_set_queuing(struct afb_proto_ws *protows, int (*queuing)(struct afb_proto_ws *, void (*)(int,void*), void*));
 
 
 extern int afb_proto_ws_client_call(struct afb_proto_ws *protows, const char *verb, struct json_object *args, const char *sessionid, void *request, const char *user_creds);

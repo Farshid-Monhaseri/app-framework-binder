@@ -627,7 +627,6 @@ static void in_after (afb_req_t request)
 	char *te;
 	double td;
 	struct timespec t;
-	void (*calling)(afb_req_t);
 
 	/* get the type */
 	ty = afb_req_value(request, "type") ?: "call";

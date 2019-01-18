@@ -646,9 +646,9 @@ static void on_hangup(void *closure)
 	}
 }
 
-static int enqueue_processing(void (*callback)(int signum, void* arg), void *arg)
+static int enqueue_processing(struct afb_proto_ws *proto, void (*callback)(int signum, void* arg), void *arg)
 {
-	return jobs_queue(NULL, 0, callback, arg);
+	return jobs_queue(proto, 0, callback, arg);
 }
 
 /*****************************************************/

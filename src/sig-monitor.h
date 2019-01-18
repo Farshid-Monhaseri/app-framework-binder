@@ -25,3 +25,5 @@ extern int sig_monitor_enable();
 
 extern void sig_monitor(int timeout, void (*function)(int sig, void*), void *arg);
 
+extern void sig_monitor_dumpstack();
+
