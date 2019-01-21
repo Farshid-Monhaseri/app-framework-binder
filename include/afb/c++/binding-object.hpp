@@ -17,9 +17,7 @@
  * limitations under the License.
  */
 
-extern "C" {
-#include <afb/afb-binding.h>
-}
+#include <afb/c++/binding-wrap.hpp>
 #include <cassert>
 #include <string>
 
@@ -93,7 +91,7 @@ namespace afb
 				return -2;
 			}
 
-			api->handle_ = handle;
+			api->api_ = handle;
 			return api->preinit(handle);
 		}
 
@@ -201,6 +199,7 @@ namespace afb
 		typename TTraits = ApiTraits<TApi>
 	>
 	class base_api_t
+		: public api
 	{
 		friend TTraits;
 
@@ -213,8 +212,6 @@ namespace afb
 		base_api_t& operator=(const base_api_t&) = delete;
 
 	protected:
-		afb_api_t handle_;
-
 		/**
 		 * @brief Default constructor.
 		 */
@@ -239,7 +236,7 @@ namespace afb
 		int add_verb(const std::string& verb, const std::string& info, void* vcbdata = nullptr, const struct afb_auth* auth = nullptr, uint32_t session = AFB_SESSION_NONE_X2, int glob = 0)
 		{
 			return afb_api_add_verb(
-				handle_,
+				api_,
 				verb.c_str(),
 				info == "" ? nullptr : info.c_str(),
 				TTraits::template verb<Callback>,
@@ -264,7 +261,7 @@ namespace afb
 		int add_verb(const std::string& verb, const std::string& info, void* vcbdata = nullptr, const struct afb_auth* auth = nullptr, uint32_t session = AFB_SESSION_NONE_X2, int glob = 0)
 		{
 			return afb_api_add_verb(
-				handle_,
+				api_,
 				verb.c_str(),
 				info == "" ? nullptr : info.c_str(),
 				TTraits::template verb<Callback>,
@@ -285,21 +282,21 @@ namespace afb
 		 * @brief Get the API's handle.
 		 * @return The API's handle.
 		 */
-		afb_api_t handle() const { return handle_; }
+		afb_api_t handle() const { return api_; }
 
 		/**
 		 * @brief Implicit conversion to C handle.
 		 * @return The API's handle.
 		 */
-		operator afb_api_t() const { return handle_; }
+		operator afb_api_t() const { return api_; }
 
 		/**
 		 * @brief Destructor.
 		 */
 		virtual ~base_api_t()
 		{
-			if (handle_ && afb_api_delete_api(handle_))
-				AFB_API_ERROR(handle_, "Failed to delete API.");
+			if (api_ && afb_api_delete_api(api_))
+				AFB_API_ERROR(api_, "Failed to delete API.");
 		}
 
 		/**
