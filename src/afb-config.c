@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 "IoT.bzh"
+ * Copyright (C) 2015-2019 "IoT.bzh"
  * Author José Bollo <jose.bollo@iot.bzh>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -366,7 +366,7 @@ static void printVersion(FILE * file)
 		AFB_VERSION
 	);
 	fprintf(file,
-		"  Copyright (C) 2015-2018 \"IoT.bzh\"\n"
+		"  Copyright (C) 2015-2019 \"IoT.bzh\"\n"
 		"  AFB comes with ABSOLUTELY NO WARRANTY.\n"
 		"  Licence Apache 2\n"
 		"\n");
