@@ -23,7 +23,7 @@ PROJECT(afb-daemon C CXX)
 SET(PROJECT_NAME "AFB Daemon")
 SET(PROJECT_PRETTY_NAME "Application Framework Binder Daemon")
 SET(PROJECT_DESCRIPTION "Secured binder of API for clients of the Application framework")
-set(AGLVERSION "6.90.0" CACHE STRING "Version of AGL")
+set(AGLVERSION "8.0.0" CACHE STRING "Version of AGL")
 set(PROJECT_VERSION ${AGLVERSION} CACHE STRING "Version of the project can override AGLVERSION")
 set(PROJECT_URL "https://gerrit.automotivelinux.org/gerrit/gitweb?p=src/app-framework-binder.git;a=summary")
 
