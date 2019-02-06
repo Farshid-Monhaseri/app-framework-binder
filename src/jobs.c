@@ -337,7 +337,7 @@ static void evloop_release()
 {
 	struct thread *nh, *ct = current_thread;
 
-	if (evloop.holder == ct) {
+	if (ct && evloop.holder == ct) {
 		nh = ct->nholder;
 		evloop.holder = nh;
 		if (nh)
@@ -397,6 +397,7 @@ static void evloop_acquire()
  */
 static void thread_enter(volatile struct thread *me)
 {
+	evloop_release();
 	/* initialize description of itself and link it in the list */
 	me->tid = pthread_self();
 	me->stop = 0;
