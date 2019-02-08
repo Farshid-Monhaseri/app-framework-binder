@@ -266,6 +266,7 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 		return;
 	}
 
+	afb_xreq_unhooked_addref(xreq);
 	rc = afb_proto_ws_client_call(
 			proto,
 			xreq->request.called_verb,
@@ -273,10 +274,10 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 			afb_session_uuid(xreq->context.session),
 			xreq,
 			xreq_on_behalf_cred_export(xreq));
-	if (rc >= 0)
-		afb_xreq_unhooked_addref(xreq);
-	else
+	if (rc < 0) {
 		afb_xreq_reply(xreq, NULL, "internal", "can't send message");
+		afb_xreq_unhooked_unref(xreq);
+	}
 }
 
 static void client_on_description_cb(void *closure, struct json_object *data)
