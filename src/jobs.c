@@ -36,7 +36,6 @@
 #include <sys/eventfd.h>
 
 #include <systemd/sd-event.h>
-#include "fdev.h"
 #if HAS_WATCHDOG
 #include <systemd/sd-daemon.h>
 #endif
@@ -71,7 +70,6 @@ struct evloop
 	unsigned state;        /**< encoded state */
 	int efd;               /**< event notification */
 	struct sd_event *sdev; /**< the systemd event loop */
-	struct fdev *fdev;     /**< handling of events */
 	struct thread *holder; /**< holder of the evloop */
 };
 
