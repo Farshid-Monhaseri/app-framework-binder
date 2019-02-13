@@ -17,12 +17,6 @@
 
 #define _GNU_SOURCE
 
-#if defined(NO_JOBS_WATCHDOG)
-#   define HAS_WATCHDOG 0
-#else
-#   define HAS_WATCHDOG 1
-#endif
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -36,9 +30,6 @@
 #include <sys/eventfd.h>
 
 #include <systemd/sd-event.h>
-#if HAS_WATCHDOG
-#include <systemd/sd-daemon.h>
-#endif
 
 #include "jobs.h"
 #include "sig-monitor.h"
@@ -889,12 +880,6 @@ int jobs_start(int allowed_count, int start_count, int waiter_count, void (*star
 	started = 0;
 	running = 0;
 	remains = waiter_count;
-
-#if HAS_WATCHDOG
-	/* set the watchdog */
-	if (sd_watchdog_enabled(0, NULL))
-		sd_event_set_watchdog(get_sd_event_locked(), 1);
-#endif
 
 	/* start at least one thread: the current one */
 	launched = 1;

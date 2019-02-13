@@ -39,6 +39,7 @@
 #include "verbose.h"
 #include "jobs.h"
 #include "process-name.h"
+#include "watchdog.h"
 
 #if !defined(DEFAULT_SUPERVISOR_INTERFACE)
 #  define DEFAULT_SUPERVISOR_INTERFACE NULL
@@ -191,6 +192,14 @@ static void start(int signum, void *arg)
 
 	/* ready */
 	sd_notify(1, "READY=1");
+
+	/* activate the watchdog */
+#if HAS_WATCHDOG
+	if (watchdog_activate() < 0)
+		ERROR("can't start the watchdog");
+#endif
+
+	/* discover binders */
 	afs_supervisor_discover();
 	return;
 error:

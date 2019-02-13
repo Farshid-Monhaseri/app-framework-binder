@@ -75,6 +75,7 @@ SET(AFB_LIB_SOURCES
 	sig-monitor.c
 	subpath.c
 	verbose.c
+	watchdog.c
 	websock.c
 	wrap-json.c
 )
