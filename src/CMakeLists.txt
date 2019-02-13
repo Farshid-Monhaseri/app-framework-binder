@@ -63,6 +63,7 @@ SET(AFB_LIB_SOURCES
 	afb-ws.c
 	afb-wsj1.c
 	afb-xreq.c
+	evmgr.c
 	fdev.c
 	fdev-epoll.c
 	fdev-systemd.c

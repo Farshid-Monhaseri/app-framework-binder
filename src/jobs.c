@@ -32,6 +32,7 @@
 #include <systemd/sd-event.h>
 
 #include "jobs.h"
+#include "evmgr.h"
 #include "sig-monitor.h"
 #include "verbose.h"
 #include "systemd.h"
@@ -55,18 +56,6 @@ struct job
 	unsigned blocked: 1; /**< is an other request blocking this one ? */
 	unsigned dropped: 1; /**< is removed ? */
 };
-
-/** Description of handled event loops */
-struct evloop
-{
-	unsigned state;        /**< encoded state */
-	int efd;               /**< event notification */
-	struct sd_event *sdev; /**< the systemd event loop */
-	struct thread *holder; /**< holder of the evloop */
-};
-
-#define EVLOOP_STATE_WAIT           1U
-#define EVLOOP_STATE_RUN            2U
 
 /** Description of threads */
 struct thread
@@ -115,7 +104,7 @@ static struct job *first_job;
 static struct job *free_jobs;
 
 /* event loop */
-static struct evloop evloop;
+static struct evmgr *evmgr;
 
 /**
  * Create a new job with the given parameters
@@ -254,70 +243,13 @@ static void job_cancel(int signum, void *arg)
 }
 
 /**
- * Monitored normal callback for events.
- * This function is called by the monitor
- * to run the event loop when the safe environment
- * is set.
- * @param signum 0 on normal flow or the number
- *               of the signal that interrupted the normal
- *               flow
- * @param arg     the events to run
- */
-static void evloop_run(int signum, void *arg)
-{
-	int rc;
-	struct sd_event *se;
-
-	if (!signum) {
-		se = evloop.sdev;
-		rc = sd_event_prepare(se);
-		if (rc < 0) {
-			errno = -rc;
-			CRITICAL("sd_event_prepare returned an error (state: %d): %m", sd_event_get_state(se));
-			abort();
-		} else {
-			if (rc == 0) {
-				rc = sd_event_wait(se, (uint64_t)(int64_t)-1);
-				if (rc < 0) {
-					errno = -rc;
-					ERROR("sd_event_wait returned an error (state: %d): %m", sd_event_get_state(se));
-				}
-			}
-			evloop.state = EVLOOP_STATE_RUN;
-			if (rc > 0) {
-				rc = sd_event_dispatch(se);
-				if (rc < 0) {
-					errno = -rc;
-					ERROR("sd_event_dispatch returned an error (state: %d): %m", sd_event_get_state(se));
-				}
-			}
-		}
-	}
-}
-
-/**
- * Internal callback for evloop management.
- * The effect of this function is hidden: it exits
- * the waiting poll if any.
- */
-static void evloop_on_efd_event()
-{
-	uint64_t x;
-	read(evloop.efd, &x, sizeof x);
-}
-
-/**
  * wakeup the event loop if needed by sending
  * an event.
  */
 static void evloop_wakeup()
 {
-	uint64_t x;
-
-	if (evloop.state & EVLOOP_STATE_WAIT) {
-		x = 1;
-		write(evloop.efd, &x, sizeof x);
-	}
+	if (evmgr)
+		evmgr_wakeup(evmgr);
 }
 
 /**
@@ -327,11 +259,13 @@ static void evloop_release()
 {
 	struct thread *nh, *ct = current_thread;
 
-	if (ct && evloop.holder == ct) {
+	if (ct && evmgr && evmgr_release_if(evmgr, ct)) {
 		nh = ct->nholder;
-		evloop.holder = nh;
-		if (nh)
+		ct->nholder = 0;
+		if (nh) {
+			evmgr_try_hold(evmgr, nh);
 			pthread_cond_signal(nh->cwhold);
+		}
 	}
 }
 
@@ -340,17 +274,7 @@ static void evloop_release()
  */
 static int evloop_get()
 {
-	struct thread *ct = current_thread;
-
-	if (evloop.holder)
-		return evloop.holder == ct;
-
-	if (!evloop.sdev)
-		return 0;
-
-	ct->nholder = NULL;
-	evloop.holder = ct;
-	return 1;
+	return evmgr && evmgr_try_hold(evmgr, current_thread);
 }
 
 /**
@@ -358,7 +282,7 @@ static int evloop_get()
  */
 static void evloop_acquire()
 {
-	struct thread **pwait, *ct;
+	struct thread *pwait, *ct;
 	pthread_cond_t cond;
 
 	/* try to get the evloop */
@@ -370,10 +294,10 @@ static void evloop_acquire()
 		pthread_cond_init(&cond, NULL);
 
 		/* queue current thread in holder list */
-		pwait = &evloop.holder;
-		while (*pwait)
-			pwait = &(*pwait)->nholder;
-		*pwait = ct;
+		pwait = evmgr_holder(evmgr);
+		while (pwait->nholder)
+			pwait = pwait->nholder;
+		pwait->nholder = ct;
 
 		/* wake up the evloop */
 		evloop_wakeup();
@@ -395,6 +319,7 @@ static void thread_enter(volatile struct thread *me)
 	me->tid = pthread_self();
 	me->stop = 0;
 	me->waits = 0;
+	me->nholder = 0;
 	me->upper = current_thread;
 	me->next = threads;
 	threads = (struct thread*)me;
@@ -454,17 +379,15 @@ static void thread_run_internal(volatile struct thread *me)
 			job_release(job);
 		/* no job, check event loop wait */
 		} else if (evloop_get()) {
-			if (evloop.state != 0) {
+			if (!evmgr_can_run(evmgr)) {
 				/* busy ? */
 				CRITICAL("Can't enter dispatch while in dispatch!");
 				abort();
 			}
 			/* run the events */
-			evloop.state = EVLOOP_STATE_RUN|EVLOOP_STATE_WAIT;
 			pthread_mutex_unlock(&mutex);
-			sig_monitor(0, evloop_run, NULL);
+			sig_monitor(0, (void(*)(int,void*))evmgr_job_run, evmgr);
 			pthread_mutex_lock(&mutex);
-			evloop.state = 0;
 		} else {
 			/* no job and no event loop */
 			running--;
@@ -754,60 +677,6 @@ int jobs_call(
 }
 
 /**
- * Internal callback for evloop management.
- * The effect of this function is hidden: it exits
- * the waiting poll if any. Then it wakes up a thread
- * awaiting the evloop using signal.
- */
-static int on_evloop_efd(sd_event_source *s, int fd, uint32_t revents, void *userdata)
-{
-	evloop_on_efd_event();
-	return 1;
-}
-
-/**
- * Gets a sd_event item for the current thread.
- * @return a sd_event or NULL in case of error
- */
-static struct sd_event *get_sd_event_locked()
-{
-	int rc;
-
-	/* creates the evloop on need */
-	if (!evloop.sdev) {
-		/* start the creation */
-		evloop.state = 0;
-		/* creates the eventfd for waking up polls */
-		evloop.efd = eventfd(0, EFD_CLOEXEC|EFD_SEMAPHORE);
-		if (evloop.efd < 0) {
-			ERROR("can't make eventfd for events");
-			goto error1;
-		}
-		/* create the systemd event loop */
-		evloop.sdev = systemd_get_event_loop();
-		if (!evloop.sdev) {
-			ERROR("can't make event loop");
-			goto error2;
-		}
-		/* put the eventfd in the event loop */
-		rc = sd_event_add_io(evloop.sdev, NULL, evloop.efd, EPOLLIN, on_evloop_efd, NULL);
-		if (rc < 0) {
-			ERROR("can't register eventfd");
-			evloop.sdev = NULL;
-error2:
-			close(evloop.efd);
-error1:
-			return NULL;
-		}
-	}
-
-	/* acquire the event loop */
-	evloop_acquire();
-
-	return evloop.sdev;
-}
-
-/**
  * Ensure that the current running thread can control the event loop.
  */
 void jobs_acquire_event_manager()
@@ -820,9 +689,18 @@ void jobs_acquire_event_manager()
 		current_thread = &lt;
 	}
 
-	/* process */
+	/* lock */
 	pthread_mutex_lock(&mutex);
-	get_sd_event_locked();
+
+	/* creates the evloop on need */
+	if (!evmgr)
+		evmgr_create(&evmgr);
+
+	/* acquire the event loop under lock */
+	if (evmgr)
+		evloop_acquire();
+
+	/* unlock */
 	pthread_mutex_unlock(&mutex);
 
 	/* release the faked thread environment if needed */
@@ -835,7 +713,7 @@ void jobs_acquire_event_manager()
 		 * A workaround to achieve that goal is for the caller to
 		 * require the event loop a second time after having modified it.
 		 */
-		NOTICE("Requiring sd_event loop out of binder callbacks is hazardous!");
+		NOTICE("Requiring event manager/loop from outside of binder's callback is hazardous!");
 		if (verbose_wants(Log_Level_Info))
 			sig_monitor_dumpstack();
 		evloop_release();
