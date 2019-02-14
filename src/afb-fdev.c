@@ -17,10 +17,10 @@
 
 #include "fdev.h"
 
-#include "afb-systemd.h"
+#include "systemd.h"
 #include "fdev-systemd.h"
 
 struct fdev *afb_fdev_create(int fd)
 {
-	return fdev_systemd_create(afb_systemd_get_event_loop(), fd);
+	return fdev_systemd_create(systemd_get_event_loop(), fd);
 }

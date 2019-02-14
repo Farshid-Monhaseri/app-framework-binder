@@ -31,7 +31,8 @@
 
 #include "afb-fdev.h"
 #include "afb-socket.h"
-#include "afb-systemd.h"
+
+#include "systemd.h"
 #include "fdev.h"
 #include "verbose.h"
 
@@ -228,7 +229,7 @@ static int open_systemd(const char *spec)
 	errno = EAFNOSUPPORT;
 	return -1;
 #else
-	return afb_systemd_fds_for(spec);
+	return systemd_fds_for(spec);
 #endif
 }
 

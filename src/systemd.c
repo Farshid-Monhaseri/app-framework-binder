@@ -24,7 +24,7 @@
 #include <systemd/sd-bus.h>
 #include <systemd/sd-daemon.h>
 
-#include "afb-systemd.h"
+#include "systemd.h"
 #include "jobs.h"
 
 static struct sd_bus *sdbusopen(struct sd_bus **p, int (*f)(struct sd_bus **))
@@ -35,7 +35,7 @@ static struct sd_bus *sdbusopen(struct sd_bus **p, int (*f)(struct sd_bus **))
 			errno = -rc;
 			*p = NULL;
 		} else {
-			rc = sd_bus_attach_event(*p, afb_systemd_get_event_loop(), 0);
+			rc = sd_bus_attach_event(*p, systemd_get_event_loop(), 0);
 			if (rc < 0) {
 				sd_bus_unref(*p);
 				errno = -rc;
@@ -46,18 +46,18 @@ static struct sd_bus *sdbusopen(struct sd_bus **p, int (*f)(struct sd_bus **))
 	return *p;
 }
 
-struct sd_event *afb_systemd_get_event_loop()
+struct sd_event *systemd_get_event_loop()
 {
 	return jobs_get_sd_event();
 }
 
-struct sd_bus *afb_systemd_get_user_bus()
+struct sd_bus *systemd_get_user_bus()
 {
 	static struct sd_bus *result = NULL;
 	return sdbusopen((void*)&result, (void*)sd_bus_open_user);
 }
 
-struct sd_bus *afb_systemd_get_system_bus()
+struct sd_bus *systemd_get_system_bus()
 {
 	static struct sd_bus *result = NULL;
 	return sdbusopen((void*)&result, (void*)sd_bus_open_system);
@@ -80,14 +80,14 @@ static char **fds_names()
 	return names;
 }
 
-int afb_systemd_fds_init()
+int systemd_fds_init()
 {
 	errno = 0;
 	fds_names();
 	return -!!errno;
 }
 
-int afb_systemd_fds_for(const char *name)
+int systemd_fds_for(const char *name)
 {
 	int idx;
 	char **names;

@@ -56,7 +56,6 @@ SET(AFB_LIB_SOURCES
 	afb-session.c
 	afb-socket.c
 	afb-stub-ws.c
-	afb-systemd.c
 	afb-trace.c
 	afb-websock.c
 	afb-ws-client.c
@@ -74,6 +73,7 @@ SET(AFB_LIB_SOURCES
 	process-name.c
 	sig-monitor.c
 	subpath.c
+	systemd.c
 	verbose.c
 	watchdog.c
 	websock.c

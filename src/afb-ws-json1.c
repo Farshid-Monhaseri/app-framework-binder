@@ -27,7 +27,6 @@
 
 #include "afb-wsj1.h"
 #include "afb-ws-json1.h"
-#include "afb-systemd.h"
 #include "afb-msg-json.h"
 #include "afb-session.h"
 #include "afb-cred.h"
@@ -35,6 +34,8 @@
 #include "afb-xreq.h"
 #include "afb-context.h"
 #include "afb-evt.h"
+
+#include "systemd.h"
 #include "verbose.h"
 #include "fdev.h"
 

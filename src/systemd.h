@@ -20,11 +20,11 @@
 struct sd_event;
 struct sd_bus;
 
-extern struct sd_event *afb_systemd_get_event_loop();
-extern struct sd_bus *afb_systemd_get_user_bus();
-extern struct sd_bus *afb_systemd_get_system_bus();
+extern struct sd_event *systemd_get_event_loop();
+extern struct sd_bus *systemd_get_user_bus();
+extern struct sd_bus *systemd_get_system_bus();
 
-extern int afb_systemd_fds_init();
-extern int afb_systemd_fds_for(const char *name);
+extern int systemd_fds_init();
+extern int systemd_fds_for(const char *name);
 
 

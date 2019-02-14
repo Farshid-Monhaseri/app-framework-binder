@@ -42,11 +42,11 @@
 #include "afb-hsrv.h"
 #include "afb-fdev.h"
 #include "afb-socket.h"
+
 #include "fdev.h"
 #include "verbose.h"
 #include "locale-root.h"
-
-#include "afb-systemd.h"
+#include "systemd.h"
 #include "jobs.h"
 
 #define JSON_CONTENT  "application/json"

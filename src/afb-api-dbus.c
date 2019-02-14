@@ -33,8 +33,6 @@
 
 #include <afb/afb-event-x2.h>
 
-#include "afb-systemd.h"
-
 #include "afb-session.h"
 #include "afb-msg-json.h"
 #include "afb-api.h"
@@ -44,8 +42,9 @@
 #include "afb-cred.h"
 #include "afb-evt.h"
 #include "afb-xreq.h"
-#include "verbose.h"
 
+#include "verbose.h"
+#include "systemd.h"
 
 static const char DEFAULT_PATH_PREFIX[] = "/org/agl/afb/api/";
 
@@ -130,7 +129,7 @@ static struct api_dbus *make_api_dbus_3(int system, const char *path, size_t pat
 	}
 
 	/* choose the bus */
-	sdbus = (system ? afb_systemd_get_system_bus : afb_systemd_get_user_bus)();
+	sdbus = (system ? systemd_get_system_bus : systemd_get_user_bus)();
 	if (sdbus == NULL)
 		goto error2;
 
