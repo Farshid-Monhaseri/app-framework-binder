@@ -17,34 +17,59 @@
 
 #define _GNU_SOURCE
 
+/*******************************************************************************
+*  sig-monitor is under the control of several compilation flags
+*******************************************************************************/
+
+/* controls whether to dump stack or not */
+#if !defined(USE_SIG_MONITOR_DUMPSTACK)
+#  define USE_SIG_MONITOR_DUMPSTACK 1
+#endif
+
+/* control whether to monitor signals */
+#if !defined(USE_SIG_MONITOR_SIGNALS)
+#  define USE_SIG_MONITOR_SIGNALS 1
+#endif
+
+/* controls whether to monitor calls */
+#if !defined(USE_SIG_MONITOR_FOR_CALL)
+#  define USE_SIG_MONITOR_FOR_CALL 1
+#endif
+
+/* control whether to monitor timers */
+#if !defined(USE_SIG_MONITOR_TIMERS)
+#  define USE_SIG_MONITOR_TIMERS 1
+#endif
+
+#if !USE_SIG_MONITOR_SIGNALS
+#  undef USE_SIG_MONITOR_FOR_CALL
+#  define USE_SIG_MONITOR_FOR_CALL 0
+#endif
+
+#if !USE_SIG_MONITOR_FOR_CALL
+#  undef USE_SIG_MONITOR_TIMERS
+#  define USE_SIG_MONITOR_TIMERS 0
+#endif
+
+/******************************************************************************/
+
 #include <stdlib.h>
 #include <stdio.h>
-#include <signal.h>
 #include <string.h>
-#include <setjmp.h>
-#include <time.h>
 #include <unistd.h>
-#include <sys/syscall.h>
-#include <execinfo.h>
 
 #include "sig-monitor.h"
+
 #include "verbose.h"
 
-#define SIG_FOR_TIMER   SIGVTALRM
+/******************************************************************************/
+#if !USE_SIG_MONITOR_DUMPSTACK
 
-/* local handler */
-static _Thread_local sigjmp_buf *error_handler;
-static _Thread_local int in_safe_dumpstack;
+static inline void dumpstack(int crop, int signum) {}
 
-/* local timers */
-static _Thread_local int thread_timer_set;
-static _Thread_local timer_t thread_timerid;
+#else
 
-/* internal signal lists */
-static int sigerr[] = { SIG_FOR_TIMER, SIGSEGV, SIGFPE, SIGILL, SIGBUS, 0 };
-static int sigterm[] = { SIGINT, SIGABRT, SIGTERM, 0 };
-static int exiting = 0;
-static int enabled = 0;
+#include <execinfo.h>
 
 /*
  * Dumps the current stack
@@ -82,23 +107,28 @@ static void dumpstack(int crop, int signum)
 	}
 }
 
-static void safe_dumpstack_cb(int signum, void *closure)
-{
-	int *args = closure;
-	if (signum)
-		ERROR("Can't provide backtrace: raised signal %s", strsignal(signum));
-	else
-		dumpstack(args[0], args[1]);
-}
+#endif
+/******************************************************************************/
+#if !USE_SIG_MONITOR_TIMERS
 
-static void safe_dumpstack(int crop, int signum)
-{
-	int args[2] = { crop + 3, signum };
+static inline int timeout_create() { return 0; }
+static inline int timeout_arm(int timeout) { return 0; }
+static inline void timeout_disarm() {}
+static inline void timeout_delete() {}
 
-	in_safe_dumpstack = 1;
-	sig_monitor(0, safe_dumpstack_cb, args);
-	in_safe_dumpstack = 0;
-}
+#define SIG_FOR_TIMER   0
+
+#else
+
+#include <time.h>
+#include <sys/syscall.h>
+#include <signal.h>
+
+#define SIG_FOR_TIMER   SIGVTALRM
+
+/* local per thread timers */
+static _Thread_local int thread_timer_set;
+static _Thread_local timer_t thread_timerid;
 
 /*
  * Creates a timer for the current thread
@@ -166,9 +196,67 @@ static inline void timeout_delete()
 		thread_timer_set = 0;
 	}
 }
+#endif
+/******************************************************************************/
+#if !USE_SIG_MONITOR_FOR_CALL
+
+static inline void monitor_raise(int signum) {}
+
+#else
+
+#include <setjmp.h>
+
+/* local handler */
+static _Thread_local sigjmp_buf *error_handler;
+
+static void monitor(int timeout, void (*function)(int sig, void*), void *arg)
+{
+	volatile int signum, signum2;
+	sigjmp_buf jmpbuf, *older;
+
+	older = error_handler;
+	signum = setjmp(jmpbuf);
+	if (signum == 0) {
+		error_handler = &jmpbuf;
+		if (timeout) {
+			timeout_create();
+			timeout_arm(timeout);
+		}
+		function(0, arg);
+	} else {
+		signum2 = setjmp(jmpbuf);
+		if (signum2 == 0)
+			function(signum, arg);
+	}
+	if (timeout)
+		timeout_disarm();
+	error_handler = older;
+}
+
+static inline void monitor_raise(int signum)
+{
+	if (error_handler != NULL)
+		longjmp(*error_handler, signum);
+}
+#endif
+/******************************************************************************/
+#if !USE_SIG_MONITOR_SIGNALS
+
+static inline int enable_signal_handling() { return 0; }
+
+#else
+
+#include <signal.h>
+
+/* internal signal lists */
+static int sigerr[] = { SIGSEGV, SIGFPE, SIGILL, SIGBUS, SIG_FOR_TIMER, 0 };
+static int sigterm[] = { SIGINT, SIGABRT, SIGTERM, 0 };
+
+static int exiting = 0;
+static int enabled = 0;
 
 /* install the handlers */
-static int install(void (*handler)(int), int *signals)
+static int set_signals_handler(void (*handler)(int), int *signals)
 {
 	int result = 1;
 	struct sigaction sa;
@@ -200,11 +288,39 @@ static void on_rescue_exit(int signum)
  */
 static void safe_exit(int code)
 {
-	install(on_rescue_exit, sigerr);
-	install(on_rescue_exit, sigterm);
+	set_signals_handler(on_rescue_exit, sigerr);
+	set_signals_handler(on_rescue_exit, sigterm);
 	exiting = code;
 	exit(code);
 }
+
+#if !USE_SIG_MONITOR_DUMPSTACK
+
+static inline void safe_dumpstack(int crop, int signum) {}
+#define in_safe_dumpstack (0)
+
+#else
+
+static _Thread_local int in_safe_dumpstack;
+
+static void safe_dumpstack_cb(int signum, void *closure)
+{
+	int *args = closure;
+	if (signum)
+		ERROR("Can't provide backtrace: raised signal %s", strsignal(signum));
+	else
+		dumpstack(args[0], args[1]);
+}
+
+static void safe_dumpstack(int crop, int signum)
+{
+	int args[2] = { crop + 3, signum };
+
+	in_safe_dumpstack = 1;
+	sig_monitor(0, safe_dumpstack_cb, args);
+	in_safe_dumpstack = 0;
+}
+#endif
 
 /* Handles signals that terminate the process */
 static void on_signal_terminate (int signum)
@@ -220,42 +336,43 @@ static void on_signal_terminate (int signum)
 /* Handles monitored signals that can be continued */
 static void on_signal_error(int signum)
 {
-	if (in_safe_dumpstack)
-		longjmp(*error_handler, signum);
+	if (!in_safe_dumpstack) {
+		ERROR("ALERT! signal %d received: %s", signum, strsignal(signum));
 
-	ERROR("ALERT! signal %d received: %s", signum, strsignal(signum));
-	if (error_handler == NULL && signum == SIG_FOR_TIMER)
-		return;
+		safe_dumpstack(3, signum);
+	}
+	monitor_raise(signum);
 
-	safe_dumpstack(3, signum);
-
-	// unlock signal to allow a new signal to come
-	if (error_handler != NULL)
-		longjmp(*error_handler, signum);
-
-	ERROR("Unmonitored signal %d received: %s", signum, strsignal(signum));
-	safe_exit(2);
+	if (signum != SIG_FOR_TIMER) {
+		ERROR("Unmonitored signal %d received: %s", signum, strsignal(signum));
+		safe_exit(2);
+	}
 }
 
-void sig_monitor_disable()
+/*
+static void disable_signal_handling()
 {
+	set_signals_handler(SIG_DFL, sigerr);
+	set_signals_handler(SIG_DFL, sigterm);
 	enabled = 0;
-	install(SIG_DFL, sigerr);
-	install(SIG_DFL, sigterm);
 }
+*/
 
-int sig_monitor_enable()
+static int enable_signal_handling()
 {
-	enabled = install(on_signal_error, sigerr) && install(on_signal_terminate, sigterm);
-	if (enabled)
-		return 0;
-	sig_monitor_disable();
-	return -1;
+	if (!set_signals_handler(on_signal_error, sigerr)
+	     || !set_signals_handler(on_signal_terminate, sigterm)) {
+		return -1;
+	}
+	enabled = 1;
+	return 0;
 }
+#endif
+/******************************************************************************/
 
 int sig_monitor_init(int enable)
 {
-	return enable ? sig_monitor_enable() : (sig_monitor_disable(), 0);
+	return enable ? enable_signal_handling() : 0;
 }
 
 int sig_monitor_init_timeouts()
@@ -268,35 +385,13 @@ void sig_monitor_clean_timeouts()
 	timeout_delete();
 }
 
-static void monitor(int timeout, void (*function)(int sig, void*), void *arg)
-{
-	volatile int signum, signum2;
-	sigjmp_buf jmpbuf, *older;
-
-	older = error_handler;
-	signum = setjmp(jmpbuf);
-	if (signum == 0) {
-		error_handler = &jmpbuf;
-		if (timeout) {
-			timeout_create();
-			timeout_arm(timeout);
-		}
-		function(0, arg);
-	} else {
-		signum2 = setjmp(jmpbuf);
-		if (signum2 == 0)
-			function(signum, arg);
-	}
-	if (timeout)
-		timeout_disarm();
-	error_handler = older;
-}
-
 void sig_monitor(int timeout, void (*function)(int sig, void*), void *arg)
 {
+#if USE_SIG_MONITOR_SIGNALS && USE_SIG_MONITOR_FOR_CALL
 	if (enabled)
 		monitor(timeout, function, arg);
 	else
+#endif
 		function(0, arg);
 }
 

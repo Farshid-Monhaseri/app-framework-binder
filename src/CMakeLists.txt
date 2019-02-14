@@ -24,6 +24,35 @@ ADD_DEFINITIONS(-DBINDING_INSTALL_DIR="${binding_install_dir}")
 # Always add INFER_EXTENSION (more details in afb-hreq.c)
 ADD_DEFINITIONS(-DINFER_EXTENSION)
 
+############################################################################
+# TODO: improve below setting
+set(USE_SIG_MONITOR_DUMPSTACK ON CACHE BOOL "activate dump stack on error")
+set(USE_SIG_MONITOR_SIGNALS   ON CACHE BOOL "activate handling of signals")
+set(USE_SIG_MONITOR_FOR_CALL  ON CACHE BOOL "activate monitoring of calls")
+set(USE_SIG_MONITOR_TIMERS    ON CACHE BOOL "activate monitoring of call expiration")
+
+if(USE_SIG_MONITOR_DUMPSTACK)
+  add_definitions(-DUSE_SIG_MONITOR_DUMPSTACK=1)
+else()
+  add_definitions(-DUSE_SIG_MONITOR_DUMPSTACK=0)
+endif()
+if(USE_SIG_MONITOR_SIGNALS)
+  add_definitions(-DUSE_SIG_MONITOR_SIGNALS=1)
+else()
+  add_definitions(-DUSE_SIG_MONITOR_SIGNALS=0)
+endif()
+if(USE_SIG_MONITOR_FOR_CALL)
+  add_definitions(-DUSE_SIG_MONITOR_FOR_CALL=1)
+else()
+  add_definitions(-DUSE_SIG_MONITOR_FOR_CALL=0)
+endif()
+if(USE_SIG_MONITOR_TIMERS)
+  add_definitions(-DUSE_SIG_MONITOR_TIMERS=1)
+else()
+  add_definitions(-DUSE_SIG_MONITOR_TIMERS=0)
+endif()
+############################################################################
+
 SET(AFB_LIB_SOURCES
 	afb-api.c
 	afb-api-so.c
