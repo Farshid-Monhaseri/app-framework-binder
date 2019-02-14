@@ -86,7 +86,7 @@ IF(HAVE_MAGIC_H)
 ENDIF(HAVE_MAGIC_H)
 
 PKG_CHECK_MODULES(libsystemd libsystemd>=222)
-PKG_CHECK_MODULES(libmicrohttpd libmicrohttpd>=0.9.55)
+PKG_CHECK_MODULES(libmicrohttpd libmicrohttpd>=0.9.60)
 PKG_CHECK_MODULES(openssl openssl)
 PKG_CHECK_MODULES(uuid uuid)
 PKG_CHECK_MODULES(cynara cynara-client)

@@ -2,7 +2,7 @@ Priority: optional
 Maintainer: unknown <unknown@debian.org>
 Source: agl-app-framework-binder
 Build-Depends: debhelper (>= 5),pkg-config,	
- libmicrohttpd-dev (>= 0.9.55),
+ libmicrohttpd-dev (>= 0.9.60),
  cmake,
  libsystemd-dev (>= 222),
  libssl-dev,
