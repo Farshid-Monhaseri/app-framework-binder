@@ -7,6 +7,20 @@ cd $R/bin
 
 lcov -c -i -d $R/bin -o $R/lcov-out.info
 
+vg() {
+	if [[ -z "$NOVALGRIND" ]]; then
+		valgrind "$@"
+	else
+		while :; do
+			case "$1" in
+			--*) shift;;
+			*) break;;
+			esac
+		done
+		"$@"
+	fi
+}
+
 mk() {
 	echo
 	echo "*******************************************************************"
@@ -78,7 +92,7 @@ mk $R/bin/test-wrap-json
 # true life test
 ##########################################################
 mk \
-valgrind \
+vg \
 	--log-file=$R/valgrind.out \
 	--trace-children=no \
 	--track-fds=yes \

@@ -12,3 +12,5 @@ bin/*.o
 bin/*.so
 bin/*.gcda
 bin/*.gcno
+bin/*.c.gcov
+*.info
