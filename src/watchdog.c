@@ -27,12 +27,15 @@
 #include <systemd/sd-daemon.h>
 
 #include "jobs.h"
+#include "systemd.h"
 
 int watchdog_activate()
 {
 	/* set the watchdog */
-	if (sd_watchdog_enabled(0, NULL))
-		sd_event_set_watchdog(jobs_get_sd_event(), 1);
+	if (sd_watchdog_enabled(0, NULL)) {
+		jobs_acquire_event_manager();
+		sd_event_set_watchdog(systemd_get_event_loop(), 1);
+	}
 	return 0;
 }
 

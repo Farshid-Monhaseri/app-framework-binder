@@ -34,6 +34,7 @@
 #include "jobs.h"
 #include "sig-monitor.h"
 #include "verbose.h"
+#include "systemd.h"
 
 #define EVENT_TIMEOUT_TOP  	((uint64_t)-1)
 #define EVENT_TIMEOUT_CHILD	((uint64_t)10000)
@@ -783,16 +784,15 @@ static struct sd_event *get_sd_event_locked()
 			goto error1;
 		}
 		/* create the systemd event loop */
-		rc = sd_event_new(&evloop.sdev);
-		if (rc < 0) {
-			ERROR("can't make new event loop");
+		evloop.sdev = systemd_get_event_loop();
+		if (!evloop.sdev) {
+			ERROR("can't make event loop");
 			goto error2;
 		}
 		/* put the eventfd in the event loop */
 		rc = sd_event_add_io(evloop.sdev, NULL, evloop.efd, EPOLLIN, on_evloop_efd, NULL);
 		if (rc < 0) {
 			ERROR("can't register eventfd");
-			sd_event_unref(evloop.sdev);
 			evloop.sdev = NULL;
 error2:
 			close(evloop.efd);
@@ -808,12 +808,10 @@ error1:
 }
 
 /**
- * Gets a sd_event item for the current thread.
- * @return a sd_event or NULL in case of error
+ * Ensure that the current running thread can control the event loop.
  */
-struct sd_event *jobs_get_sd_event()
+void jobs_acquire_event_manager()
 {
-	struct sd_event *result;
 	struct thread lt;
 
 	/* ensure an existing thread environment */
@@ -824,7 +822,7 @@ struct sd_event *jobs_get_sd_event()
 
 	/* process */
 	pthread_mutex_lock(&mutex);
-	result = get_sd_event_locked();
+	get_sd_event_locked();
 	pthread_mutex_unlock(&mutex);
 
 	/* release the faked thread environment if needed */
@@ -843,8 +841,6 @@ struct sd_event *jobs_get_sd_event()
 		evloop_release();
 		current_thread = NULL;
 	}
-
-	return result;
 }
 
 /**

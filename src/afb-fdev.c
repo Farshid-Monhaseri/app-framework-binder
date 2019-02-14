@@ -17,10 +17,12 @@
 
 #include "fdev.h"
 
+#include "jobs.h"
 #include "systemd.h"
 #include "fdev-systemd.h"
 
 struct fdev *afb_fdev_create(int fd)
 {
+	jobs_acquire_event_manager();
 	return fdev_systemd_create(systemd_get_event_loop(), fd);
 }

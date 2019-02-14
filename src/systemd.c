@@ -25,41 +25,53 @@
 #include <systemd/sd-daemon.h>
 
 #include "systemd.h"
-#include "jobs.h"
 
 static struct sd_bus *sdbusopen(struct sd_bus **p, int (*f)(struct sd_bus **))
 {
-	if (*p == NULL) {
-		int rc = f(p);
-		if (rc < 0) {
-			errno = -rc;
-			*p = NULL;
-		} else {
-			rc = sd_bus_attach_event(*p, systemd_get_event_loop(), 0);
+	int rc;
+	struct sd_bus *r;
+
+	r = *p;
+	if (!r) {
+		rc = f(&r);
+		if (rc >= 0) {
+			rc = sd_bus_attach_event(r, systemd_get_event_loop(), 0);
 			if (rc < 0) {
-				sd_bus_unref(*p);
-				errno = -rc;
-				*p = NULL;
+				sd_bus_unref(r);
+				r = 0;
 			}
 		}
+		if (rc < 0)
+			errno = -rc;
+		*p = r;
 	}
-	return *p;
+	return r;
 }
 
 struct sd_event *systemd_get_event_loop()
 {
-	return jobs_get_sd_event();
+	static struct sd_event *result = 0;
+	int rc;
+
+	if (!result) {
+		rc = sd_event_new(&result);
+		if (rc < 0) {
+			errno = -rc;
+			result = NULL;
+		}
+	}
+	return result;
 }
 
 struct sd_bus *systemd_get_user_bus()
 {
-	static struct sd_bus *result = NULL;
+	static struct sd_bus *result = 0;
 	return sdbusopen((void*)&result, (void*)sd_bus_open_user);
 }
 
 struct sd_bus *systemd_get_system_bus()
 {
-	static struct sd_bus *result = NULL;
+	static struct sd_bus *result = 0;
 	return sdbusopen((void*)&result, (void*)sd_bus_open_system);
 }
 

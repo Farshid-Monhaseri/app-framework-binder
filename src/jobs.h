@@ -48,5 +48,5 @@ extern int jobs_start(
 		void (*start)(int signum, void* arg),
 		void *arg);
 
-struct sd_event;
-extern struct sd_event *jobs_get_sd_event();
+extern void jobs_acquire_event_manager();
+

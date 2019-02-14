@@ -315,6 +315,24 @@ static int event_broadcast_cb(struct afb_api_x3 *closure, const char *name, stru
 	return afb_evt_broadcast(event, object);
 }
 
+static struct sd_event *get_event_loop(struct afb_api_x3 *closure)
+{
+	jobs_acquire_event_manager();
+	return systemd_get_event_loop();
+}
+
+static struct sd_bus *get_user_bus(struct afb_api_x3 *closure)
+{
+	jobs_acquire_event_manager();
+	return systemd_get_user_bus();
+}
+
+static struct sd_bus *get_system_bus(struct afb_api_x3 *closure)
+{
+	jobs_acquire_event_manager();
+	return systemd_get_system_bus();
+}
+
 static int rootdir_open_locale_cb(struct afb_api_x3 *closure, const char *filename, int flags, const char *locale)
 {
 	return afb_common_rootdir_open_locale(filename, flags, locale);
@@ -451,21 +469,30 @@ static int hooked_event_broadcast_cb(struct afb_api_x3 *closure, const char *nam
 static struct sd_event *hooked_get_event_loop(struct afb_api_x3 *closure)
 {
 	struct afb_export *export = from_api_x3(closure);
-	struct sd_event *r = systemd_get_event_loop();
+	struct sd_event *r;
+
+	jobs_acquire_event_manager();
+	r = get_event_loop(closure);
 	return afb_hook_api_get_event_loop(export, r);
 }
 
 static struct sd_bus *hooked_get_user_bus(struct afb_api_x3 *closure)
 {
 	struct afb_export *export = from_api_x3(closure);
-	struct sd_bus *r = systemd_get_user_bus();
+	struct sd_bus *r;
+
+	jobs_acquire_event_manager();
+	r = get_user_bus(closure);
 	return afb_hook_api_get_user_bus(export, r);
 }
 
 static struct sd_bus *hooked_get_system_bus(struct afb_api_x3 *closure)
 {
 	struct afb_export *export = from_api_x3(closure);
-	struct sd_bus *r = systemd_get_system_bus();
+	struct sd_bus *r;
+
+	jobs_acquire_event_manager();
+	r = get_system_bus(closure);
 	return afb_hook_api_get_system_bus(export, r);
 }
 
@@ -537,9 +564,9 @@ static const struct afb_daemon_itf_x1 daemon_itf = {
 	.vverbose_v2 = vverbose_cb,
 	.event_make = legacy_event_x1_make_cb,
 	.event_broadcast = event_broadcast_cb,
-	.get_event_loop = systemd_get_event_loop,
-	.get_user_bus = systemd_get_user_bus,
-	.get_system_bus = systemd_get_system_bus,
+	.get_event_loop = get_event_loop,
+	.get_user_bus = get_user_bus,
+	.get_system_bus = get_system_bus,
 	.rootdir_get_fd = afb_common_rootdir_get_fd,
 	.rootdir_open_locale = rootdir_open_locale_cb,
 	.queue_job = queue_job_cb,
@@ -1052,9 +1079,9 @@ static const struct afb_api_x3_itf api_x3_itf = {
 
 	.vverbose = (void*)vverbose_cb,
 
-	.get_event_loop = systemd_get_event_loop,
-	.get_user_bus = systemd_get_user_bus,
-	.get_system_bus = systemd_get_system_bus,
+	.get_event_loop = get_event_loop,
+	.get_user_bus = get_user_bus,
+	.get_system_bus = get_system_bus,
 	.rootdir_get_fd = afb_common_rootdir_get_fd,
 	.rootdir_open_locale = rootdir_open_locale_cb,
 	.queue_job = queue_job_cb,

@@ -45,6 +45,7 @@
 
 #include "verbose.h"
 #include "systemd.h"
+#include "jobs.h"
 
 static const char DEFAULT_PATH_PREFIX[] = "/org/agl/afb/api/";
 
@@ -129,6 +130,7 @@ static struct api_dbus *make_api_dbus_3(int system, const char *path, size_t pat
 	}
 
 	/* choose the bus */
+	jobs_acquire_event_manager();
 	sdbus = (system ? systemd_get_system_bus : systemd_get_user_bus)();
 	if (sdbus == NULL)
 		goto error2;
