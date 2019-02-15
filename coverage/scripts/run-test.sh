@@ -147,7 +147,7 @@ $R/bin/afb-daemon-cov \
 # true life test
 ##########################################################
 mk \
-valgrind \
+vg \
 	--log-file=$R/valgrind.out \
 	--trace-children=no \
 	--track-fds=yes \
