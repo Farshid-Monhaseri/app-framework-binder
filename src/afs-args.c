@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 #include "verbose.h"
-#include "afs-config.h"
+#include "afs-args.h"
 
 #if !defined(AFB_VERSION)
 #  error "you should define AFB_VERSION"
@@ -240,7 +240,7 @@ static void noarg(int optc)
  |   Parse option and launch action
  +--------------------------------------------------------- */
 
-static void parse_arguments(int argc, char **argv, struct afs_config *config)
+static void parse_arguments(int argc, char **argv, struct afs_args *config)
 {
 	char *programName = argv[0];
 	int optc, ind;
@@ -346,7 +346,7 @@ static void parse_arguments(int argc, char **argv, struct afs_config *config)
 	free(gnuOptions);
 }
 
-static void fulfill_config(struct afs_config *config)
+static void fulfill_config(struct afs_args *config)
 {
 	// default HTTP port
 	if (config->httpdPort == 0)
@@ -389,7 +389,7 @@ static void fulfill_config(struct afs_config *config)
 		config->token = AFS_SUPERVISOR_TOKEN;
 }
 
-void afs_config_dump(struct afs_config *config)
+static void dump(struct afs_args *config)
 {
 #define NN(x)   (x)?:""
 #define P(...)  fprintf(stderr, __VA_ARGS__)
@@ -428,13 +428,13 @@ void afs_config_dump(struct afs_config *config)
 #undef NN
 }
 
-static void parse_environment(struct afs_config *config)
+static void parse_environment(struct afs_args *config)
 {
 }
 
-struct afs_config *afs_config_parse_arguments(int argc, char **argv)
+struct afs_args *afs_args_parse(int argc, char **argv)
 {
-	struct afs_config *result;
+	struct afs_args *result;
 
 	result = calloc(1, sizeof *result);
 
@@ -442,7 +442,7 @@ struct afs_config *afs_config_parse_arguments(int argc, char **argv)
 	parse_arguments(argc, argv, result);
 	fulfill_config(result);
 	if (verbose_wants(Log_Level_Info))
-		afs_config_dump(result);
+		dump(result);
 	return result;
 }
 

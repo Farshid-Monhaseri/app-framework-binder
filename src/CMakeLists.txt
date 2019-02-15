@@ -52,11 +52,11 @@ SET(AFB_LIB_SOURCES
 	afb-api-v3.c
 	afb-api-ws.c
 	afb-apiset.c
+	afb-args.c
 	afb-auth.c
 	afb-autoset.c
 	afb-calls.c
 	afb-common.c
-	afb-config.c
 	afb-context.c
 	afb-cred.c
 	afb-debug.c
@@ -135,7 +135,7 @@ INSTALL(TARGETS afb-daemon
 # build and install afb-daemon
 ###########################################
 IF(INCLUDE_SUPERVISOR)
-	ADD_EXECUTABLE(afs-supervisor main-afs-supervisor.c afs-supervisor.c afs-discover.c afs-config.c)
+	ADD_EXECUTABLE(afs-supervisor main-afs-supervisor.c afs-supervisor.c afs-discover.c afs-args.c)
 	TARGET_LINK_LIBRARIES(afs-supervisor
 		afb-lib
 		${link_libraries}

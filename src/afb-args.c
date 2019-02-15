@@ -31,7 +31,7 @@
 #endif
 
 #include "verbose.h"
-#include "afb-config.h"
+#include "afb-args.h"
 #include "afb-hook-flags.h"
 #include "wrap-json.h"
 
@@ -985,11 +985,6 @@ static void fulfill_config(struct json_object *config)
 #endif
 }
 
-void afb_config_dump(struct json_object *config)
-{
-	dump(config, stderr, "--", "CONFIG");
-}
-
 static void on_environment(struct json_object *config, int optid, const char *name, void (*func)(struct json_object*, int, const char*))
 {
 	char *value = secure_getenv(name);
@@ -1043,7 +1038,7 @@ static void parse_environment(struct json_object *config)
 	on_environment_bool(config, SET_TRAP_FAULTS, "AFB_TRAP_FAULTS");
 }
 
-struct json_object *afb_config_parse_arguments(int argc, char **argv)
+struct json_object *afb_args_parse(int argc, char **argv)
 {
 	struct json_object *result;
 
@@ -1055,12 +1050,8 @@ struct json_object *afb_config_parse_arguments(int argc, char **argv)
 	parse_arguments(argc, argv, result);
 	fulfill_config(result);
 	if (verbose_wants(Log_Level_Info))
-		afb_config_dump(result);
+		dump(result, stderr, "--", "CONFIG");
 	return result;
 }
 
-struct json_object *afb_config_json(struct json_object *config)
-{
-	return NULL;
-}
 

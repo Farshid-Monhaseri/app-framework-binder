@@ -41,7 +41,7 @@
 #include "afb-xreq.h"
 #include "afb-trace.h"
 #include "afb-session.h"
-#include "afb-config.h"
+#include "afb-args.h"
 #include "afb-supervision.h"
 #include "afs-supervision.h"
 #include "afb-stub-ws.h"

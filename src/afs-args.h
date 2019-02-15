@@ -17,7 +17,7 @@
 #pragma once
 
 // main config structure
-struct afs_config {
+struct afs_args {
 	char *rootdir;		// base dir for files
 	char *roothttp;		// directory for http files
 	char *rootbase;		// Angular HTML5 base URL
@@ -36,6 +36,5 @@ struct afs_config {
 	int nbSessionMax;	// max count of sessions
 };
 
-extern struct afs_config *afs_config_parse_arguments(int argc, char **argv);
-extern void afs_config_dump(struct afs_config *config);
+extern struct afs_args *afs_args_parse(int argc, char **argv);
 

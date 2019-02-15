@@ -38,7 +38,7 @@
 
 #include <systemd/sd-daemon.h>
 
-#include "afb-config.h"
+#include "afb-args.h"
 #include "afb-hswitch.h"
 #include "afb-apiset.h"
 #include "afb-autoset.h"
@@ -898,7 +898,7 @@ int main(int argc, char *argv[])
 	afb_debug("main-entry");
 
 	// ------------- Build session handler & init config -------
-	main_config = afb_config_parse_arguments(argc, argv);
+	main_config = afb_args_parse(argc, argv);
 	if (sig_monitor_init(
 		!json_object_object_get_ex(main_config, "trap-faults", &obj)
 			|| json_object_get_boolean(obj)) < 0) {

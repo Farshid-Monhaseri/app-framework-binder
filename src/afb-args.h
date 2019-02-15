@@ -18,5 +18,5 @@
 
 struct json_object;
 
-extern struct json_object *afb_config_parse_arguments(int argc, char **argv);
+extern struct json_object *afb_args_parse(int argc, char **argv);
 

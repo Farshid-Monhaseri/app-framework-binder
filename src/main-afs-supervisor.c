@@ -34,7 +34,7 @@
 #include "afb-session.h"
 
 #include "afs-supervisor.h"
-#include "afs-config.h"
+#include "afs-args.h"
 
 #include "verbose.h"
 #include "jobs.h"
@@ -46,7 +46,7 @@
 #endif
 
 /* the main config */
-struct afs_config *main_config;
+struct afs_args *main_config;
 
 /* the main apiset */
 struct afb_apiset *main_apiset;
@@ -212,7 +212,7 @@ error:
 int main(int ac, char **av)
 {
 	/* scan arguments */
-	main_config = afs_config_parse_arguments(ac, av);
+	main_config = afs_args_parse(ac, av);
 	if (main_config->name) {
 		verbose_set_name(main_config->name, 0);
 		process_name_set_name(main_config->name);
