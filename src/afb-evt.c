@@ -74,8 +74,10 @@ struct afb_evtid {
 	/* rwlock of the event */
 	pthread_rwlock_t rwlock;
 
+#if WITH_AFB_HOOK
 	/* hooking */
 	int hookflags;
+#endif
 
 	/* refcount */
 	int refcount;
@@ -117,14 +119,16 @@ static struct afb_event_x2_itf afb_evt_event_x2_itf = {
 	.addref = (void*)afb_evt_evtid_addref
 };
 
+#if WITH_AFB_HOOK
 /* the interface for events */
-static struct afb_event_x2_itf afb_evt_hooked_eventid_itf = {
+static struct afb_event_x2_itf afb_evt_hooked_event_x2_itf = {
 	.broadcast = (void*)afb_evt_evtid_hooked_broadcast,
 	.push = (void*)afb_evt_evtid_hooked_push,
 	.unref = (void*)afb_evt_evtid_hooked_unref,
 	.name = (void*)afb_evt_evtid_hooked_name,
 	.addref = (void*)afb_evt_evtid_hooked_addref
 };
+#endif
 
 /* head of the list of listeners */
 static pthread_rwlock_t listeners_rwlock = PTHREAD_RWLOCK_INITIALIZER;
@@ -163,6 +167,17 @@ static int broadcast(const char *event, struct json_object *obj, int id)
 }
 
 /*
+ * Broadcasts the event 'evtid' with its 'object'
+ * 'object' is released (like json_object_put)
+ * Returns the count of listener that received the event.
+ */
+int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *object)
+{
+	return broadcast(evtid->fullname, object, evtid->id);
+}
+
+#if WITH_AFB_HOOK
+/*
  * Broadcasts the 'event' of 'id' with its 'obj'
  * 'obj' is released (like json_object_put)
  * calls hooks if hookflags isn't 0
@@ -192,20 +207,11 @@ static int hooked_broadcast(const char *event, struct json_object *obj, int id, 
  * 'object' is released (like json_object_put)
  * Returns the count of listener that received the event.
  */
-int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *object)
-{
-	return broadcast(evtid->fullname, object, evtid->id);
-}
-
-/*
- * Broadcasts the event 'evtid' with its 'object'
- * 'object' is released (like json_object_put)
- * Returns the count of listener that received the event.
- */
 int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *object)
 {
 	return hooked_broadcast(evtid->fullname, object, evtid->id, evtid->hookflags);
 }
+#endif
 
 /*
  * Broadcasts the 'event' with its 'object'
@@ -214,7 +220,11 @@ int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *
  */
 int afb_evt_broadcast(const char *event, struct json_object *object)
 {
+#if WITH_AFB_HOOK
 	return hooked_broadcast(event, object, 0, -1);
+#else
+	return broadcast(event, object, 0);
+#endif
 }
 
 /*
@@ -241,36 +251,6 @@ int afb_evt_evtid_push(struct afb_evtid *evtid, struct json_object *obj)
 		watch = watch->next_by_evtid;
 	}
 	pthread_rwlock_unlock(&evtid->rwlock);
-	json_object_put(obj);
-	return result;
-}
-
-/*
- * Pushes the event 'evtid' with 'obj' to its listeners
- * 'obj' is released (like json_object_put)
- * Emits calls to hooks.
- * Returns the count of listener taht received the event.
- */
-int afb_evt_evtid_hooked_push(struct afb_evtid *evtid, struct json_object *obj)
-{
-
-	int result;
-
-	/* lease the object */
-	json_object_get(obj);
-
-	/* hook before push */
-	if (evtid->hookflags & afb_hook_flag_evt_push_before)
-		afb_hook_evt_push_before(evtid->fullname, evtid->id, obj);
-
-	/* push */
-	result = afb_evt_evtid_push(evtid, obj);
-
-	/* hook after push */
-	if (evtid->hookflags & afb_hook_flag_evt_push_after)
-		afb_hook_evt_push_after(evtid->fullname, evtid->id, obj, result);
-
-	/* release the object */
 	json_object_put(obj);
 	return result;
 }
@@ -342,10 +322,14 @@ struct afb_evtid *afb_evt_evtid_create(const char *fullname)
 	evtid->id = event_id_counter;
 	pthread_rwlock_init(&evtid->rwlock, NULL);
 	evtids = evtid;
+#if WITH_AFB_HOOK
 	evtid->hookflags = afb_hook_flags_evt(evtid->fullname);
-	evtid->eventid.itf = evtid->hookflags ? &afb_evt_hooked_eventid_itf : &afb_evt_event_x2_itf;
+	evtid->eventid.itf = evtid->hookflags ? &afb_evt_hooked_event_x2_itf : &afb_evt_event_x2_itf;
 	if (evtid->hookflags & afb_hook_flag_evt_create)
 		afb_hook_evt_create(evtid->fullname, evtid->id);
+#else
+	evtid->eventid.itf = &afb_evt_event_x2_itf;
+#endif
 	pthread_rwlock_unlock(&events_rwlock);
 
 	/* returns the event */
@@ -381,16 +365,6 @@ struct afb_evtid *afb_evt_evtid_addref(struct afb_evtid *evtid)
 {
 	__atomic_add_fetch(&evtid->refcount, 1, __ATOMIC_RELAXED);
 	return evtid;
-}
-
-/*
- * increment the reference count of the event 'evtid'
- */
-struct afb_evtid *afb_evt_evtid_hooked_addref(struct afb_evtid *evtid)
-{
-	if (evtid->hookflags & afb_hook_flag_evt_addref)
-		afb_hook_evt_addref(evtid->fullname, evtid->id);
-	return afb_evt_evtid_addref(evtid);
 }
 
 /*
@@ -436,17 +410,6 @@ void afb_evt_evtid_unref(struct afb_evtid *evtid)
 }
 
 /*
- * decrement the reference count of the event 'evtid'
- * and destroy it when the count reachs zero
- */
-void afb_evt_evtid_hooked_unref(struct afb_evtid *evtid)
-{
-	if (evtid->hookflags & afb_hook_flag_evt_unref)
-		afb_hook_evt_unref(evtid->fullname, evtid->id);
-	afb_evt_evtid_unref(evtid);
-}
-
-/*
  * Returns the true name of the 'event'
  */
 const char *afb_evt_evtid_fullname(struct afb_evtid *evtid)
@@ -461,17 +424,6 @@ const char *afb_evt_evtid_name(struct afb_evtid *evtid)
 {
 	const char *name = strchr(evtid->fullname, '/');
 	return name ? name + 1 : evtid->fullname;
-}
-
-/*
- * Returns the name associated to the event 'evtid'.
- */
-const char *afb_evt_evtid_hooked_name(struct afb_evtid *evtid)
-{
-	const char *result = afb_evt_evtid_name(evtid);
-	if (evtid->hookflags & afb_hook_flag_evt_name)
-		afb_hook_evt_name(evtid->fullname, evtid->id, result);
-	return result;
 }
 
 /*
@@ -642,21 +594,6 @@ int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid 
 	return -1;
 }
 
-/*
- * update the hooks for events
- */
-void afb_evt_update_hooks()
-{
-	struct afb_evtid *evtid;
-
-	pthread_rwlock_rdlock(&events_rwlock);
-	for (evtid = evtids ; evtid ; evtid = evtid->next) {
-		evtid->hookflags = afb_hook_flags_evt(evtid->fullname);
-		evtid->eventid.itf = evtid->hookflags ? &afb_evt_hooked_eventid_itf : &afb_evt_event_x2_itf;
-	}
-	pthread_rwlock_unlock(&events_rwlock);
-}
-
 inline struct afb_evtid *afb_evt_event_x2_to_evtid(struct afb_event_x2 *eventid)
 {
 	return (struct afb_evtid*)eventid;
@@ -740,6 +677,7 @@ int afb_evt_event_x2_remove_watch(struct afb_evt_listener *listener, struct afb_
 }
 
 int afb_evt_event_x2_push(struct afb_event_x2 *eventid, struct json_object *object)
+#if WITH_AFB_HOOK
 {
 	struct afb_evtid *evtid = afb_evt_event_x2_to_evtid(eventid);
 	if (evtid)
@@ -747,6 +685,9 @@ int afb_evt_event_x2_push(struct afb_event_x2 *eventid, struct json_object *obje
 	json_object_put(object);
 	return 0;
 }
+#else
+	__attribute__((alias("afb_evt_event_x2_unhooked_push")));
+#endif
 
 int afb_evt_event_x2_unhooked_push(struct afb_event_x2 *eventid, struct json_object *object)
 {
@@ -760,7 +701,11 @@ int afb_evt_event_x2_unhooked_push(struct afb_event_x2 *eventid, struct json_obj
 struct afb_event_x1 afb_evt_event_from_evtid(struct afb_evtid *evtid)
 {
 	return evtid
-		? (struct afb_event_x1){ .itf = &afb_evt_hooked_eventid_itf, .closure = &evtid->eventid }
+#if WITH_AFB_HOOK
+		? (struct afb_event_x1){ .itf = &afb_evt_hooked_event_x2_itf, .closure = &evtid->eventid }
+#else
+		? (struct afb_event_x1){ .itf = &afb_evt_event_x2_itf, .closure = &evtid->eventid }
+#endif
 		: (struct afb_event_x1){ .itf = NULL, .closure = NULL };
 }
 
@@ -778,4 +723,83 @@ struct afb_event_x2 *afb_evt_event_x2_addref(struct afb_event_x2 *eventid)
 		afb_evt_evtid_addref(evtid);
 	return eventid;
 }
+
+#if WITH_AFB_HOOK
+/*
+ * Pushes the event 'evtid' with 'obj' to its listeners
+ * 'obj' is released (like json_object_put)
+ * Emits calls to hooks.
+ * Returns the count of listener taht received the event.
+ */
+int afb_evt_evtid_hooked_push(struct afb_evtid *evtid, struct json_object *obj)
+{
+
+	int result;
+
+	/* lease the object */
+	json_object_get(obj);
+
+	/* hook before push */
+	if (evtid->hookflags & afb_hook_flag_evt_push_before)
+		afb_hook_evt_push_before(evtid->fullname, evtid->id, obj);
+
+	/* push */
+	result = afb_evt_evtid_push(evtid, obj);
+
+	/* hook after push */
+	if (evtid->hookflags & afb_hook_flag_evt_push_after)
+		afb_hook_evt_push_after(evtid->fullname, evtid->id, obj, result);
+
+	/* release the object */
+	json_object_put(obj);
+	return result;
+}
+
+/*
+ * increment the reference count of the event 'evtid'
+ */
+struct afb_evtid *afb_evt_evtid_hooked_addref(struct afb_evtid *evtid)
+{
+	if (evtid->hookflags & afb_hook_flag_evt_addref)
+		afb_hook_evt_addref(evtid->fullname, evtid->id);
+	return afb_evt_evtid_addref(evtid);
+}
+
+/*
+ * decrement the reference count of the event 'evtid'
+ * and destroy it when the count reachs zero
+ */
+void afb_evt_evtid_hooked_unref(struct afb_evtid *evtid)
+{
+	if (evtid->hookflags & afb_hook_flag_evt_unref)
+		afb_hook_evt_unref(evtid->fullname, evtid->id);
+	afb_evt_evtid_unref(evtid);
+}
+
+/*
+ * Returns the name associated to the event 'evtid'.
+ */
+const char *afb_evt_evtid_hooked_name(struct afb_evtid *evtid)
+{
+	const char *result = afb_evt_evtid_name(evtid);
+	if (evtid->hookflags & afb_hook_flag_evt_name)
+		afb_hook_evt_name(evtid->fullname, evtid->id, result);
+	return result;
+}
+
+/*
+ * update the hooks for events
+ */
+void afb_evt_update_hooks()
+{
+	struct afb_evtid *evtid;
+
+	pthread_rwlock_rdlock(&events_rwlock);
+	for (evtid = evtids ; evtid ; evtid = evtid->next) {
+		evtid->hookflags = afb_hook_flags_evt(evtid->fullname);
+		evtid->eventid.itf = evtid->hookflags ? &afb_evt_hooked_event_x2_itf : &afb_evt_event_x2_itf;
+	}
+	pthread_rwlock_unlock(&events_rwlock);
+}
+#endif
 

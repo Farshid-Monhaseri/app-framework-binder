@@ -26,31 +26,21 @@ ADD_DEFINITIONS(-DINFER_EXTENSION)
 
 ############################################################################
 # TODO: improve below setting
-set(USE_SIG_MONITOR_DUMPSTACK ON CACHE BOOL "activate dump stack on error")
-set(USE_SIG_MONITOR_SIGNALS   ON CACHE BOOL "activate handling of signals")
-set(USE_SIG_MONITOR_FOR_CALL  ON CACHE BOOL "activate monitoring of calls")
-set(USE_SIG_MONITOR_TIMERS    ON CACHE BOOL "activate monitoring of call expiration")
+option(USE_SIG_MONITOR_DUMPSTACK "activate dump stack on error"           ON)
+option(USE_SIG_MONITOR_SIGNALS   "activate handling of signals"           ON)
+option(USE_SIG_MONITOR_FOR_CALL  "activate monitoring of calls"           ON)
+option(USE_SIG_MONITOR_TIMERS    "activate monitoring of call expiration" ON)
+option(WITH_AFB_HOOK             "include hooking"                        ON)
+option(WITH_AFB_TRACE            "include monitoring trace"               ON)
 
-if(USE_SIG_MONITOR_DUMPSTACK)
-  add_definitions(-DUSE_SIG_MONITOR_DUMPSTACK=1)
-else()
-  add_definitions(-DUSE_SIG_MONITOR_DUMPSTACK=0)
-endif()
-if(USE_SIG_MONITOR_SIGNALS)
-  add_definitions(-DUSE_SIG_MONITOR_SIGNALS=1)
-else()
-  add_definitions(-DUSE_SIG_MONITOR_SIGNALS=0)
-endif()
-if(USE_SIG_MONITOR_FOR_CALL)
-  add_definitions(-DUSE_SIG_MONITOR_FOR_CALL=1)
-else()
-  add_definitions(-DUSE_SIG_MONITOR_FOR_CALL=0)
-endif()
-if(USE_SIG_MONITOR_TIMERS)
-  add_definitions(-DUSE_SIG_MONITOR_TIMERS=1)
-else()
-  add_definitions(-DUSE_SIG_MONITOR_TIMERS=0)
-endif()
+add_definitions(
+  -DUSE_SIG_MONITOR_DUMPSTACK=$<BOOL:${USE_SIG_MONITOR_DUMPSTACK}>
+  -DUSE_SIG_MONITOR_SIGNALS=$<BOOL:${USE_SIG_MONITOR_SIGNALS}>
+  -DUSE_SIG_MONITOR_FOR_CALL=$<BOOL:${USE_SIG_MONITOR_FOR_CALL}>
+  -DUSE_SIG_MONITOR_TIMERS=$<BOOL:${USE_SIG_MONITOR_TIMERS}>
+  -DWITH_AFB_HOOK=$<BOOL:${WITH_AFB_HOOK}>
+  -DWITH_AFB_TRACE=$<BOOL:${WITH_AFB_TRACE}>
+)
 ############################################################################
 
 SET(AFB_LIB_SOURCES

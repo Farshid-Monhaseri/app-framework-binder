@@ -196,6 +196,7 @@ static struct option_desc optdefs[] = {
 
 	{SET_SESSIONMAX,      1, "session-max", "Max count of session simultaneously [default " d2s(DEFAULT_MAX_SESSION_COUNT) "]"},
 
+#if WITH_AFB_HOOK
 	{SET_TRACEREQ,        1, "tracereq",    "Log the requests: none, common, extra, all"},
 	{SET_TRACEEVT,        1, "traceevt",    "Log the events: none, common, extra, all"},
 	{SET_TRACESES,        1, "traceses",    "Log the sessions: none, all"},
@@ -204,6 +205,7 @@ static struct option_desc optdefs[] = {
 #if !defined(REMOVE_LEGACY_TRACE)
 	{SET_TRACEDITF,       1, "traceditf",   "Log the daemons: no, common, all"},
 	{SET_TRACESVC,        1, "tracesvc",    "Log the services: no, all"},
+#endif
 #endif
 
 	{ADD_CALL,            1, "call",        "Call at start, format of val: API/VERB:json-args"},
@@ -332,12 +334,14 @@ static void printVersion(FILE * file)
 	fprintf(file,
 		"\n"
 		"  AGL Framework Binder [AFB %s] "
+
 #if defined(WITH_DBUS_TRANSPARENCY)
 		"+"
 #else
 		"-"
 #endif
 		"DBUS "
+
 #if defined(WITH_MONITORING_OPTION)
 		"+"
 #else
@@ -349,7 +353,23 @@ static void printVersion(FILE * file)
 #else
 		"-"
 #endif
-		"SUPERVISION [BINDINGS "
+		"SUPERVISION "
+
+#if WITH_AFB_HOOK
+		"+"
+#else
+		"-"
+#endif
+		"HOOK "
+
+#if WITH_TRACE
+		"+"
+#else
+		"-"
+#endif
+		"TRACE "
+
+		"[BINDINGS "
 #if defined(WITH_LEGACY_BINDING_V1)
 		"+"
 #else
@@ -594,6 +614,7 @@ static void config_set_optint(struct json_object *config, int optid, int mini, i
 	return config_set_optint_base(config, optid, mini, maxi, 10);
 }
 
+__attribute__((unused))
 static void config_set_optenum(struct json_object *config, int optid, int (*func)(const char*))
 {
 	const char *name = get_arg(optid);
@@ -835,6 +856,7 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 			break;
 
 
+#if WITH_AFB_HOOK
 		case SET_TRACEREQ:
 			config_set_optenum(config, optid, afb_hook_flags_xreq_from_text);
 			break;
@@ -863,6 +885,7 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 		case SET_TRACESVC:
 			config_set_optenum(config, optid, afb_hook_flags_legacy_svc_from_text);
 			break;
+#endif
 #endif
 
 		case SET_EXEC:
@@ -975,6 +998,7 @@ static void on_environment(struct json_object *config, int optid, const char *na
 		func(config, optid, value);
 }
 
+__attribute__((unused))
 static void on_environment_enum(struct json_object *config, int optid, const char *name, int (*func)(const char*))
 {
 	char *value = secure_getenv(name);
@@ -1003,17 +1027,19 @@ static void on_environment_bool(struct json_object *config, int optid, const cha
 
 static void parse_environment(struct json_object *config)
 {
+#if WITH_AFB_HOOK
 	on_environment_enum(config, SET_TRACEREQ, "AFB_TRACEREQ", afb_hook_flags_xreq_from_text);
 	on_environment_enum(config, SET_TRACEEVT, "AFB_TRACEEVT", afb_hook_flags_evt_from_text);
 	on_environment_enum(config, SET_TRACESES, "AFB_TRACESES", afb_hook_flags_session_from_text);
 	on_environment_enum(config, SET_TRACEAPI, "AFB_TRACEAPI", afb_hook_flags_api_from_text);
 	on_environment_enum(config, SET_TRACEGLOB, "AFB_TRACEGLOB", afb_hook_flags_global_from_text);
-	on_environment(config, ADD_LDPATH, "AFB_LDPATHS", config_add_str);
-	on_environment(config, ADD_SET, "AFB_SET", config_mix2_str);
 #if !defined(REMOVE_LEGACY_TRACE)
 	on_environment_enum(config, SET_TRACEDITF, "AFB_TRACEDITF", afb_hook_flags_legacy_ditf_from_text);
 	on_environment_enum(config, SET_TRACESVC, "AFB_TRACESVC", afb_hook_flags_legacy_svc_from_text);
 #endif
+#endif
+	on_environment(config, ADD_LDPATH, "AFB_LDPATHS", config_add_str);
+	on_environment(config, ADD_SET, "AFB_SET", config_mix2_str);
 	on_environment_bool(config, SET_TRAP_FAULTS, "AFB_TRAP_FAULTS");
 }
 

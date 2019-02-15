@@ -66,7 +66,6 @@ extern void afb_export_undeclare(struct afb_export *export);
 extern const char *afb_export_apiname(const struct afb_export *export);
 extern int afb_export_add_alias(struct afb_export *export, const char *apiname, const char *aliasname);
 extern int afb_export_rename(struct afb_export *export, const char *apiname);
-extern void afb_export_update_hooks(struct afb_export *export);
 
 extern int afb_export_unshare_session(struct afb_export *export);
 
@@ -114,6 +113,10 @@ extern void afb_export_process_xreq(struct afb_export *export, struct afb_xreq *
 extern void afb_export_context_init(struct afb_export *export, struct afb_context *context);
 extern struct afb_export *afb_export_from_api_x3(struct afb_api_x3 *api);
 extern struct afb_api_x3 *afb_export_to_api_x3(struct afb_export *export);
+
+#if WITH_AFB_HOOK
+extern void afb_export_update_hooks(struct afb_export *export);
+#endif
 
 #if defined(WITH_LEGACY_BINDING_V1)
 

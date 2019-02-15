@@ -18,6 +18,13 @@
 
 #pragma once
 
+#if !WITH_AFB_HOOK && WITH_AFB_TRACE
+#  undef WITH_AFB_TRACE
+#  define WITH_AFB_TRACE 0
+#endif
+
+#if WITH_AFB_TRACE
+
 struct afb_trace;
 
 extern struct afb_trace *afb_trace_create(const char *api, struct afb_session *bound);
@@ -28,4 +35,5 @@ extern void afb_trace_unref(struct afb_trace *trace);
 extern int afb_trace_add(afb_req_t req, struct json_object *args, struct afb_trace *trace);
 extern int afb_trace_drop(afb_req_t req, struct json_object *args, struct afb_trace *trace);
 
+#endif
 

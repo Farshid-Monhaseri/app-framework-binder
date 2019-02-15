@@ -17,6 +17,8 @@
 
 #pragma once
 
+#if WITH_AFB_HOOK  /***********************************************************/
+
 #include <stdarg.h>
 #include <time.h>
 
@@ -459,3 +461,4 @@ extern struct afb_hook_global *afb_hook_addref_global(struct afb_hook_global *ho
 extern void afb_hook_unref_global(struct afb_hook_global *hook);
 
 
+#endif /* WITH_AFB_HOOK *******************************************************/

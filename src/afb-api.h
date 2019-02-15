@@ -25,7 +25,9 @@ struct afb_api_itf
 {
 	void (*call)(void *closure, struct afb_xreq *xreq);
 	int (*service_start)(void *closure);
+#if WITH_AFB_HOOK
 	void (*update_hooks)(void *closure);
+#endif
 	int (*get_logmask)(void *closure);
 	void (*set_logmask)(void *closure, int level);
 	struct json_object *(*describe)(void *closure);

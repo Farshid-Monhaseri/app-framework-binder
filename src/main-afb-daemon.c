@@ -55,8 +55,10 @@
 #include "afb-common.h"
 #include "afb-export.h"
 #include "afb-monitor.h"
+#if WITH_AFB_HOOK
 #include "afb-hook.h"
 #include "afb-hook-flags.h"
+#endif
 #include "afb-debug.h"
 #if defined(WITH_SUPERVISION)
 #   include "afb-supervision.h"
@@ -675,7 +677,13 @@ static void run_startup_calls()
 
 static void start(int signum, void *arg)
 {
-	const char *tracereq, *traceapi, *traceevt, *traceses, *tracesvc, *traceditf, *traceglob;
+#if WITH_AFB_HOOK
+	const char *tracereq = NULL, *traceapi = NULL, *traceevt = NULL,
+#if !defined(REMOVE_LEGACY_TRACE)
+		*tracesvc = NULL, *traceditf = NULL,
+#endif
+		*traceses = NULL, *traceglob = NULL;
+#endif
 	const char *workdir, *rootdir, *token, *rootapi;
 	struct json_object *settings;
 	struct afb_hsrv *hsrv;
@@ -692,19 +700,20 @@ static void start(int signum, void *arg)
 	}
 
 	settings = NULL;
-	token = rootapi = tracesvc = traceditf = tracereq =
-		traceapi = traceevt = traceses = traceglob = NULL;
 	no_httpd = 0;
 	http_port = -1;
+	rootapi = token = NULL;
 	rc = wrap_json_unpack(main_config, "{"
 			"ss ss s?s"
 			"si si si"
 			"s?b s?i s?s"
-			"s?o"
+#if WITH_AFB_HOOK
 #if !defined(REMOVE_LEGACY_TRACE)
 			"s?s s?s"
 #endif
 			"s?s s?s s?s s?s s?s"
+#endif
+			"s?o"
 			"}",
 
 			"rootdir", &rootdir,
@@ -719,7 +728,7 @@ static void start(int signum, void *arg)
 			"port", &http_port,
 			"rootapi", &rootapi,
 
-			"set", &settings,
+#if WITH_AFB_HOOK
 #if !defined(REMOVE_LEGACY_TRACE)
 			"tracesvc", &tracesvc,
 			"traceditf", &traceditf,
@@ -728,7 +737,9 @@ static void start(int signum, void *arg)
 			"traceapi", &traceapi,
 			"traceevt", &traceevt,
 			"traceses",  &traceses,
-			"traceglob", &traceglob
+			"traceglob", &traceglob,
+#endif
+			"set", &settings
 			);
 	if (rc < 0) {
 		ERROR("Unable to get start config");
@@ -792,6 +803,7 @@ static void start(int signum, void *arg)
 	}
 #endif
 
+#if WITH_AFB_HOOK
 	/* install hooks */
 	if (tracereq)
 		afb_hook_create_xreq(NULL, NULL, NULL, afb_hook_flags_xreq_from_text(tracereq), NULL, NULL);
@@ -810,6 +822,7 @@ static void start(int signum, void *arg)
 		afb_hook_create_session(NULL, afb_hook_flags_session_from_text(traceses), NULL, NULL);
 	if (traceglob)
 		afb_hook_create_global(afb_hook_flags_global_from_text(traceglob), NULL, NULL);
+#endif
 
 	/* load bindings and apis */
 	afb_debug("start-load");

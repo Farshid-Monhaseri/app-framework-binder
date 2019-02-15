@@ -58,7 +58,9 @@ const char *extras[] = {
 struct afb_api_itf api_itf_null = {
 	.call = NULL,
 	.service_start = NULL,
+#if WITH_AFB_HOOK
 	.update_hooks = NULL,
+#endif
 	.get_logmask = NULL,
 	.set_logmask = NULL,
 	.describe = NULL,
@@ -395,7 +397,9 @@ int set_cb_start(void *closure)
 struct afb_api_itf set_api_itf = {
 	.call = NULL,
 	.service_start = set_cb_start,
+#if WITH_AFB_HOOK
 	.update_hooks = set_cb0,
+#endif
 	.get_logmask = set_cb_getmask,
 	.set_logmask = set_cb_setmask,
 	.describe = NULL,
@@ -426,7 +430,9 @@ START_TEST (check_settings)
 	ck_assert_int_eq(nn, set_count);
 
 	set_count = 0;
+#if WITH_AFB_HOOK
 	afb_apiset_update_hooks(a, NULL);
+#endif
 	ck_assert_int_eq(nn, set_count);
 
 	for (mask = 1 ; !(mask >> 10) ; mask <<= 1) {
@@ -505,7 +511,9 @@ int clacb_start(void *closure)
 struct afb_api_itf clitf = {
 	.call = NULL,
 	.service_start = clacb_start,
+#if WITH_AFB_HOOK
 	.update_hooks = NULL,
+#endif
 	.get_logmask = NULL,
 	.set_logmask = NULL,
 	.describe = NULL,

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_AFB_HOOK && WITH_AFB_TRACE
+
 #define _GNU_SOURCE
 
 #include <assert.h>
@@ -1605,3 +1607,5 @@ int afb_trace_drop(afb_req_t req, struct json_object *args, struct afb_trace *tr
 	free(context.errors);
 	return -1;
 }
+
+#endif

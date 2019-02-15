@@ -870,6 +870,7 @@ int afb_apiset_start_all_services(struct afb_apiset *set)
 	return ret;
 }
 
+#if WITH_AFB_HOOK
 /**
  * Ask to update the hook flags of the 'api'
  * @param set the api set
@@ -893,6 +894,7 @@ void afb_apiset_update_hooks(struct afb_apiset *set, const char *name)
 			d->api.itf->update_hooks(d->api.closure);
 	}
 }
+#endif
 
 /**
  * Set the logmask of the 'api' to 'mask'

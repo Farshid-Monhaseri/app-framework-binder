@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_AFB_HOOK  /***********************************************************/
+
 #define _GNU_SOURCE
 
 #include <stdlib.h>
@@ -358,3 +360,4 @@ char *afb_hook_flags_legacy_svc_to_text(int value)
 }
 #endif
 
+#endif /* WITH_AFB_HOOK *******************************************************/

@@ -63,6 +63,12 @@ cflags = $(ccflags) $(ldflags)
 defs = 	-DAGL_DEVEL \
 	-DWITH_MONITORING_OPTION \
 	-DAFB_VERSION=\"cov\" \
+	-DUSE_SIG_MONITOR_DUMPSTACK=1 \
+	-DUSE_SIG_MONITOR_SIGNALS=1 \
+	-DUSE_SIG_MONITOR_FOR_CALL=1 \
+	-DUSE_SIG_MONITOR_TIMERS=1 \
+	-DWITH_AFB_HOOK=1 \
+	-DWITH_AFB_TRACE=1 \
 	-DBINDING_INSTALL_DIR=\"$(shell pwd)/fake\"
 
 afb_lib_src = $(shell ls $(srcdir)/*.c | egrep -v '/afs-|/main-|/fdev-epoll.c|/afb-ws-client.c' )

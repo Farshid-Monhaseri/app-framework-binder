@@ -53,7 +53,9 @@
 
 /* api and apiset name */
 static const char supervision_apiname[] = AFS_SUPERVISION_APINAME;
+#if WITH_AFB_TRACE
 static const char supervisor_apiname[] = AFS_SUPERVISOR_APINAME;
+#endif
 
 /* path of the supervision socket */
 static const char supervisor_socket_path[] = AFS_SUPERVISION_SOCKET;
@@ -80,8 +82,10 @@ static struct afb_api_itf supervision_api_itf =
 /* the supervisor link */
 static struct afb_stub_ws *supervisor;
 
+#if WITH_AFB_TRACE
 /* the trace api */
 static struct afb_trace *trace;
+#endif
 
 /* open the socket */
 static int open_supervisor_socket(const char *path)
@@ -121,15 +125,17 @@ static int open_supervisor_socket(const char *path)
 static void disconnect_supervisor()
 {
 	struct afb_stub_ws *s;
-	struct afb_trace *t;
 
 	INFO("Disconnecting supervision");
 	s = __atomic_exchange_n(&supervisor, NULL, __ATOMIC_RELAXED);
-	t = __atomic_exchange_n(&trace, NULL, __ATOMIC_RELAXED);
 	if (s)
 		afb_stub_ws_unref(s);
+
+#if WITH_AFB_TRACE
+	struct afb_trace *t = __atomic_exchange_n(&trace, NULL, __ATOMIC_RELAXED);
 	if (t)
 		afb_trace_unref(t);
+#endif
 }
 
 static void on_supervisor_hangup(struct afb_stub_ws *s)
@@ -302,12 +308,16 @@ enum  {  Break ,  Config ,  Do ,  Exit ,  Sclose ,  Slist ,  Trace ,  Wait  };
 
 static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 {
-	int i, rc;
-	struct json_object *args, *drop, *add, *sub, *list;
+	int i;
+	struct json_object *args, *sub, *list;
 	const char *api, *verb, *uuid;
 	struct afb_session *session;
 	const struct afb_api_item *xapi;
 	afb_req_t req;
+#if WITH_AFB_TRACE
+	struct json_object *drop, *add;
+	int rc;
+#endif
 
 	/* search the verb */
 	i = (int)(sizeof verbs / sizeof *verbs);
@@ -354,10 +364,11 @@ static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 		afb_xreq_reply(xreq, json_object_get(global.config), NULL, NULL);
 		break;
 	case Trace:
+		req = xreq_to_req_x2(xreq);
+#if WITH_AFB_TRACE
 		if (!trace)
 			trace = afb_trace_create(supervisor_apiname, NULL /* not bound to any session */);
 
-		req = xreq_to_req_x2(xreq);
 		add = drop = NULL;
 		wrap_json_unpack(args, "{s?o s?o}", "add", &add, "drop", &drop);
 		if (add) {
@@ -371,6 +382,9 @@ static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 				return;
 		}
 		afb_req_success(req, NULL, NULL);
+#else
+		afb_req_reply(req, NULL, "not-available", NULL);
+#endif
 		break;
 	case Do:
 		sub = NULL;

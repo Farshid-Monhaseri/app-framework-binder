@@ -54,7 +54,9 @@ extern const struct afb_api_item *afb_apiset_lookup_started(struct afb_apiset *s
 extern int afb_apiset_start_service(struct afb_apiset *set, const char *name);
 extern int afb_apiset_start_all_services(struct afb_apiset *set);
 
+#if WITH_AFB_HOOK
 extern void afb_apiset_update_hooks(struct afb_apiset *set, const char *name);
+#endif
 extern void afb_apiset_set_logmask(struct afb_apiset *set, const char *name, int mask);
 extern int afb_apiset_get_logmask(struct afb_apiset *set, const char *name);
 

@@ -55,8 +55,10 @@ struct afb_xreq
 	const struct afb_xreq_query_itf *queryitf; /**< interface of xreq implementation functions */
 	int refcount;			/**< current ref count */
 	int replied;			/**< is replied? */
+#if WITH_AFB_HOOK
 	int hookflags;			/**< flags for hooking */
 	int hookindex;			/**< hook index of the request if hooked */
+#endif
 	struct afb_evt_listener *listener; /**< event listener for the request */
 	struct afb_cred *cred;		/**< client credential if revelant */
 	struct afb_xreq *caller;	/**< caller request if any */

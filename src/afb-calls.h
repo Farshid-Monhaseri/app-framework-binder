@@ -27,7 +27,6 @@ struct afb_req_x1;
 struct afb_req_x2;
 
 /******************************************************************************/
-
 extern
 void afb_calls_call(
 		struct afb_export *export,
@@ -38,26 +37,7 @@ void afb_calls_call(
 		void *closure);
 
 extern
-void afb_calls_hooked_call(
-		struct afb_export *export,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, struct json_object*, const char *error, const char *info, struct afb_api_x3*),
-		void *closure);
-
-extern
 int afb_calls_call_sync(
-		struct afb_export *export,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		struct json_object **object,
-		char **error,
-		char **info);
-
-extern
-int afb_calls_hooked_call_sync(
 		struct afb_export *export,
 		const char *api,
 		const char *verb,
@@ -77,16 +57,6 @@ void afb_calls_subcall(
 			void *closure);
 
 extern
-void afb_calls_hooked_subcall(
-			struct afb_xreq *xreq,
-			const char *api,
-			const char *verb,
-			struct json_object *args,
-			int flags,
-			void (*callback)(void *closure, struct json_object *object, const char *error, const char * info, struct afb_req_x2 *req),
-			void *closure);
-
-extern
 int afb_calls_subcall_sync(
 			struct afb_xreq *xreq,
 			const char *api,
@@ -96,6 +66,38 @@ int afb_calls_subcall_sync(
 			struct json_object **object,
 			char **error,
 			char **info);
+
+/******************************************************************************/
+#if WITH_AFB_HOOK
+
+extern
+void afb_calls_hooked_call(
+		struct afb_export *export,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, struct json_object*, const char *error, const char *info, struct afb_api_x3*),
+		void *closure);
+
+extern
+int afb_calls_hooked_call_sync(
+		struct afb_export *export,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		struct json_object **object,
+		char **error,
+		char **info);
+
+extern
+void afb_calls_hooked_subcall(
+			struct afb_xreq *xreq,
+			const char *api,
+			const char *verb,
+			struct json_object *args,
+			int flags,
+			void (*callback)(void *closure, struct json_object *object, const char *error, const char * info, struct afb_req_x2 *req),
+			void *closure);
 
 extern
 int afb_calls_hooked_subcall_sync(
@@ -108,19 +110,11 @@ int afb_calls_hooked_subcall_sync(
 			char **error,
 			char **info);
 
+#endif /* WITH_AFB_HOOK */
 /******************************************************************************/
 
 extern
 void afb_calls_legacy_call_v12(
-		struct afb_export *export,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*),
-		void *closure);
-
-extern
-void afb_calls_legacy_hooked_call_v12(
 		struct afb_export *export,
 		const char *api,
 		const char *verb,
@@ -138,6 +132,26 @@ void afb_calls_legacy_call_v3(
 		void *closure);
 
 extern
+int afb_calls_legacy_call_sync(
+		struct afb_export *export,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		struct json_object **result);
+
+/******************************************************************************/
+#if WITH_AFB_HOOK
+
+extern
+void afb_calls_legacy_hooked_call_v12(
+		struct afb_export *export,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*),
+		void *closure);
+
+extern
 void afb_calls_legacy_hooked_call_v3(
 		struct afb_export *export,
 		const char *api,
@@ -147,14 +161,6 @@ void afb_calls_legacy_hooked_call_v3(
 		void *closure);
 
 extern
-int afb_calls_legacy_call_sync(
-		struct afb_export *export,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		struct json_object **result);
-
-extern
 int afb_calls_legacy_hooked_call_sync(
 		struct afb_export *export,
 		const char *api,
@@ -162,19 +168,11 @@ int afb_calls_legacy_hooked_call_sync(
 		struct json_object *args,
 		struct json_object **result);
 
+#endif /* WITH_AFB_HOOK */
 /******************************************************************************/
 
 extern
 void afb_calls_legacy_subcall_v1(
-		struct afb_xreq *caller,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*),
-		void *closure);
-
-extern
-void afb_calls_legacy_hooked_subcall_v1(
 		struct afb_xreq *caller,
 		const char *api,
 		const char *verb,
@@ -192,25 +190,7 @@ void afb_calls_legacy_subcall_v2(
 		void *closure);
 
 extern
-void afb_calls_legacy_hooked_subcall_v2(
-		struct afb_xreq *caller,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*, struct afb_req_x1),
-		void *closure);
-
-extern
 void afb_calls_legacy_subcall_v3(
-		struct afb_xreq *caller,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*, struct afb_req_x2 *),
-		void *closure);
-
-extern
-void afb_calls_legacy_hooked_subcall_v3(
 		struct afb_xreq *caller,
 		const char *api,
 		const char *verb,
@@ -226,6 +206,36 @@ int afb_calls_legacy_subcall_sync(
 		struct json_object *args,
 		struct json_object **result);
 
+/******************************************************************************/
+#if WITH_AFB_HOOK
+
+extern
+void afb_calls_legacy_hooked_subcall_v1(
+		struct afb_xreq *caller,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*),
+		void *closure);
+
+extern
+void afb_calls_legacy_hooked_subcall_v2(
+		struct afb_xreq *caller,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*, struct afb_req_x1),
+		void *closure);
+
+extern
+void afb_calls_legacy_hooked_subcall_v3(
+		struct afb_xreq *caller,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*, struct afb_req_x2 *),
+		void *closure);
+
 extern
 int afb_calls_legacy_hooked_subcall_sync(
 		struct afb_xreq *caller,
@@ -233,3 +243,6 @@ int afb_calls_legacy_hooked_subcall_sync(
 		const char *verb,
 		struct json_object *args,
 		struct json_object **result);
+
+#endif /* WITH_AFB_HOOK */
+/******************************************************************************/

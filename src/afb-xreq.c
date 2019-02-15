@@ -53,8 +53,10 @@ static void xreq_finalize(struct afb_xreq *xreq)
 {
 	if (!xreq->replied)
 		afb_xreq_reply(xreq, NULL, "error", "no reply");
+#if WITH_AFB_HOOK
 	if (xreq->hookflags)
 		afb_hook_xreq_end(xreq);
+#endif
 	if (xreq->caller)
 		afb_xreq_unhooked_unref(xreq->caller);
 	xreq->queryitf->unref(xreq);
@@ -347,6 +349,42 @@ static int xreq_subcallsync_cb(
 
 /******************************************************************************/
 
+const struct afb_req_x2_itf xreq_itf = {
+	.json = xreq_json_cb,
+	.get = xreq_get_cb,
+	.legacy_success = xreq_legacy_success_cb,
+	.legacy_fail = xreq_legacy_fail_cb,
+	.legacy_vsuccess = xreq_legacy_vsuccess_cb,
+	.legacy_vfail = xreq_legacy_vfail_cb,
+	.legacy_context_get = xreq_legacy_context_get_cb,
+	.legacy_context_set = xreq_legacy_context_set_cb,
+	.addref = xreq_addref_cb,
+	.unref = xreq_unref_cb,
+	.session_close = xreq_session_close_cb,
+	.session_set_LOA = xreq_session_set_LOA_cb,
+	.legacy_subscribe_event_x1 = xreq_legacy_subscribe_event_x1_cb,
+	.legacy_unsubscribe_event_x1 = xreq_legacy_unsubscribe_event_x1_cb,
+	.legacy_subcall = xreq_legacy_subcall_cb,
+	.legacy_subcallsync = xreq_legacy_subcallsync_cb,
+	.vverbose = xreq_vverbose_cb,
+	.legacy_store_req = xreq_legacy_store_cb,
+	.legacy_subcall_req = xreq_legacy_subcall_req_cb,
+	.has_permission = xreq_has_permission_cb,
+	.get_application_id = xreq_get_application_id_cb,
+	.context_make = xreq_context_make_cb,
+	.subscribe_event_x2 = xreq_subscribe_event_x2_cb,
+	.unsubscribe_event_x2 = xreq_unsubscribe_event_x2_cb,
+	.legacy_subcall_request = xreq_legacy_subcall_request_cb,
+	.get_uid = xreq_get_uid_cb,
+	.reply = xreq_reply_cb,
+	.vreply = xreq_vreply_cb,
+	.get_client_info = xreq_get_client_info_cb,
+	.subcall = xreq_subcall_cb,
+	.subcallsync = xreq_subcallsync_cb,
+};
+/******************************************************************************/
+#if WITH_AFB_HOOK
+
 static struct json_object *xreq_hooked_json_cb(struct afb_req_x2 *closure)
 {
 	struct json_object *r = xreq_json_cb(closure);
@@ -569,40 +607,6 @@ static int xreq_hooked_subcallsync_cb(
 
 /******************************************************************************/
 
-const struct afb_req_x2_itf xreq_itf = {
-	.json = xreq_json_cb,
-	.get = xreq_get_cb,
-	.legacy_success = xreq_legacy_success_cb,
-	.legacy_fail = xreq_legacy_fail_cb,
-	.legacy_vsuccess = xreq_legacy_vsuccess_cb,
-	.legacy_vfail = xreq_legacy_vfail_cb,
-	.legacy_context_get = xreq_legacy_context_get_cb,
-	.legacy_context_set = xreq_legacy_context_set_cb,
-	.addref = xreq_addref_cb,
-	.unref = xreq_unref_cb,
-	.session_close = xreq_session_close_cb,
-	.session_set_LOA = xreq_session_set_LOA_cb,
-	.legacy_subscribe_event_x1 = xreq_legacy_subscribe_event_x1_cb,
-	.legacy_unsubscribe_event_x1 = xreq_legacy_unsubscribe_event_x1_cb,
-	.legacy_subcall = xreq_legacy_subcall_cb,
-	.legacy_subcallsync = xreq_legacy_subcallsync_cb,
-	.vverbose = xreq_vverbose_cb,
-	.legacy_store_req = xreq_legacy_store_cb,
-	.legacy_subcall_req = xreq_legacy_subcall_req_cb,
-	.has_permission = xreq_has_permission_cb,
-	.get_application_id = xreq_get_application_id_cb,
-	.context_make = xreq_context_make_cb,
-	.subscribe_event_x2 = xreq_subscribe_event_x2_cb,
-	.unsubscribe_event_x2 = xreq_unsubscribe_event_x2_cb,
-	.legacy_subcall_request = xreq_legacy_subcall_request_cb,
-	.get_uid = xreq_get_uid_cb,
-	.reply = xreq_reply_cb,
-	.vreply = xreq_vreply_cb,
-	.get_client_info = xreq_get_client_info_cb,
-	.subcall = xreq_subcall_cb,
-	.subcallsync = xreq_subcallsync_cb,
-};
-
 const struct afb_req_x2_itf xreq_hooked_itf = {
 	.json = xreq_hooked_json_cb,
 	.get = xreq_hooked_get_cb,
@@ -636,14 +640,17 @@ const struct afb_req_x2_itf xreq_hooked_itf = {
 	.subcall = xreq_hooked_subcall_cb,
 	.subcallsync = xreq_hooked_subcallsync_cb,
 };
+#endif
 
 /******************************************************************************/
 
 struct afb_req_x1 afb_xreq_unstore(struct afb_stored_req *sreq)
 {
 	struct afb_xreq *xreq = (struct afb_xreq *)sreq;
+#if WITH_AFB_HOOK
 	if (xreq->hookflags)
 		afb_hook_xreq_legacy_unstore(xreq);
+#endif
 	return xreq_to_req_x1(xreq);
 }
 
@@ -675,6 +682,21 @@ const char *afb_xreq_raw(struct afb_xreq *xreq, size_t *size)
 	return result;
 }
 
+void afb_xreq_unhooked_legacy_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, void (*callback)(void*, int, struct json_object*, struct afb_req_x2 *), void *cb_closure)
+{
+	xreq_legacy_subcall_request_cb(xreq_to_req_x2(xreq), api, verb, args, callback, cb_closure);
+}
+
+void afb_xreq_unhooked_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, int flags, void (*callback)(void*, struct json_object*, const char*, const char*, struct afb_req_x2 *), void *closure)
+{
+	xreq_subcall_cb(xreq_to_req_x2(xreq), api, verb, args, flags, callback, closure);
+}
+
+int afb_xreq_unhooked_legacy_subcall_sync(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, struct json_object **result)
+{
+	return xreq_legacy_subcallsync_cb(xreq_to_req_x2(xreq), api, verb, args, result);
+}
+
 void afb_xreq_addref(struct afb_xreq *xreq)
 {
 	afb_req_x2_addref(xreq_to_req_x2(xreq));
@@ -685,29 +707,14 @@ void afb_xreq_unref(struct afb_xreq *xreq)
 	afb_req_x2_unref(xreq_to_req_x2(xreq));
 }
 
-void afb_xreq_unhooked_legacy_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, void (*callback)(void*, int, struct json_object*, struct afb_req_x2 *), void *cb_closure)
-{
-	xreq_legacy_subcall_request_cb(xreq_to_req_x2(xreq), api, verb, args, callback, cb_closure);
-}
-
 void afb_xreq_legacy_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, void (*callback)(void*, int, struct json_object*, struct afb_req_x2 *), void *cb_closure)
 {
 	afb_req_x2_subcall_legacy(xreq_to_req_x2(xreq), api, verb, args, callback, cb_closure);
 }
 
-void afb_xreq_unhooked_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, int flags, void (*callback)(void*, struct json_object*, const char*, const char*, struct afb_req_x2 *), void *closure)
-{
-	xreq_subcall_cb(xreq_to_req_x2(xreq), api, verb, args, flags, callback, closure);
-}
-
 void afb_xreq_subcall(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, int flags, void (*callback)(void*, struct json_object*, const char*, const char*, struct afb_req_x2 *), void *closure)
 {
 	afb_req_x2_subcall(xreq_to_req_x2(xreq), api, verb, args, flags, callback, closure);
-}
-
-int afb_xreq_unhooked_legacy_subcall_sync(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, struct json_object **result)
-{
-	return xreq_legacy_subcallsync_cb(xreq_to_req_x2(xreq), api, verb, args, result);
 }
 
 int afb_xreq_legacy_subcall_sync(struct afb_xreq *xreq, const char *api, const char *verb, struct json_object *args, struct json_object **result)
@@ -838,6 +845,7 @@ void afb_xreq_reply_unknown_verb(struct afb_xreq *xreq)
 	afb_xreq_reply_f(xreq, NULL, "unknown-verb", "verb %s unknown within api %s", xreq->request.called_verb, xreq->request.called_api);
 }
 
+#if WITH_AFB_HOOK
 static void init_hooking(struct afb_xreq *xreq)
 {
 	afb_hook_init_xreq(xreq);
@@ -846,6 +854,7 @@ static void init_hooking(struct afb_xreq *xreq)
 		afb_hook_xreq_begin(xreq);
 	}
 }
+#endif
 
 /**
  * job callback for asynchronous and secured processing of the request.
@@ -859,8 +868,10 @@ static void process_async(int signum, void *arg)
 		/* emit the error (assumes that hooking is initialised) */
 		afb_xreq_reply_f(xreq, NULL, "aborted", "signal %s(%d) caught", strsignal(signum), signum);
 	} else {
+#if WITH_AFB_HOOK
 		/* init hooking */
 		init_hooking(xreq);
+#endif
 		/* invoke api call method to process the request */
 		api = (const struct afb_api_item*)xreq->context.api_key;
 		api->itf->call(api->closure, xreq);
@@ -879,8 +890,10 @@ static void early_failure(struct afb_xreq *xreq, const char *status, const char 
 {
 	va_list args;
 
+#if WITH_AFB_HOOK
 	/* init hooking */
 	init_hooking(xreq);
+#endif
 
 	/* send error */
 	va_start(args, info);

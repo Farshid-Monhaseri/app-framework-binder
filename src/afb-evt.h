@@ -43,27 +43,21 @@ extern struct afb_evtid *afb_evt_evtid_create(const char *fullname);
 extern struct afb_evtid *afb_evt_evtid_create2(const char *prefix, const char *name);
 
 extern struct afb_evtid *afb_evt_evtid_addref(struct afb_evtid *evtid);
-extern struct afb_evtid *afb_evt_evtid_hooked_addref(struct afb_evtid *evtid);
 
 extern void afb_evt_evtid_unref(struct afb_evtid *evtid);
-extern void afb_evt_evtid_hooked_unref(struct afb_evtid *evtid);
 
 extern const char *afb_evt_evtid_fullname(struct afb_evtid *evtid);
 extern int afb_evt_evtid_id(struct afb_evtid *evtid);
 
 extern const char *afb_evt_evtid_name(struct afb_evtid *evtid);
-extern const char *afb_evt_evtid_hooked_name(struct afb_evtid *evtid);
 
 extern int afb_evt_evtid_push(struct afb_evtid *evtid, struct json_object *obj);
-extern int afb_evt_evtid_hooked_push(struct afb_evtid *evtid, struct json_object *obj);
 
 extern int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *object);
-extern int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *object);
 
 extern int afb_evt_watch_add_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
 extern int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
 
-extern void afb_evt_update_hooks();
 
 
 extern struct afb_event_x2 *afb_evt_event_x2_create(const char *fullname);
@@ -83,3 +77,11 @@ extern struct afb_evtid *afb_evt_event_x2_to_evtid(struct afb_event_x2 *eventid)
 extern struct afb_event_x2 *afb_evt_event_x2_from_evtid(struct afb_evtid *evtid);
 extern struct afb_event_x1 afb_evt_event_from_evtid(struct afb_evtid *evtid);
 
+#if WITH_AFB_HOOK
+extern struct afb_evtid *afb_evt_evtid_hooked_addref(struct afb_evtid *evtid);
+extern void afb_evt_evtid_hooked_unref(struct afb_evtid *evtid);
+extern const char *afb_evt_evtid_hooked_name(struct afb_evtid *evtid);
+extern int afb_evt_evtid_hooked_push(struct afb_evtid *evtid, struct json_object *obj);
+extern int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *object);
+extern void afb_evt_update_hooks();
+#endif

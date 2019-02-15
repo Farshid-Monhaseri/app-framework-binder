@@ -240,8 +240,10 @@ static void session_close(struct afb_session *session)
 		/* close it now */
 		session->closed = 1;
 
+#if WITH_AFB_HOOK
 		/* emit the hook */
 		afb_hook_session_close(session);
+#endif
 
 		/* release cookies */
 		for (idx = 0 ; idx < COOKIECOUNT ; idx++) {
@@ -258,7 +260,9 @@ static void session_close(struct afb_session *session)
 /* destroy the 'session' */
 static void session_destroy (struct afb_session *session)
 {
+#if WITH_AFB_HOOK
 	afb_hook_session_destroy(session);
+#endif
 	pthread_mutex_destroy(&session->mutex);
 	free(session->lang);
 	free(session);
@@ -316,7 +320,9 @@ static struct afb_session *session_add(const char *uuid, int timeout, time_t now
 		return NULL;
 	}
 
+#if WITH_AFB_HOOK
 	afb_hook_session_create(session);
+#endif
 
 	return session;
 }
@@ -513,7 +519,9 @@ end:
 struct afb_session *afb_session_addref(struct afb_session *session)
 {
 	if (session != NULL) {
+#if WITH_AFB_HOOK
 		afb_hook_session_addref(session);
+#endif
 		session_lock(session);
 		session->refcount++;
 		session_unlock(session);
@@ -527,7 +535,9 @@ void afb_session_unref(struct afb_session *session)
 	if (session == NULL)
 		return;
 
+#if WITH_AFB_HOOK
 	afb_hook_session_unref(session);
+#endif
 	session_lock(session);
 	if (!--session->refcount) {
 		if (session->autoclose)
@@ -590,7 +600,9 @@ void afb_session_new_token (struct afb_session *session)
 	session_lock(session);
 	new_uuid(session->token);
 	session_update_expiration(session, NOW);
+#if WITH_AFB_HOOK
 	afb_hook_session_renew(session);
+#endif
 	session_unlock(session);
 }
 

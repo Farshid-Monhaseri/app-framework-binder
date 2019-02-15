@@ -187,6 +187,7 @@ END_TEST
 /*********************************************************************/
 /* check hooking */
 
+#if WITH_AFB_HOOK
 int hookflag;
 
 void on_create(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
@@ -299,6 +300,8 @@ START_TEST (check_hooking)
 }
 END_TEST
 
+#endif
+
 /*********************************************************************/
 
 
@@ -327,6 +330,8 @@ int main(int ac, char **av)
 			addtest(check_creation);
 			addtest(check_capacity);
 			addtest(check_cookies);
+#if WITH_AFB_HOOK
 			addtest(check_hooking);
+#endif
 	return !!srun();
 }

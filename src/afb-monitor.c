@@ -326,6 +326,7 @@ static void f_set(afb_req_t req)
 	afb_req_success(req, NULL, NULL);
 }
 
+#if WITH_AFB_TRACE
 static void *context_create(void *closure)
 {
 	return afb_trace_create(_afb_binding_monitor.api, NULL);
@@ -360,7 +361,14 @@ static void f_trace(afb_req_t req)
 end:
 	afb_apiset_update_hooks(target_set, NULL);
 	afb_evt_update_hooks();
+	return;
 }
+#else
+static void f_trace(afb_req_t req)
+{
+	afb_req_reply(req, NULL, "not-available", NULL);
+}
+#endif
 
 static void f_session(afb_req_t req)
 {

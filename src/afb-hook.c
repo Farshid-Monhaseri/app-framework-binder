@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_AFB_HOOK  /***********************************************************/
+
 #define _GNU_SOURCE
 
 #include <limits.h>
@@ -1848,3 +1850,4 @@ void afb_hook_unref_global(struct afb_hook_global *hook)
 	}
 }
 
+#endif /* WITH_AFB_HOOK *******************************************************/
