@@ -39,8 +39,6 @@ extern int jobs_call(
 		void (*callback)(int, void*),
 		void *arg);
 
-extern void jobs_terminate();
-
 extern int jobs_start(
 		int allowed_count,
 		int start_count,
@@ -50,3 +48,4 @@ extern int jobs_start(
 
 extern void jobs_acquire_event_manager();
 
+extern void jobs_exit(void (*handler)());

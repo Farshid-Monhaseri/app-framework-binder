@@ -399,6 +399,17 @@ static struct afb_hsrv *start_http_server()
  | execute_command
  +--------------------------------------------------------- */
 
+static void wait_child_and_exit()
+{
+	pid_t pidchld = childpid;
+
+	childpid = 0;
+	if (!SELF_PGROUP)
+		killpg(pidchld, SIGKILL);
+	waitpid(pidchld, NULL, 0);
+	exit(0);
+}
+
 static void on_sigchld(int signum, siginfo_t *info, void *uctx)
 {
 	if (info->si_pid == childpid) {
@@ -406,11 +417,9 @@ static void on_sigchld(int signum, siginfo_t *info, void *uctx)
 		case CLD_EXITED:
 		case CLD_KILLED:
 		case CLD_DUMPED:
-			childpid = 0;
-			if (!SELF_PGROUP)
-				killpg(info->si_pid, SIGKILL);
-			waitpid(info->si_pid, NULL, 0);
-			exit(0);
+			jobs_exit(wait_child_and_exit);
+		default:
+			break;
 		}
 	}
 }
