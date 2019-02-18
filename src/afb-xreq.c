@@ -722,6 +722,7 @@ int afb_xreq_legacy_subcall_sync(struct afb_xreq *xreq, const char *api, const c
 	return afb_req_x2_subcall_sync_legacy(xreq_to_req_x2(xreq), api, verb, args, result);
 }
 
+#if WITH_LEGACY_BINDING_V1
 static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
 {
 	int loa;
@@ -763,6 +764,7 @@ static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
 
 	return 0;
 }
+#endif
 
 static int xreq_session_check_apply_v2(struct afb_xreq *xreq, uint32_t sessionflags, const struct afb_auth *auth)
 {
@@ -800,6 +802,7 @@ static int xreq_session_check_apply_v2(struct afb_xreq *xreq, uint32_t sessionfl
 	return 0;
 }
 
+#if WITH_LEGACY_BINDING_V1
 void afb_xreq_call_verb_v1(struct afb_xreq *xreq, const struct afb_verb_desc_v1 *verb)
 {
 	if (!verb)
@@ -808,7 +811,9 @@ void afb_xreq_call_verb_v1(struct afb_xreq *xreq, const struct afb_verb_desc_v1 
 		if (!xreq_session_check_apply_v1(xreq, verb->session))
 			verb->callback(xreq_to_req_x1(xreq));
 }
+#endif
 
+#if WITH_LEGACY_BINDING_V2
 void afb_xreq_call_verb_v2(struct afb_xreq *xreq, const struct afb_verb_v2 *verb)
 {
 	if (!verb)
@@ -817,6 +822,7 @@ void afb_xreq_call_verb_v2(struct afb_xreq *xreq, const struct afb_verb_v2 *verb
 		if (!xreq_session_check_apply_v2(xreq, verb->session, verb->auth))
 			verb->callback(xreq_to_req_x1(xreq));
 }
+#endif
 
 void afb_xreq_call_verb_v3(struct afb_xreq *xreq, const struct afb_verb_v3 *verb)
 {

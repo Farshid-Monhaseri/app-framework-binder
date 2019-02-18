@@ -36,7 +36,9 @@
 #if WITH_LEGACY_BINDING_V1
 #include "afb-api-so-v1.h"
 #endif
+#if WITH_LEGACY_BINDING_V2
 #include "afb-api-so-v2.h"
+#endif
 #include "afb-api-v3.h"
 #include "afb-common.h"
 #include "afb-cred.h"
@@ -68,7 +70,9 @@ enum afb_api_version
 #if WITH_LEGACY_BINDING_V1
 	Api_Version_1 = 1,
 #endif
+#if WITH_LEGACY_BINDING_V2
 	Api_Version_2 = 2,
+#endif
 	Api_Version_3 = 3
 };
 
@@ -265,11 +269,6 @@ static void vverbose_cb(struct afb_api_x3 *closure, int level, const char *file,
 	}
 }
 
-static void legacy_vverbose_v1_cb(struct afb_api_x3 *closure, int level, const char *file, int line, const char *fmt, va_list args)
-{
-	vverbose_cb(closure, level, file, line, NULL, fmt, args);
-}
-
 static struct afb_event_x2 *event_x2_make_cb(struct afb_api_x3 *closure, const char *name)
 {
 	struct afb_export *export = from_api_x3(closure);
@@ -283,12 +282,6 @@ static struct afb_event_x2 *event_x2_make_cb(struct afb_api_x3 *closure, const c
 
 	/* create the event */
 	return afb_evt_event_x2_create2(export->api.apiname, name);
-}
-
-static struct afb_event_x1 legacy_event_x1_make_cb(struct afb_api_x3 *closure, const char *name)
-{
-	struct afb_event_x2 *event = event_x2_make_cb(closure, name);
-	return afb_evt_event_from_evtid(afb_evt_event_x2_to_evtid(event));
 }
 
 static int event_broadcast_cb(struct afb_api_x3 *closure, const char *name, struct json_object *object)
@@ -343,11 +336,6 @@ static int rootdir_open_locale_cb(struct afb_api_x3 *closure, const char *filena
 static int queue_job_cb(struct afb_api_x3 *closure, void (*callback)(int signum, void *arg), void *argument, void *group, int timeout)
 {
 	return jobs_queue(group, timeout, callback, argument);
-}
-
-static struct afb_req_x1 legacy_unstore_req_cb(struct afb_api_x3 *closure, struct afb_stored_req *sreq)
-{
-	return afb_xreq_unstore(sreq);
 }
 
 static int require_api_cb(struct afb_api_x3 *closure, const char *name, int initialized)
@@ -421,6 +409,24 @@ static struct afb_api_x3 *api_new_api_cb(
 	return apiv3 ? to_api_x3(afb_api_v3_export(apiv3)) : NULL;
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
+
+static void legacy_vverbose_v1_cb(struct afb_api_x3 *closure, int level, const char *file, int line, const char *fmt, va_list args)
+{
+	vverbose_cb(closure, level, file, line, NULL, fmt, args);
+}
+
+static struct afb_event_x1 legacy_event_x1_make_cb(struct afb_api_x3 *closure, const char *name)
+{
+	struct afb_event_x2 *event = event_x2_make_cb(closure, name);
+	return afb_evt_event_from_evtid(afb_evt_event_x2_to_evtid(event));
+}
+
+static struct afb_req_x1 legacy_unstore_req_cb(struct afb_api_x3 *closure, struct afb_stored_req *sreq)
+{
+	return afb_xreq_unstore(sreq);
+}
+
 static const struct afb_daemon_itf_x1 daemon_itf = {
 	.vverbose_v1 = legacy_vverbose_v1_cb,
 	.vverbose_v2 = vverbose_cb,
@@ -437,6 +443,7 @@ static const struct afb_daemon_itf_x1 daemon_itf = {
 	.add_alias = add_alias_cb,
 	.new_api = api_new_api_cb,
 };
+#endif
 
 #if WITH_AFB_HOOK
 static void hooked_vverbose_cb(struct afb_api_x3 *closure, int level, const char *file, int line, const char *function, const char *fmt, va_list args)
@@ -449,26 +456,12 @@ static void hooked_vverbose_cb(struct afb_api_x3 *closure, int level, const char
 	va_end(ap);
 }
 
-static void legacy_hooked_vverbose_v1_cb(struct afb_api_x3 *closure, int level, const char *file, int line, const char *fmt, va_list args)
-{
-	hooked_vverbose_cb(closure, level, file, line, NULL, fmt, args);
-}
-
 static struct afb_event_x2 *hooked_event_x2_make_cb(struct afb_api_x3 *closure, const char *name)
 {
 	struct afb_export *export = from_api_x3(closure);
 	struct afb_event_x2 *r = event_x2_make_cb(closure, name);
 	afb_hook_api_event_make(export, name, r);
 	return r;
-}
-
-static struct afb_event_x1 legacy_hooked_event_x1_make_cb(struct afb_api_x3 *closure, const char *name)
-{
-	struct afb_event_x2 *event = hooked_event_x2_make_cb(closure, name);
-	struct afb_event_x1 e;
-	e.closure = event;
-	e.itf = event ? event->itf : NULL;
-	return e;
 }
 
 static int hooked_event_broadcast_cb(struct afb_api_x3 *closure, const char *name, struct json_object *object)
@@ -534,13 +527,6 @@ static int hooked_queue_job_cb(struct afb_api_x3 *closure, void (*callback)(int 
 	return afb_hook_api_queue_job(export, callback, argument, group, timeout, r);
 }
 
-static struct afb_req_x1 legacy_hooked_unstore_req_cb(struct afb_api_x3 *closure, struct afb_stored_req *sreq)
-{
-	struct afb_export *export = from_api_x3(closure);
-	afb_hook_api_legacy_unstore_req(export, sreq);
-	return legacy_unstore_req_cb(closure, sreq);
-}
-
 static int hooked_require_api_cb(struct afb_api_x3 *closure, const char *name, int initialized)
 {
 	int result;
@@ -573,6 +559,29 @@ static struct afb_api_x3 *hooked_api_new_api_cb(
 	return result;
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
+
+static void legacy_hooked_vverbose_v1_cb(struct afb_api_x3 *closure, int level, const char *file, int line, const char *fmt, va_list args)
+{
+	hooked_vverbose_cb(closure, level, file, line, NULL, fmt, args);
+}
+
+static struct afb_event_x1 legacy_hooked_event_x1_make_cb(struct afb_api_x3 *closure, const char *name)
+{
+	struct afb_event_x2 *event = hooked_event_x2_make_cb(closure, name);
+	struct afb_event_x1 e;
+	e.closure = event;
+	e.itf = event ? event->itf : NULL;
+	return e;
+}
+
+static struct afb_req_x1 legacy_hooked_unstore_req_cb(struct afb_api_x3 *closure, struct afb_stored_req *sreq)
+{
+	struct afb_export *export = from_api_x3(closure);
+	afb_hook_api_legacy_unstore_req(export, sreq);
+	return legacy_unstore_req_cb(closure, sreq);
+}
+
 static const struct afb_daemon_itf_x1 hooked_daemon_itf = {
 	.vverbose_v1 = legacy_hooked_vverbose_v1_cb,
 	.vverbose_v2 = hooked_vverbose_cb,
@@ -589,6 +598,8 @@ static const struct afb_daemon_itf_x1 hooked_daemon_itf = {
 	.add_alias = hooked_add_alias_cb,
 	.new_api = hooked_api_new_api_cb,
 };
+#endif
+
 #endif
 
 /******************************************************************************
@@ -639,18 +650,6 @@ static int call_sync_x3(
 	return afb_calls_call_sync(export, api, verb, args, object, error, info);
 }
 
-static void legacy_call_v12(
-		struct afb_api_x3 *apix3,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*),
-		void *closure)
-{
-	struct afb_export *export = from_api_x3(apix3);
-	afb_calls_legacy_call_v12(export, api, verb, args, callback, closure);
-}
-
 static void legacy_call_x3(
 		struct afb_api_x3 *apix3,
 		const char *api,
@@ -674,11 +673,26 @@ static int legacy_call_sync(
 	return afb_calls_legacy_call_sync(export, api, verb, args, result);
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
+
+static void legacy_call_v12(
+		struct afb_api_x3 *apix3,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*),
+		void *closure)
+{
+	struct afb_export *export = from_api_x3(apix3);
+	afb_calls_legacy_call_v12(export, api, verb, args, callback, closure);
+}
+
 /* the interface for services */
 static const struct afb_service_itf_x1 service_itf = {
 	.call = legacy_call_v12,
 	.call_sync = legacy_call_sync
 };
+#endif
 
 #if WITH_AFB_HOOK
 static void hooked_call_x3(
@@ -706,18 +720,6 @@ static int hooked_call_sync_x3(
 	return afb_calls_hooked_call_sync(export, api, verb, args, object, error, info);
 }
 
-static void legacy_hooked_call_v12(
-		struct afb_api_x3 *apix3,
-		const char *api,
-		const char *verb,
-		struct json_object *args,
-		void (*callback)(void*, int, struct json_object*),
-		void *closure)
-{
-	struct afb_export *export = from_api_x3(apix3);
-	afb_calls_legacy_hooked_call_v12(export, api, verb, args, callback, closure);
-}
-
 static void legacy_hooked_call_x3(
 		struct afb_api_x3 *apix3,
 		const char *api,
@@ -741,11 +743,27 @@ static int legacy_hooked_call_sync(
 	return afb_calls_legacy_hooked_call_sync(export, api, verb, args, result);
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
+
+static void legacy_hooked_call_v12(
+		struct afb_api_x3 *apix3,
+		const char *api,
+		const char *verb,
+		struct json_object *args,
+		void (*callback)(void*, int, struct json_object*),
+		void *closure)
+{
+	struct afb_export *export = from_api_x3(apix3);
+	afb_calls_legacy_hooked_call_v12(export, api, verb, args, callback, closure);
+}
+
 /* the interface for services */
 static const struct afb_service_itf_x1 hooked_service_itf = {
 	.call = legacy_hooked_call_v12,
 	.call_sync = legacy_hooked_call_sync
 };
+#endif
+
 #endif
 
 /******************************************************************************
@@ -762,6 +780,7 @@ static int api_set_verbs_v2_cb(
 		struct afb_api_x3 *api,
 		const struct afb_verb_v2 *verbs)
 {
+#if WITH_LEGACY_BINDING_V2
 	struct afb_export *export = from_api_x3(api);
 
 	if (export->unsealed) {
@@ -770,6 +789,9 @@ static int api_set_verbs_v2_cb(
 	}
 
 	errno = EPERM;
+#else
+	errno = ECANCELED;
+#endif
 	return -1;
 }
 
@@ -1305,10 +1327,12 @@ static void set_interfaces(struct afb_export *export)
 		export->export.v1.daemon.itf = export->hookditf ? &hooked_daemon_itf : &daemon_itf;
 		break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
 		export->export.v2->daemon.itf = export->hookditf ? &hooked_daemon_itf : &daemon_itf;
 		export->export.v2->service.itf = export->hooksvc ? &hooked_service_itf : &service_itf;
 		break;
+#endif
 	}
 #else
 
@@ -1320,10 +1344,12 @@ static void set_interfaces(struct afb_export *export)
 		export->export.v1.daemon.itf = &daemon_itf;
 		break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
 		export->export.v2->daemon.itf = &daemon_itf;
 		export->export.v2->service.itf = &service_itf;
 		break;
+#endif
 	}
 
 #endif
@@ -1437,6 +1463,7 @@ struct afb_export *afb_export_create_v1(struct afb_apiset *declare_set,
 }
 #endif
 
+#if WITH_LEGACY_BINDING_V2
 struct afb_export *afb_export_create_v2(struct afb_apiset *declare_set,
 			struct afb_apiset *call_set,
 			const char *apiname,
@@ -1459,6 +1486,7 @@ struct afb_export *afb_export_create_v2(struct afb_apiset *declare_set,
 	}
 	return export;
 }
+#endif
 
 struct afb_export *afb_export_create_v3(struct afb_apiset *declare_set,
 			struct afb_apiset *call_set,
@@ -1526,6 +1554,7 @@ int afb_export_unshare_session(struct afb_export *export)
 	return 0;
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
 int afb_export_handle_events_v12(struct afb_export *export, void (*on_event)(const char *event, struct json_object *object))
 {
 	/* check version */
@@ -1533,8 +1562,10 @@ int afb_export_handle_events_v12(struct afb_export *export, void (*on_event)(con
 #if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
 		break;
+#endif
 	default:
 		ERROR("invalid version 12 for API %s", export->api.apiname);
 		errno = EINVAL;
@@ -1544,6 +1575,7 @@ int afb_export_handle_events_v12(struct afb_export *export, void (*on_event)(con
 	export->on_any_event_v12 = on_event;
 	return ensure_listener(export);
 }
+#endif
 
 int afb_export_handle_events_v3(struct afb_export *export, void (*on_event)(struct afb_api_x3 *api, const char *event, struct json_object *object))
 {
@@ -1602,7 +1634,9 @@ void afb_export_logmask_set(struct afb_export *export, int mask)
 #if WITH_LEGACY_BINDING_V1
 	case Api_Version_1: export->export.v1.verbosity = verbosity_from_mask(mask); break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2: export->export.v2->verbosity = verbosity_from_mask(mask); break;
+#endif
 	}
 }
 
@@ -1655,9 +1689,11 @@ static void do_init(int sig, void *closure)
 					.closure = to_api_x3(export) }) : 0;
 			break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 		case Api_Version_2:
 			rc = export->init.v2 ? export->init.v2() : 0;
 			break;
+#endif
 		case Api_Version_3:
 			rc = export->init.v3 ? export->init.v3(to_api_x3(export)) : 0;
 			break;
@@ -1690,11 +1726,14 @@ int afb_export_start(struct afb_export *export)
 	}
 
 	/* set event handling */
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
 	switch (export->version) {
 #if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
+#endif
 		if (export->on_any_event_v12) {
 			rc = afb_export_handle_events_v12(export, export->on_any_event_v12);
 			break;
@@ -1708,6 +1747,7 @@ int afb_export_start(struct afb_export *export)
 		ERROR("Can't set event handler for %s", export->api.apiname);
 		return -1;
 	}
+#endif
 
 #if WITH_AFB_HOOK
 	/* Starts the service */
@@ -1747,9 +1787,11 @@ static void api_call_cb(void *closure, struct afb_xreq *xreq)
 		afb_api_so_v1_process_call(export->desc.v1, xreq);
 		break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
 		afb_api_so_v2_process_call(export->desc.v2, xreq);
 		break;
+#endif
 	case Api_Version_3:
 		afb_api_v3_process_call(export->desc.v3, xreq);
 		break;
@@ -1770,9 +1812,11 @@ static struct json_object *api_describe_cb(void *closure)
 		result = afb_api_so_v1_make_description_openAPIv3(export->desc.v1, export->api.apiname);
 		break;
 #endif
+#if WITH_LEGACY_BINDING_V2
 	case Api_Version_2:
 		result = afb_api_so_v2_make_description_openAPIv3(export->desc.v2, export->api.apiname);
 		break;
+#endif
 	case Api_Version_3:
 		result = afb_api_v3_make_description_openAPIv3(export->desc.v3, export->api.apiname);
 		break;

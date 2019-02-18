@@ -25,7 +25,6 @@
 #include <sys/stat.h>
 
 #include "afb-api-so.h"
-#include "afb-api-so-v2.h"
 #include "afb-api-so-v3.h"
 #include "verbose.h"
 #include "sig-monitor.h"
@@ -35,6 +34,9 @@
 #endif
 #if WITH_LEGACY_BINDING_VDYN
 #   include "afb-api-so-vdyn.h"
+#endif
+#if WITH_LEGACY_BINDING_V2
+#   include "afb-api-so-v2.h"
 #endif
 
 struct safe_dlopen
@@ -91,6 +93,7 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 	if (rc)
 		return 0; /* yes version 3 */
 
+#if WITH_LEGACY_BINDING_V2
 	/* try the version 2 */
 	rc = afb_api_so_v2_add(path, handle, declare_set, call_set);
 	if (rc < 0) {
@@ -99,6 +102,12 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 	}
 	if (rc)
 		return 0; /* yes version 2 */
+#else
+	if (dlsym(handle, "afbBindingV2")) {
+		WARNING("binding [%s]: version 2 not supported", path);
+		obsolete = 1;
+	}
+#endif
 
 #if WITH_LEGACY_BINDING_VDYN
 	/* try the version dyn */

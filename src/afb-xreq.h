@@ -85,6 +85,7 @@ struct afb_xreq
 
 /* req wrappers for xreq */
 extern struct afb_req_x1 afb_xreq_unstore(struct afb_stored_req *sreq);
+
 extern void afb_xreq_addref(struct afb_xreq *xreq);
 extern void afb_xreq_unref(struct afb_xreq *xreq);
 extern void afb_xreq_unhooked_addref(struct afb_xreq *xreq);
@@ -154,8 +155,13 @@ extern void afb_xreq_init(struct afb_xreq *xreq, const struct afb_xreq_query_itf
 
 extern void afb_xreq_process(struct afb_xreq *xreq, struct afb_apiset *apiset);
 
+#if WITH_LEGACY_BINDING_V1
 extern void afb_xreq_call_verb_v1(struct afb_xreq *xreq, const struct afb_verb_desc_v1 *verb);
+#endif
+#if WITH_LEGACY_BINDING_V2
 extern void afb_xreq_call_verb_v2(struct afb_xreq *xreq, const struct afb_verb_v2 *verb);
+#endif
+
 extern void afb_xreq_call_verb_v3(struct afb_xreq *xreq, const struct afb_verb_v3 *verb);
 
 extern const char *xreq_on_behalf_cred_export(struct afb_xreq *xreq);

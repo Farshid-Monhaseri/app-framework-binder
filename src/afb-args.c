@@ -381,7 +381,13 @@ static void printVersion(FILE * file)
 #else
 		"-"
 #endif
-		"VDYN +V2 +V3]\n"
+		"VDYN "
+#if WITH_LEGACY_BINDING_V2
+		"+"
+#else
+		"-"
+#endif
+		"V2 +V3]\n"
 		"\n",
 		AFB_VERSION
 	);
@@ -545,6 +551,7 @@ static int config_has_bool(struct json_object *config, int optid)
 		&& json_object_get_boolean(x);
 }
 
+__attribute__((unused))
 static int config_has_str(struct json_object *config, int optid, const char *val)
 {
 	int i, n;

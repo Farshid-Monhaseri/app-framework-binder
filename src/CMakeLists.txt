@@ -35,6 +35,7 @@ option(WITH_AFB_TRACE             "include monitoring trace"               ON)
 option(WITH_SUPERVISOR            "Activates installation of supervisor"   OFF)
 option(WITH_DBUS_TRANSPARENCY     "Allows API transparency over DBUS"      OFF)
 option(WITH_LEGACY_BINDING_V1     "Includes the legacy Binding API version 1" OFF)
+option(WITH_LEGACY_BINDING_V2     "Includes the legacy Binding API version 2" ON)
 option(WITH_LEGACY_BINDING_VDYN   "Includes the legacy Binding API version dynamic" OFF)
 
 if(INCLUDE_SUPERVISOR)
@@ -58,6 +59,7 @@ add_definitions(
   -DWITH_AFB_HOOK=$<BOOL:${WITH_AFB_HOOK}>
   -DWITH_AFB_TRACE=$<BOOL:${WITH_AFB_TRACE}>
   -DWITH_LEGACY_BINDING_V1=$<BOOL:${INCLUDE_LEGACY_BINDING_V1}>
+  -DWITH_LEGACY_BINDING_V2=$<BOOL:${WITH_LEGACY_BINDING_V2}>
   -DWITH_LEGACY_BINDING_VDYN=$<BOOL:${INCLUDE_LEGACY_BINDING_VDYN}>
   -DWITH_DBUS_TRANSPARENCY=$<BOOL:${INCLUDE_DBUS_TRANSPARENCY}>
   -DWITH_SUPERVISION=$<BOOL:${INCLUDE_SUPERVISOR}>

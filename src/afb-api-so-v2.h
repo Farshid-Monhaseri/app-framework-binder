@@ -18,6 +18,8 @@
 
 #pragma once
 
+#if WITH_LEGACY_BINDING_V2
+
 struct afb_apiset;
 struct afb_binding_v2;
 struct afb_binding_data_v2;
@@ -29,3 +31,5 @@ extern int afb_api_so_v2_add_binding(const struct afb_binding_v2 *binding, void 
 
 extern void afb_api_so_v2_process_call(const struct afb_binding_v2 *binding, struct afb_xreq *xreq);
 extern struct json_object *afb_api_so_v2_make_description_openAPIv3(const struct afb_binding_v2 *binding, const char *apiname);
+
+#endif

@@ -698,6 +698,7 @@ int afb_evt_event_x2_unhooked_push(struct afb_event_x2 *eventid, struct json_obj
 	return 0;
 }
 
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
 struct afb_event_x1 afb_evt_event_from_evtid(struct afb_evtid *evtid)
 {
 	return evtid
@@ -708,6 +709,7 @@ struct afb_event_x1 afb_evt_event_from_evtid(struct afb_evtid *evtid)
 #endif
 		: (struct afb_event_x1){ .itf = NULL, .closure = NULL };
 }
+#endif
 
 void afb_evt_event_x2_unref(struct afb_event_x2 *eventid)
 {

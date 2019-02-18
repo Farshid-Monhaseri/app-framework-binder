@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_LEGACY_BINDING_V2
+
 #define _GNU_SOURCE
 
 #include <stdlib.h>
@@ -221,3 +223,4 @@ int afb_api_so_v2_add(const char *path, void *handle, struct afb_apiset *declare
 	return -1;
 }
 
+#endif

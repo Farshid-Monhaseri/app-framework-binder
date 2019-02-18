@@ -23,7 +23,6 @@ struct afb_api_v3;
 struct afb_api_x3;
 struct afb_auth;
 struct afb_req_x2;
-struct afb_verb_v2;
 struct afb_verb_v3;
 struct afb_binding_v3;
 struct afb_xreq;
@@ -57,10 +56,6 @@ extern void afb_api_v3_unref(struct afb_api_v3 *api);
 
 extern struct afb_export *afb_api_v3_export(struct afb_api_v3 *api);
 
-extern void afb_api_v3_set_verbs_v2(
-		struct afb_api_v3 *api,
-		const struct afb_verb_v2 *verbs);
-
 extern void afb_api_v3_set_verbs_v3(
 		struct afb_api_v3 *api,
 		const struct afb_verb_v3 *verbs);
@@ -83,3 +78,12 @@ extern int afb_api_v3_del_verb(
 extern void afb_api_v3_process_call(struct afb_api_v3 *api, struct afb_xreq *xreq);
 extern struct json_object *afb_api_v3_make_description_openAPIv3(struct afb_api_v3 *api, const char *apiname);
 
+#if WITH_LEGACY_BINDING_V2
+
+struct afb_verb_v2;
+
+extern void afb_api_v3_set_verbs_v2(
+		struct afb_api_v3 *api,
+		const struct afb_verb_v2 *verbs);
+
+#endif

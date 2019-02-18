@@ -24,8 +24,6 @@ struct afb_apiset;
 struct afb_context;
 struct afb_xreq;
 
-struct afb_binding_v2;
-struct afb_binding_data_v2;
 struct afb_api_v3;
 struct afb_api_x3;
 struct afb_event_x2;
@@ -38,15 +36,6 @@ extern struct afb_export *afb_export_create_none_for_path(
 				const char *path,
 				int (*creator)(void*, struct afb_api_x3*),
 				void *closure);
-
-extern struct afb_export *afb_export_create_v2(struct afb_apiset *declare_set,
-				struct afb_apiset *call_set,
-				const char *apiname,
-				const struct afb_binding_v2 *binding,
-				struct afb_binding_data_v2 *data,
-				int (*init)(),
-				void (*onevent)(const char*, struct json_object*),
-				const char* path);
 
 extern struct afb_export *afb_export_create_v3(struct afb_apiset *declare_set,
 				struct afb_apiset *call_set,
@@ -73,11 +62,6 @@ extern int afb_export_preinit_x3(
 				struct afb_export *export,
 				int (*preinit)(void *,struct afb_api_x3*),
 				void *closure);
-
-extern int afb_export_handle_events_v12(
-				struct afb_export *export,
-				void (*on_event)(const char *event, struct json_object *object));
-
 
 extern int afb_export_handle_events_v3(
 				struct afb_export *export,
@@ -135,4 +119,27 @@ extern struct afb_binding_v1 *afb_export_register_v1(
 				struct afb_binding_v1 *(*regfun)(const struct afb_binding_interface_v1*));
 
 #endif
+
+#if WITH_LEGACY_BINDING_V2
+
+struct afb_binding_v2;
+struct afb_binding_data_v2;
+
+extern struct afb_export *afb_export_create_v2(struct afb_apiset *declare_set,
+				struct afb_apiset *call_set,
+				const char *apiname,
+				const struct afb_binding_v2 *binding,
+				struct afb_binding_data_v2 *data,
+				int (*init)(),
+				void (*onevent)(const char*, struct json_object*),
+				const char* path);
+
+#endif
+
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
+extern int afb_export_handle_events_v12(
+				struct afb_export *export,
+				void (*on_event)(const char *event, struct json_object *object));
+#endif
+
 

@@ -75,7 +75,10 @@ extern int afb_evt_event_x2_remove_watch(struct afb_evt_listener *listener, stru
 
 extern struct afb_evtid *afb_evt_event_x2_to_evtid(struct afb_event_x2 *eventid);
 extern struct afb_event_x2 *afb_evt_event_x2_from_evtid(struct afb_evtid *evtid);
+
+#if WITH_LEGACY_BINDING_V1 || WITH_LEGACY_BINDING_V2
 extern struct afb_event_x1 afb_evt_event_from_evtid(struct afb_evtid *evtid);
+#endif
 
 #if WITH_AFB_HOOK
 extern struct afb_evtid *afb_evt_evtid_hooked_addref(struct afb_evtid *evtid);

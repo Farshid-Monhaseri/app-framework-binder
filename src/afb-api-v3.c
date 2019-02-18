@@ -44,7 +44,9 @@ struct afb_api_v3 {
 	int refcount;
 	int count;
 	struct afb_verb_v3 **verbs;
+#if WITH_LEGACY_BINDING_V2
 	const struct afb_verb_v2 *verbsv2;
+#endif
 	const struct afb_verb_v3 *verbsv3;
 	struct afb_export *export;
 	const char *info;
@@ -77,7 +79,9 @@ static struct afb_verb_v3 *search_dynamic_verb(struct afb_api_v3 *api, const cha
 void afb_api_v3_process_call(struct afb_api_v3 *api, struct afb_xreq *xreq)
 {
 	const struct afb_verb_v3 *verbsv3;
+#if WITH_LEGACY_BINDING_V2
 	const struct afb_verb_v2 *verbsv2;
+#endif
 	const char *name;
 
 	name = xreq->request.called_verb;
@@ -104,6 +108,7 @@ void afb_api_v3_process_call(struct afb_api_v3 *api, struct afb_xreq *xreq)
 		return;
 	}
 
+#if WITH_LEGACY_BINDING_V2
 	/* look in legacy set */
 	verbsv2 = api->verbsv2;
 	if (verbsv2) {
@@ -116,7 +121,7 @@ void afb_api_v3_process_call(struct afb_api_v3 *api, struct afb_xreq *xreq)
 			}
 		}
 	}
-
+#endif
 	afb_xreq_reply_unknown_verb(xreq);
 }
 
@@ -252,12 +257,14 @@ struct afb_export *afb_api_v3_export(struct afb_api_v3 *api)
 	return api->export;
 }
 
+#if WITH_LEGACY_BINDING_V2
 void afb_api_v3_set_verbs_v2(
 		struct afb_api_v3 *api,
 		const struct afb_verb_v2 *verbs)
 {
 	api->verbsv2 = verbs;
 }
+#endif
 
 void afb_api_v3_set_verbs_v3(
 		struct afb_api_v3 *api,
