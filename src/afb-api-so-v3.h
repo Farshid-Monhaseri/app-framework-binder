@@ -18,6 +18,10 @@
 
 #pragma once
 
+#if WITH_DYNAMIC_BINDING
+
 struct afb_apiset;
 
 extern int afb_api_so_v3_add(const char *path, void *handle, struct afb_apiset *declare_set, struct afb_apiset * call_set);
+
+#endif

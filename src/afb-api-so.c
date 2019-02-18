@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_DYNAMIC_BINDING
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -322,3 +324,4 @@ int afb_api_so_add_pathset_nofails(const char *pathset, struct afb_apiset *decla
 	return afb_api_so_add_pathset(pathset, declare_set, call_set, 0);
 }
 
+#endif

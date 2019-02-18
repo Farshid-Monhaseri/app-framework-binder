@@ -25,7 +25,7 @@ ADD_DEFINITIONS(-DBINDING_INSTALL_DIR="${binding_install_dir}")
 ADD_DEFINITIONS(-DINFER_EXTENSION)
 
 ############################################################################
-# TODO: improve below setting
+# TODO: improve below setting by using config file
 option(WITH_SIG_MONITOR_DUMPSTACK "activate dump stack on error"           ON)
 option(WITH_SIG_MONITOR_SIGNALS   "activate handling of signals"           ON)
 option(WITH_SIG_MONITOR_FOR_CALL  "activate monitoring of calls"           ON)
@@ -37,6 +37,7 @@ option(WITH_DBUS_TRANSPARENCY     "Allows API transparency over DBUS"      OFF)
 option(WITH_LEGACY_BINDING_V1     "Includes the legacy Binding API version 1" OFF)
 option(WITH_LEGACY_BINDING_V2     "Includes the legacy Binding API version 2" ON)
 option(WITH_LEGACY_BINDING_VDYN   "Includes the legacy Binding API version dynamic" OFF)
+option(WITH_DYNAMIC_BINDING       "Allow to load dynamic bindings (shared libraries)" ON)
 
 if(INCLUDE_SUPERVISOR)
   set(WITH_SUPERVISOR ON)
@@ -52,6 +53,7 @@ if(INCLUDE_LEGACY_BINDING_VDYN)
 endif()
 
 add_definitions(
+  -DAGL_DEVEL=$<BOOL:${AGL_DEVEL}>
   -DWITH_SIG_MONITOR_DUMPSTACK=$<BOOL:${WITH_SIG_MONITOR_DUMPSTACK}>
   -DWITH_SIG_MONITOR_SIGNALS=$<BOOL:${WITH_SIG_MONITOR_SIGNALS}>
   -DWITH_SIG_MONITOR_FOR_CALL=$<BOOL:${WITH_SIG_MONITOR_FOR_CALL}>
@@ -63,6 +65,7 @@ add_definitions(
   -DWITH_LEGACY_BINDING_VDYN=$<BOOL:${INCLUDE_LEGACY_BINDING_VDYN}>
   -DWITH_DBUS_TRANSPARENCY=$<BOOL:${INCLUDE_DBUS_TRANSPARENCY}>
   -DWITH_SUPERVISION=$<BOOL:${INCLUDE_SUPERVISOR}>
+  -DWITH_DYNAMIC_BINDING=$<BOOL:${WITH_DYNAMIC_BINDING}>
 )
 ############################################################################
 

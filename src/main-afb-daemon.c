@@ -835,9 +835,11 @@ static void start(int signum, void *arg)
 
 	/* load bindings and apis */
 	afb_debug("start-load");
+#if WITH_DYNAMIC_BINDING
 	apiset_start_list("binding", afb_api_so_add_binding, "the binding");
 	apiset_start_list("ldpaths", afb_api_so_add_pathset_fails, "the binding path set");
 	apiset_start_list("weak-ldpaths", afb_api_so_add_pathset_nofails, "the weak binding path set");
+#endif
 	apiset_start_list("auto-api", afb_autoset_add_any, "the automatic api path set");
 #if WITH_DBUS_TRANSPARENCY
 	apiset_start_list("dbus-client", afb_api_dbus_add_client, "the afb-dbus client");

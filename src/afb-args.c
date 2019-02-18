@@ -80,14 +80,13 @@
 
 #define SET_CACHE_TIMEOUT    7
 
-#define AUTO_WS              8
-#define AUTO_LINK            9
-
+#if WITH_DYNAMIC_BINDING
 #define ADD_LDPATH          10
-#define SET_API_TIMEOUT     11
-#define SET_SESSION_TIMEOUT 12
-#define ADD_WEAK_LDPATH     13
-#define SET_NO_LDPATH       14
+#define ADD_WEAK_LDPATH     11
+#define SET_NO_LDPATH       12
+#endif
+#define SET_API_TIMEOUT     13
+#define SET_SESSION_TIMEOUT 14
 
 #define SET_SESSIONMAX      15
 
@@ -115,7 +114,9 @@
 #endif
 
 #define ADD_AUTO_API       'A'
+#if WITH_DYNAMIC_BINDING
 #define ADD_BINDING        'b'
+#endif
 #define SET_CONFIG         'C'
 #define SET_COLOR          'c'
 #define SET_DAEMON         'D'
@@ -174,11 +175,12 @@ static struct option_desc optdefs[] = {
 	{SET_UPLOAD_DIR,      1, "uploaddir",   "Directory for uploading files [default: workdir] relative to workdir"},
 	{SET_ROOT_DIR,        1, "rootdir",     "Root Directory of the application [default: workdir] relative to workdir"},
 
+#if WITH_DYNAMIC_BINDING
 	{ADD_LDPATH,          1, "ldpaths",     "Load bindings from dir1:dir2:... [default = " BINDING_INSTALL_DIR "]"},
 	{ADD_BINDING,         1, "binding",     "Load the binding of path"},
 	{ADD_WEAK_LDPATH,     1, "weak-ldpaths","Same as --ldpaths but ignore errors"},
 	{SET_NO_LDPATH,       0, "no-ldpaths",  "Discard default ldpaths loading"},
-
+#endif
 	{SET_TOKEN,           1, "token",       "Initial Secret [default=random, use --token="" to allow any token]"},
 	{SET_RANDOM_TOKEN,    0, "random-token","Enforce a random token"},
 
@@ -369,7 +371,13 @@ static void printVersion(FILE * file)
 #endif
 		"TRACE "
 
-		"[BINDINGS "
+		"["
+#if WITH_DYNAMIC_BINDING
+		"BINDINGS "
+		"+"
+#else
+		"-"
+#endif
 #if WITH_LEGACY_BINDING_V1
 		"+"
 #else
@@ -426,7 +434,11 @@ static void printHelp(FILE * file, const char *name)
 	fprintf(file,
 		"Example:\n  %s  --verbose --port="
 		d2s(DEFAULT_HTTP_PORT)
-		" --token='azerty' --ldpaths=build/bindings:/usr/lib64/agl/bindings\n",
+		" --token='azerty'"
+#if WITH_DYNAMIC_BINDING
+		" --ldpaths=build/bindings:/usr/lib64/agl/bindings"
+#endif
+		"\n",
 		name);
 }
 
@@ -826,12 +838,14 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 		case ADD_DBUS_SERVICE:
 #endif
 		case ADD_ALIAS:
+#if WITH_DYNAMIC_BINDING
 		case ADD_LDPATH:
 		case ADD_WEAK_LDPATH:
+		case ADD_BINDING:
+#endif
 		case ADD_CALL:
 		case ADD_WS_CLIENT:
 		case ADD_WS_SERVICE:
-		case ADD_BINDING:
 		case ADD_AUTO_API:
 			config_add_optstr(config, optid);
 			break;
@@ -845,7 +859,9 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 #endif
 		case SET_RANDOM_TOKEN:
 		case SET_NO_HTTPD:
+#if WITH_DYNAMIC_BINDING
 		case SET_NO_LDPATH:
+#endif
 			noarg(optid);
 			config_set_bool(config, optid, 1);
 			break;
@@ -979,8 +995,10 @@ static void fulfill_config(struct json_object *config)
 	if (config_has_bool(config, SET_RANDOM_TOKEN))
 		config_del(config, SET_TOKEN);
 
+#if WITH_DYNAMIC_BINDING
 	if (!config_has(config, ADD_LDPATH) && !config_has(config, ADD_WEAK_LDPATH) && !config_has_bool(config, SET_NO_LDPATH))
 		config_add_str(config, ADD_LDPATH, BINDING_INSTALL_DIR);
+#endif
 
 #if defined(WITH_MONITORING_OPTION)
 	if (config_has_bool(config, SET_MONITORING) && !config_has_str(config, ADD_ALIAS, MONITORING_ALIAS))
@@ -1040,7 +1058,9 @@ static void parse_environment(struct json_object *config)
 	on_environment_enum(config, SET_TRACESVC, "AFB_TRACESVC", afb_hook_flags_legacy_svc_from_text);
 #endif
 #endif
+#if WITH_DYNAMIC_BINDING
 	on_environment(config, ADD_LDPATH, "AFB_LDPATHS", config_add_str);
+#endif
 	on_environment(config, ADD_SET, "AFB_SET", config_mix2_str);
 	on_environment_bool(config, SET_TRAP_FAULTS, "AFB_TRAP_FAULTS");
 }

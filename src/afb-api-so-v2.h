@@ -18,7 +18,7 @@
 
 #pragma once
 
-#if WITH_LEGACY_BINDING_V2
+#if WITH_LEGACY_BINDING_V2 && WITH_DYNAMIC_BINDING
 
 struct afb_apiset;
 struct afb_binding_v2;

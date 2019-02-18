@@ -18,6 +18,8 @@
 
 #pragma once
 
+#if WITH_DYNAMIC_BINDING
+
 struct afb_apiset;
 
 extern int afb_api_so_add_binding(const char *path, struct afb_apiset *declare_set, struct afb_apiset * call_set);
@@ -31,4 +33,4 @@ extern int afb_api_so_add_pathset(const char *pathset, struct afb_apiset *declar
 extern int afb_api_so_add_pathset_fails(const char *pathset, struct afb_apiset *declare_set, struct afb_apiset * call_set);
 extern int afb_api_so_add_pathset_nofails(const char *pathset, struct afb_apiset *declare_set, struct afb_apiset * call_set);
 
-
+#endif

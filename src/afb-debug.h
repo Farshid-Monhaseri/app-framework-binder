@@ -18,7 +18,7 @@
 
 #pragma once
 
-#if defined(AGL_DEVEL) && !defined(AFB_INSERT_DEBUG_FEATURES)
+#if AGL_DEVEL && !defined(AFB_INSERT_DEBUG_FEATURES)
 # define AFB_INSERT_DEBUG_FEATURES
 #endif
 

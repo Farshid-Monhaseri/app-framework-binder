@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#if WITH_LEGACY_BINDING_V2
+#if WITH_LEGACY_BINDING_V2 && WITH_DYNAMIC_BINDING
 
 #define _GNU_SOURCE
 

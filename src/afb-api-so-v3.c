@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#if WITH_DYNAMIC_BINDING
+
 #define _GNU_SOURCE
 
 #include <stdlib.h>
@@ -135,3 +137,4 @@ error:
 	return -1;
 }
 
+#endif
