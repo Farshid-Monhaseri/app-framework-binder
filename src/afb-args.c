@@ -109,7 +109,7 @@
 #endif
 #define SET_TRAP_FAULTS     27
 #define ADD_CALL            28
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 #   define ADD_DBUS_CLIENT  30
 #   define ADD_DBUS_SERVICE 31
 #endif
@@ -185,7 +185,7 @@ static struct option_desc optdefs[] = {
 	{GET_VERSION,         0, "version",     "Display version and copyright"},
 	{GET_HELP,            0, "help",        "Display this help"},
 
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 	{ADD_DBUS_CLIENT,     1, "dbus-client", "Bind to an afb service through dbus"},
 	{ADD_DBUS_SERVICE,    1, "dbus-server", "Provide an afb service through dbus"},
 #endif
@@ -335,7 +335,7 @@ static void printVersion(FILE * file)
 		"\n"
 		"  AGL Framework Binder [AFB %s] "
 
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 		"+"
 #else
 		"-"
@@ -348,7 +348,7 @@ static void printVersion(FILE * file)
 		"-"
 #endif
 		"MONITOR "
-#if defined(WITH_SUPERVISION)
+#if WITH_SUPERVISION
 		"+"
 #else
 		"-"
@@ -370,13 +370,13 @@ static void printVersion(FILE * file)
 		"TRACE "
 
 		"[BINDINGS "
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 		"+"
 #else
 		"-"
 #endif
 		"V1 "
-#if defined(WITH_LEGACY_BINDING_VDYN)
+#if WITH_LEGACY_BINDING_VDYN
 		"+"
 #else
 		"-"
@@ -814,7 +814,7 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 			config_set_optstr(config, optid);
 			break;
 
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 		case ADD_DBUS_CLIENT:
 		case ADD_DBUS_SERVICE:
 #endif

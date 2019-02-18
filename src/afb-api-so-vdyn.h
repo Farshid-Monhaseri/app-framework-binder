@@ -18,6 +18,10 @@
 
 #pragma once
 
+#if WITH_LEGACY_BINDING_VDYN
+
 struct afb_apiset;
 
 extern int afb_api_so_vdyn_add(const char *path, void *handle, struct afb_apiset *declare_set, struct afb_apiset * call_set);
+
+#endif

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#if defined(WITH_LEGACY_BINDING_VDYN)
+#if WITH_LEGACY_BINDING_VDYN
 
 #define _GNU_SOURCE
 

@@ -33,7 +33,7 @@
 
 #include "afb-api.h"
 #include "afb-apiset.h"
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 #include "afb-api-so-v1.h"
 #endif
 #include "afb-api-so-v2.h"
@@ -65,7 +65,7 @@
 enum afb_api_version
 {
 	Api_Version_None = 0,
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	Api_Version_1 = 1,
 #endif
 	Api_Version_2 = 2,
@@ -137,7 +137,7 @@ struct afb_export
 
 	/* internal descriptors */
 	union {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 		struct afb_binding_v1 *v1;
 #endif
 		const struct afb_binding_v2 *v2;
@@ -146,7 +146,7 @@ struct afb_export
 
 	/* start function */
 	union {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 		int (*v1)(struct afb_service_x1);
 #endif
 		int (*v2)();
@@ -159,7 +159,7 @@ struct afb_export
 
 	/* exported data */
 	union {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 		struct afb_binding_interface_v1 v1;
 #endif
 		struct afb_binding_data_v2 *v2;
@@ -1300,7 +1300,7 @@ static void set_interfaces(struct afb_export *export)
 	export->api.itf = export->hookditf|export->hooksvc ? &hooked_api_x3_itf : &api_x3_itf;
 
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 		export->export.v1.daemon.itf = export->hookditf ? &hooked_daemon_itf : &daemon_itf;
 		break;
@@ -1315,7 +1315,7 @@ static void set_interfaces(struct afb_export *export)
 	export->api.itf = &api_x3_itf;
 
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 		export->export.v1.daemon.itf = &daemon_itf;
 		break;
@@ -1416,7 +1416,7 @@ struct afb_export *afb_export_create_none_for_path(
 	return export;
 }
 
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 struct afb_export *afb_export_create_v1(struct afb_apiset *declare_set,
 			struct afb_apiset *call_set,
 			const char *apiname,
@@ -1530,7 +1530,7 @@ int afb_export_handle_events_v12(struct afb_export *export, void (*on_event)(con
 {
 	/* check version */
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 #endif
 	case Api_Version_2:
@@ -1572,7 +1572,7 @@ int afb_export_handle_init_v3(struct afb_export *export, int (*oninit)(struct af
 	return 0;
 }
 
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 /*
  * Starts a new service (v1)
  */
@@ -1599,7 +1599,7 @@ void afb_export_logmask_set(struct afb_export *export, int mask)
 {
 	export->api.logmask = mask;
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1: export->export.v1.verbosity = verbosity_from_mask(mask); break;
 #endif
 	case Api_Version_2: export->export.v2->verbosity = verbosity_from_mask(mask); break;
@@ -1643,7 +1643,7 @@ static void do_init(int sig, void *closure)
 	else {
 		export = init->export;
 		switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 		case Api_Version_1:
 			rc = export->init.v1 ? export->init.v1(
 				(struct afb_service_x1){
@@ -1691,7 +1691,7 @@ int afb_export_start(struct afb_export *export)
 
 	/* set event handling */
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 #endif
 	case Api_Version_2:
@@ -1742,7 +1742,7 @@ static void api_call_cb(void *closure, struct afb_xreq *xreq)
 	xreq->request.api = to_api_x3(export);
 
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 		afb_api_so_v1_process_call(export->desc.v1, xreq);
 		break;
@@ -1765,7 +1765,7 @@ static struct json_object *api_describe_cb(void *closure)
 	struct json_object *result;
 
 	switch (export->version) {
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	case Api_Version_1:
 		result = afb_api_so_v1_make_description_openAPIv3(export->desc.v1, export->api.apiname);
 		break;

@@ -22,33 +22,33 @@
 *******************************************************************************/
 
 /* controls whether to dump stack or not */
-#if !defined(USE_SIG_MONITOR_DUMPSTACK)
-#  define USE_SIG_MONITOR_DUMPSTACK 1
+#if !defined(WITH_SIG_MONITOR_DUMPSTACK)
+#  define WITH_SIG_MONITOR_DUMPSTACK 1
 #endif
 
 /* control whether to monitor signals */
-#if !defined(USE_SIG_MONITOR_SIGNALS)
-#  define USE_SIG_MONITOR_SIGNALS 1
+#if !defined(WITH_SIG_MONITOR_SIGNALS)
+#  define WITH_SIG_MONITOR_SIGNALS 1
 #endif
 
 /* controls whether to monitor calls */
-#if !defined(USE_SIG_MONITOR_FOR_CALL)
-#  define USE_SIG_MONITOR_FOR_CALL 1
+#if !defined(WITH_SIG_MONITOR_FOR_CALL)
+#  define WITH_SIG_MONITOR_FOR_CALL 1
 #endif
 
 /* control whether to monitor timers */
-#if !defined(USE_SIG_MONITOR_TIMERS)
-#  define USE_SIG_MONITOR_TIMERS 1
+#if !defined(WITH_SIG_MONITOR_TIMERS)
+#  define WITH_SIG_MONITOR_TIMERS 1
 #endif
 
-#if !USE_SIG_MONITOR_SIGNALS
-#  undef USE_SIG_MONITOR_FOR_CALL
-#  define USE_SIG_MONITOR_FOR_CALL 0
+#if !WITH_SIG_MONITOR_SIGNALS
+#  undef WITH_SIG_MONITOR_FOR_CALL
+#  define WITH_SIG_MONITOR_FOR_CALL 0
 #endif
 
-#if !USE_SIG_MONITOR_FOR_CALL
-#  undef USE_SIG_MONITOR_TIMERS
-#  define USE_SIG_MONITOR_TIMERS 0
+#if !WITH_SIG_MONITOR_FOR_CALL
+#  undef WITH_SIG_MONITOR_TIMERS
+#  define WITH_SIG_MONITOR_TIMERS 0
 #endif
 
 /******************************************************************************/
@@ -63,7 +63,7 @@
 #include "verbose.h"
 
 /******************************************************************************/
-#if !USE_SIG_MONITOR_DUMPSTACK
+#if !WITH_SIG_MONITOR_DUMPSTACK
 
 static inline void dumpstack(int crop, int signum) {}
 
@@ -109,7 +109,7 @@ static void dumpstack(int crop, int signum)
 
 #endif
 /******************************************************************************/
-#if !USE_SIG_MONITOR_TIMERS
+#if !WITH_SIG_MONITOR_TIMERS
 
 static inline int timeout_create() { return 0; }
 static inline int timeout_arm(int timeout) { return 0; }
@@ -198,7 +198,7 @@ static inline void timeout_delete()
 }
 #endif
 /******************************************************************************/
-#if !USE_SIG_MONITOR_FOR_CALL
+#if !WITH_SIG_MONITOR_FOR_CALL
 
 static inline void monitor_raise(int signum) {}
 
@@ -240,7 +240,7 @@ static inline void monitor_raise(int signum)
 }
 #endif
 /******************************************************************************/
-#if !USE_SIG_MONITOR_SIGNALS
+#if !WITH_SIG_MONITOR_SIGNALS
 
 static inline int enable_signal_handling() { return 0; }
 
@@ -294,7 +294,7 @@ static void safe_exit(int code)
 	exit(code);
 }
 
-#if !USE_SIG_MONITOR_DUMPSTACK
+#if !WITH_SIG_MONITOR_DUMPSTACK
 
 static inline void safe_dumpstack(int crop, int signum) {}
 #define in_safe_dumpstack (0)
@@ -387,7 +387,7 @@ void sig_monitor_clean_timeouts()
 
 void sig_monitor(int timeout, void (*function)(int sig, void*), void *arg)
 {
-#if USE_SIG_MONITOR_SIGNALS && USE_SIG_MONITOR_FOR_CALL
+#if WITH_SIG_MONITOR_SIGNALS && WITH_SIG_MONITOR_FOR_CALL
 	if (enabled)
 		monitor(timeout, function, arg);
 	else

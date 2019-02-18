@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#if defined(WITH_SUPERVISION)
+#if WITH_SUPERVISION
 
 #define _GNU_SOURCE
 

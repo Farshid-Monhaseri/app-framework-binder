@@ -30,10 +30,10 @@
 #include "verbose.h"
 #include "sig-monitor.h"
 
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 #   include "afb-api-so-v1.h"
 #endif
-#if defined(WITH_LEGACY_BINDING_VDYN)
+#if WITH_LEGACY_BINDING_VDYN
 #   include "afb-api-so-vdyn.h"
 #endif
 
@@ -100,7 +100,7 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 	if (rc)
 		return 0; /* yes version 2 */
 
-#if defined(WITH_LEGACY_BINDING_VDYN)
+#if WITH_LEGACY_BINDING_VDYN
 	/* try the version dyn */
 	rc = afb_api_so_vdyn_add(path, handle, declare_set, call_set);
 	if (rc < 0) {
@@ -116,7 +116,7 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 	}
 #endif
 
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 	/* try the version 1 */
 	rc = afb_api_so_v1_add(path, handle, declare_set, call_set);
 	if (rc < 0) {

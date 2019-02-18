@@ -118,7 +118,7 @@ extern struct afb_api_x3 *afb_export_to_api_x3(struct afb_export *export);
 extern void afb_export_update_hooks(struct afb_export *export);
 #endif
 
-#if defined(WITH_LEGACY_BINDING_V1)
+#if WITH_LEGACY_BINDING_V1
 
 struct afb_service_x1;
 struct afb_binding_interface_v1;

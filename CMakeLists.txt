@@ -39,12 +39,14 @@ INCLUDE(CTest)
 ###########################################################################
 # possible settings
 
-set(AGL_DEVEL OFF CACHE BOOL "Activates developping features")
-set(INCLUDE_MONITORING OFF CACHE BOOL "Activates installation of monitoring")
-set(INCLUDE_SUPERVISOR OFF CACHE BOOL "Activates installation of supervisor")
-set(INCLUDE_DBUS_TRANSPARENCY OFF CACHE BOOL "Allows API transparency over DBUS")
-set(INCLUDE_LEGACY_BINDING_V1 OFF CACHE BOOL "Includes the legacy Binding API version 1")
-set(INCLUDE_LEGACY_BINDING_VDYN OFF CACHE BOOL "Includes the legacy Binding API version dynamic")
+option(AGL_DEVEL                   "Activates developping features" OFF)
+option(INCLUDE_MONITORING          "Activates installation of monitoring" OFF)
+
+option(INCLUDE_SUPERVISOR          "Activates installation of supervisor" OFF)
+option(INCLUDE_DBUS_TRANSPARENCY   "Allows API transparency over DBUS" OFF)
+option(INCLUDE_LEGACY_BINDING_V1   "Includes the legacy Binding API version 1" OFF)
+option(INCLUDE_LEGACY_BINDING_VDYN "Includes the legacy Binding API version dynamic" OFF)
+
 set(AFS_SUPERVISION_SOCKET "@urn:AGL:afs:supervision:socket" CACHE STRING "Internal socket for supervision")
 set(AFS_SUPERVISOR_PORT 1619 CACHE STRING "Port of service for the supervisor")
 set(AFS_SUPERVISOR_TOKEN HELLO CACHE STRING "Secret token for the supervisor")

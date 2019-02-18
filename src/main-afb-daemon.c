@@ -43,7 +43,7 @@
 #include "afb-apiset.h"
 #include "afb-autoset.h"
 #include "afb-api-so.h"
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 #   include "afb-api-dbus.h"
 #endif
 #include "afb-api-ws.h"
@@ -60,7 +60,7 @@
 #include "afb-hook-flags.h"
 #endif
 #include "afb-debug.h"
-#if defined(WITH_SUPERVISION)
+#if WITH_SUPERVISION
 #   include "afb-supervision.h"
 #endif
 
@@ -805,7 +805,7 @@ static void start(int signum, void *arg)
 		ERROR("failed to setup monitor");
 		goto error;
 	}
-#if defined(WITH_SUPERVISION)
+#if WITH_SUPERVISION
 	if (afb_supervision_init(main_apiset, main_config) < 0) {
 		ERROR("failed to setup supervision");
 		goto error;
@@ -839,7 +839,7 @@ static void start(int signum, void *arg)
 	apiset_start_list("ldpaths", afb_api_so_add_pathset_fails, "the binding path set");
 	apiset_start_list("weak-ldpaths", afb_api_so_add_pathset_nofails, "the weak binding path set");
 	apiset_start_list("auto-api", afb_autoset_add_any, "the automatic api path set");
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 	apiset_start_list("dbus-client", afb_api_dbus_add_client, "the afb-dbus client");
 #endif
 	apiset_start_list("ws-client", afb_api_ws_add_client_weak, "the afb-websocket client");
@@ -856,7 +856,7 @@ static void start(int signum, void *arg)
 
 	/* export started apis */
 	apiset_start_list("ws-server", afb_api_ws_add_server, "the afb-websocket service");
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 	apiset_start_list("dbus-server", afb_api_dbus_add_server, "the afb-dbus service");
 #endif
 

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#if defined(WITH_DBUS_TRANSPARENCY)
+#if WITH_DBUS_TRANSPARENCY
 
 #define _GNU_SOURCE
 

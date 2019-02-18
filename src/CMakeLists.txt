@@ -26,26 +26,49 @@ ADD_DEFINITIONS(-DINFER_EXTENSION)
 
 ############################################################################
 # TODO: improve below setting
-option(USE_SIG_MONITOR_DUMPSTACK "activate dump stack on error"           ON)
-option(USE_SIG_MONITOR_SIGNALS   "activate handling of signals"           ON)
-option(USE_SIG_MONITOR_FOR_CALL  "activate monitoring of calls"           ON)
-option(USE_SIG_MONITOR_TIMERS    "activate monitoring of call expiration" ON)
-option(WITH_AFB_HOOK             "include hooking"                        ON)
-option(WITH_AFB_TRACE            "include monitoring trace"               ON)
+option(WITH_SIG_MONITOR_DUMPSTACK "activate dump stack on error"           ON)
+option(WITH_SIG_MONITOR_SIGNALS   "activate handling of signals"           ON)
+option(WITH_SIG_MONITOR_FOR_CALL  "activate monitoring of calls"           ON)
+option(WITH_SIG_MONITOR_TIMERS    "activate monitoring of call expiration" ON)
+option(WITH_AFB_HOOK              "include hooking"                        ON)
+option(WITH_AFB_TRACE             "include monitoring trace"               ON)
+option(WITH_SUPERVISOR            "Activates installation of supervisor"   OFF)
+option(WITH_DBUS_TRANSPARENCY     "Allows API transparency over DBUS"      OFF)
+option(WITH_LEGACY_BINDING_V1     "Includes the legacy Binding API version 1" OFF)
+option(WITH_LEGACY_BINDING_VDYN   "Includes the legacy Binding API version dynamic" OFF)
+
+if(INCLUDE_SUPERVISOR)
+  set(WITH_SUPERVISOR ON)
+endif()
+if(INCLUDE_DBUS_TRANSPARENCY)
+  set(WITH_DBUS_TRANSPARENCY ON)
+endif()
+if(INCLUDE_LEGACY_BINDING_V1)
+  set(WITH_LEGACY_BINDING_V1 ON)
+endif()
+if(INCLUDE_LEGACY_BINDING_VDYN)
+  set(WITH_LEGACY_BINDING_VDYN ON)
+endif()
 
 add_definitions(
-  -DUSE_SIG_MONITOR_DUMPSTACK=$<BOOL:${USE_SIG_MONITOR_DUMPSTACK}>
-  -DUSE_SIG_MONITOR_SIGNALS=$<BOOL:${USE_SIG_MONITOR_SIGNALS}>
-  -DUSE_SIG_MONITOR_FOR_CALL=$<BOOL:${USE_SIG_MONITOR_FOR_CALL}>
-  -DUSE_SIG_MONITOR_TIMERS=$<BOOL:${USE_SIG_MONITOR_TIMERS}>
+  -DWITH_SIG_MONITOR_DUMPSTACK=$<BOOL:${WITH_SIG_MONITOR_DUMPSTACK}>
+  -DWITH_SIG_MONITOR_SIGNALS=$<BOOL:${WITH_SIG_MONITOR_SIGNALS}>
+  -DWITH_SIG_MONITOR_FOR_CALL=$<BOOL:${WITH_SIG_MONITOR_FOR_CALL}>
+  -DWITH_SIG_MONITOR_TIMERS=$<BOOL:${WITH_SIG_MONITOR_TIMERS}>
   -DWITH_AFB_HOOK=$<BOOL:${WITH_AFB_HOOK}>
   -DWITH_AFB_TRACE=$<BOOL:${WITH_AFB_TRACE}>
+  -DWITH_LEGACY_BINDING_V1=$<BOOL:${INCLUDE_LEGACY_BINDING_V1}>
+  -DWITH_LEGACY_BINDING_VDYN=$<BOOL:${INCLUDE_LEGACY_BINDING_VDYN}>
+  -DWITH_DBUS_TRANSPARENCY=$<BOOL:${INCLUDE_DBUS_TRANSPARENCY}>
+  -DWITH_SUPERVISION=$<BOOL:${INCLUDE_SUPERVISOR}>
 )
 ############################################################################
 
 SET(AFB_LIB_SOURCES
 	afb-api.c
+	afb-api-dbus.c
 	afb-api-so.c
+	afb-api-so-v1.c
 	afb-api-so-v2.c
 	afb-api-so-v3.c
 	afb-api-so-vdyn.c
@@ -75,6 +98,7 @@ SET(AFB_LIB_SOURCES
 	afb-session.c
 	afb-socket.c
 	afb-stub-ws.c
+	afb-supervision.c
 	afb-trace.c
 	afb-websock.c
 	afb-ws-client.c
@@ -99,24 +123,6 @@ SET(AFB_LIB_SOURCES
 	websock.c
 	wrap-json.c
 )
-
-IF(INCLUDE_LEGACY_BINDING_V1)
-	ADD_DEFINITIONS(-DWITH_LEGACY_BINDING_V1)
-	SET(AFB_LIB_SOURCES ${AFB_LIB_SOURCES} afb-api-so-v1.c)
-ENDIF(INCLUDE_LEGACY_BINDING_V1)
-IF(INCLUDE_LEGACY_BINDING_VDYN)
-	ADD_DEFINITIONS(-DWITH_LEGACY_BINDING_VDYN)
-	SET(AFB_LIB_SOURCES ${AFB_LIB_SOURCES} afb-api-so-vdyn.c)
-ENDIF(INCLUDE_LEGACY_BINDING_VDYN)
-
-IF(INCLUDE_DBUS_TRANSPARENCY)
-	ADD_DEFINITIONS(-DWITH_DBUS_TRANSPARENCY)
-	SET(AFB_LIB_SOURCES ${AFB_LIB_SOURCES} afb-api-dbus.c)
-ENDIF()
-IF(INCLUDE_SUPERVISOR)
-	ADD_DEFINITIONS(-DWITH_SUPERVISION)
-	SET(AFB_LIB_SOURCES ${AFB_LIB_SOURCES} afb-supervision.c)
-ENDIF()
 
 ADD_LIBRARY(afb-lib STATIC ${AFB_LIB_SOURCES})
 
