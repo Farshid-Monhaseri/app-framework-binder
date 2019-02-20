@@ -25,6 +25,18 @@ extern int jobs_queue(
 		void (*callback)(int signum, void* arg),
 		void *arg);
 
+extern int jobs_queue_lazy(
+		const void *group,
+		int timeout,
+		void (*callback)(int signum, void* arg),
+		void *arg);
+
+extern int jobs_queue_urgent(
+		const void *group,
+		int timeout,
+		void (*callback)(int signum, void* arg),
+		void *arg);
+
 extern int jobs_enter(
 		const void *group,
 		int timeout,

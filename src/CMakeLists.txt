@@ -26,12 +26,12 @@ ADD_DEFINITIONS(-DINFER_EXTENSION)
 
 ############################################################################
 # TODO: improve below setting by using config file
-option(WITH_SIG_MONITOR_DUMPSTACK "activate dump stack on error"           ON)
-option(WITH_SIG_MONITOR_SIGNALS   "activate handling of signals"           ON)
-option(WITH_SIG_MONITOR_FOR_CALL  "activate monitoring of calls"           ON)
-option(WITH_SIG_MONITOR_TIMERS    "activate monitoring of call expiration" ON)
-option(WITH_AFB_HOOK              "include hooking"                        ON)
-option(WITH_AFB_TRACE             "include monitoring trace"               ON)
+option(WITH_SIG_MONITOR_DUMPSTACK "Activate dump stack on error"           ON)
+option(WITH_SIG_MONITOR_SIGNALS   "Activate handling of signals"           ON)
+option(WITH_SIG_MONITOR_FOR_CALL  "Activate monitoring of calls"           ON)
+option(WITH_SIG_MONITOR_TIMERS    "Activate monitoring of call expiration" ON)
+option(WITH_AFB_HOOK              "Include hooking"                        ON)
+option(WITH_AFB_TRACE             "Include monitoring trace"               ON)
 option(WITH_SUPERVISOR            "Activates installation of supervisor"   OFF)
 option(WITH_DBUS_TRANSPARENCY     "Allows API transparency over DBUS"      OFF)
 option(WITH_LEGACY_BINDING_V1     "Includes the legacy Binding API version 1" OFF)
