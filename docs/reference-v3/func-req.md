@@ -436,6 +436,9 @@ void afb_req_reply_f(
  *  4. 'info'    a string handling some info (can be NULL)
  *  5. 'req'     the req
  *
+ * NOTE: For convenience, *json_object_put* is called on 'object' after the
+ * callback returns. So, it is wrong to call *json_object_put* in the callback.
+ *
  * @param req      The request
  * @param api      The api name of the method to call
  * @param verb     The verb name of the method to call

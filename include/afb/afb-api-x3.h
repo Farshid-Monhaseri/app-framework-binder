@@ -814,13 +814,15 @@ int afb_api_x3_event_handler_del(
  *  4. 'info'    a string handling some info (can be NULL)
  *  5. 'api'     the api
  *
+ * NOTE: For convenience, *json_object_put* is called on 'object' after the
+ * callback returns. So, it is wrong to call *json_object_put* in the callback.
+ *
  * @param api      The api that makes the call
  * @param apiname  The api name of the method to call
  * @param verb     The verb name of the method to call
  * @param args     The arguments to pass to the method
  * @param callback The to call on completion
  * @param closure  The closure to pass to the callback
- *
  *
  * @see afb_req_subcall
  * @see afb_req_subcall_sync

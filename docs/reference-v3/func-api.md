@@ -293,6 +293,9 @@ struct json_object *afb_api_settings(
  *  4. 'info'    a string handling some info (can be NULL)
  *  5. 'api'     the api
  *
+ * NOTE: For convenience, *json_object_put* is called on 'object' after the
+ * callback returns. So, it is wrong to call *json_object_put* in the callback.
+ *
  * @param api      The api that makes the call
  * @param apiname  The api name of the method to call
  * @param verb     The verb name of the method to call
