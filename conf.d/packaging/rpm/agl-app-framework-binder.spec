@@ -28,7 +28,13 @@ BuildRequires:  pkgconfig(json-c)
 BuildRequires:  file-devel
 BuildRequires:  gcc-c++
 
+%if 0%{?suse_version}
+Requires:       libmicrohttpd12 >= 0.9.60
+%endif
+
+%if 0%{?fedora_version}
 Requires:       libmicrohttpd >= 0.9.60
+%endif
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
