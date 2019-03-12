@@ -81,13 +81,13 @@ char *make_desc(struct json_object *o)
 		}
 		else if (c == '\\') {
 			switch ((c = *b++)) {
-			case 0:
-				b--;
-				break;
 			case '/':
 				buf[0] = '/';
 				buf[1] = 0;
 				break;
+			case 0:
+				b--;
+				/*@fallthrough@*/
 			default:
 				buf[0] = '\\';
 				buf[1] = c;
