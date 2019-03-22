@@ -355,6 +355,9 @@ static int evloop_get()
 	if (evloop.holder)
 		return evloop.holder == ct;
 
+	if (!evloop.sdev)
+		return 0;
+
 	ct->nholder = NULL;
 	evloop.holder = ct;
 	return 1;
