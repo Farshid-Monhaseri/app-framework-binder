@@ -57,7 +57,7 @@ This service is evolving permanently and is only designed as a helper for develo
 
 %build
 export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
-%cmake  -DAGL_DEVEL=1 -DINCLUDE_MONITORING=ON
+%cmake  -DAGL_DEVEL=1 -DINCLUDE_MONITORING=ON -DCMAKE_C_FLAGS="-D_FORTIFY_SOURCE=1"
 %__make %{?_smp_mflags}
 
 
