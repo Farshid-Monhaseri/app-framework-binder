@@ -59,7 +59,6 @@ struct afb_xreq
 	int hookflags;			/**< flags for hooking */
 	int hookindex;			/**< hook index of the request if hooked */
 #endif
-	struct afb_evt_listener *listener; /**< event listener for the request */
 	struct afb_cred *cred;		/**< client credential if revelant */
 	struct afb_xreq *caller;	/**< caller request if any */
 };

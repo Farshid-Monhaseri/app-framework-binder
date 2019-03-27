@@ -52,6 +52,8 @@ static void aws_on_broadcast_cb(void *closure, const char *event, struct json_ob
 /* predeclaration of wsreq callbacks */
 static void wsreq_destroy(struct afb_xreq *xreq);
 static void wsreq_reply(struct afb_xreq *xreq, struct json_object *object, const char *error, const char *info);
+static int wsreq_subscribe(struct afb_xreq *xreq, struct afb_event_x2 *event);
+static int wsreq_unsubscribe(struct afb_xreq *xreq, struct afb_event_x2 *event);
 
 /* declaration of websocket structure */
 struct afb_ws_json1
@@ -85,6 +87,8 @@ static struct afb_wsj1_itf wsj1_itf = {
 /* interface for xreq */
 const struct afb_xreq_query_itf afb_ws_json1_xreq_itf = {
 	.reply = wsreq_reply,
+	.subscribe = wsreq_subscribe,
+	.unsubscribe = wsreq_unsubscribe,
 	.unref = wsreq_destroy
 };
 
@@ -202,7 +206,6 @@ static void aws_on_call_cb(void *closure, const char *api, const char *verb, str
 	wsreq->xreq.request.called_verb = verb;
 	wsreq->xreq.json = afb_wsj1_msg_object_j(wsreq->msgj1);
 	wsreq->aws = afb_ws_json1_addref(ws);
-	wsreq->xreq.listener = wsreq->aws->listener;
 
 	/* emits the call */
 	afb_xreq_process(&wsreq->xreq, ws->apiset);
@@ -255,5 +258,19 @@ static void wsreq_reply(struct afb_xreq *xreq, struct json_object *object, const
 			wsreq->msgj1, reply, afb_context_sent_token(&wsreq->xreq.context));
 	if (rc)
 		ERROR("Can't send reply: %m");
+}
+
+static int wsreq_subscribe(struct afb_xreq *xreq, struct afb_event_x2 *event)
+{
+	struct afb_wsreq *wsreq = CONTAINER_OF_XREQ(struct afb_wsreq, xreq);
+
+	return afb_evt_event_x2_add_watch(wsreq->aws->listener, event);
+}
+
+static int wsreq_unsubscribe(struct afb_xreq *xreq, struct afb_event_x2 *event)
+{
+	struct afb_wsreq *wsreq = CONTAINER_OF_XREQ(struct afb_wsreq, xreq);
+
+	return afb_evt_event_x2_remove_watch(wsreq->aws->listener, event);
 }
 
