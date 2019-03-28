@@ -969,7 +969,7 @@ void afb_config_dump(struct json_object *config)
 
 static void on_environment(struct json_object *config, int optid, const char *name, void (*func)(struct json_object*, int, const char*))
 {
-	char *value = getenv(name);
+	char *value = secure_getenv(name);
 
 	if (value && *value)
 		func(config, optid, value);
@@ -977,7 +977,7 @@ static void on_environment(struct json_object *config, int optid, const char *na
 
 static void on_environment_enum(struct json_object *config, int optid, const char *name, int (*func)(const char*))
 {
-	char *value = getenv(name);
+	char *value = secure_getenv(name);
 
 	if (value) {
 		if (func(value) == -1)
@@ -989,7 +989,7 @@ static void on_environment_enum(struct json_object *config, int optid, const cha
 
 static void on_environment_bool(struct json_object *config, int optid, const char *name)
 {
-	char *value = getenv(name);
+	char *value = secure_getenv(name);
 	int asbool;
 
 	if (value) {
