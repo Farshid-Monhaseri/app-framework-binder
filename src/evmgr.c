@@ -185,13 +185,14 @@ int evmgr_create(struct evmgr **result)
 	/* creates the eventfd for waking up polls */
 	evmgr->efd = eventfd(0, EFD_CLOEXEC|EFD_SEMAPHORE);
 	if (evmgr->efd < 0) {
-		ERROR("can't make eventfd for events");
 		rc = -errno;
+		ERROR("can't make eventfd for events");
 		goto error1;
 	}
 	/* create the systemd event loop */
 	evmgr->sdev = systemd_get_event_loop();
 	if (!evmgr->sdev) {
+		rc = -errno;
 		ERROR("can't make new event loop");
 		goto error2;
 	}
