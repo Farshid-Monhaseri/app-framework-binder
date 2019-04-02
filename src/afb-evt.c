@@ -86,7 +86,7 @@ struct afb_evtid {
 	int id;
 
 	/* fullname of the event */
-	char fullname[1];
+	char fullname[];
 };
 
 /*
@@ -296,7 +296,7 @@ struct afb_evtid *afb_evt_evtid_create(const char *fullname)
 
 	/* allocates the event */
 	len = strlen(fullname);
-	evtid = malloc(len + sizeof * evtid);
+	evtid = malloc(len + 1 + sizeof * evtid);
 	if (evtid == NULL)
 		goto error;
 

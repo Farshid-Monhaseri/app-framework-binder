@@ -73,7 +73,7 @@ struct api_alias
 {
 	struct api_alias *next;
 	struct api_desc *api;
-	char name[1];
+	char name[];
 };
 
 /**
@@ -83,7 +83,7 @@ struct api_class
 {
 	struct api_class *next;
 	struct api_array providers;
-	char name[1];
+	char name[];
 };
 
 /**
@@ -92,7 +92,7 @@ struct api_class
 struct api_depend
 {
 	struct afb_apiset *set;
-	char name[1];
+	char name[];
 };
 
 /**
@@ -110,7 +110,7 @@ struct afb_apiset
 	} onlack;			/** not found handler */
 	int timeout;			/**< the timeout in second for the apiset */
 	int refcount;			/**< reference count for freeing resources */
-	char name[1];			/**< name of the apiset */
+	char name[];			/**< name of the apiset */
 };
 
 /**
@@ -215,7 +215,7 @@ static struct api_class *class_search(const char *name, int create)
 	if (!create)
 		return NULL;
 
-	c = calloc(1, strlen(name) + sizeof *c);
+	c = calloc(1, strlen(name) + 1 + sizeof *c);
 	if (!c)
 		errno = ENOMEM;
 	else {
@@ -341,7 +341,7 @@ struct afb_apiset *afb_apiset_create(const char *name, int timeout)
 {
 	struct afb_apiset *set;
 
-	set = calloc(1, (name ? strlen(name) : 0) + sizeof *set);
+	set = calloc(1, (name ? strlen(name) : 0) + 1 + sizeof *set);
 	if (set) {
 		set->timeout = timeout;
 		set->refcount = 1;
@@ -545,7 +545,7 @@ int afb_apiset_add_alias(struct afb_apiset *set, const char *name, const char *a
 	}
 
 	/* allocates and init the struct */
-	ali = malloc(sizeof *ali + strlen(alias));
+	ali = malloc(sizeof *ali + strlen(alias) + 1);
 	if (ali == NULL) {
 		ERROR("out of memory");
 		errno = ENOMEM;
@@ -1079,7 +1079,7 @@ int afb_apiset_require(struct afb_apiset *set, const char *name, const char *req
 	if (!a)
 		errno = ENOENT;
 	else {
-		d = malloc(strlen(required) + sizeof *d);
+		d = malloc(strlen(required) + 1 + sizeof *d);
 		if (!d)
 			errno = ENOMEM;
 		else {

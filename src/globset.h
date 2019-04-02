@@ -26,7 +26,7 @@ struct globset_handler
 	void *closure;
 
 	/* the pattern */
-	char pattern[1];
+	char pattern[];
 };
 
 struct globset;

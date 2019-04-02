@@ -56,7 +56,7 @@ struct hsrv_itf {
 	struct hsrv_itf *next;
 	struct afb_hsrv *hsrv;
 	struct fdev *fdev;
-	char uri[1];
+	char uri[];
 };
 
 struct hsrv_handler {
@@ -562,7 +562,7 @@ int afb_hsrv_add_interface(struct afb_hsrv *hsrv, const char *uri)
 {
 	struct hsrv_itf *itf;
 
-	itf = malloc(sizeof *itf + strlen(uri));
+	itf = malloc(sizeof *itf + 1 + strlen(uri));
 	if (itf == NULL)
 		return -1;
 

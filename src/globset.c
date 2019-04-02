@@ -323,7 +323,7 @@ int globset_add(
 	}
 
 	/* not found, create it */
-	ph = malloc(len + sizeof *ph);
+	ph = malloc(1 + len + sizeof *ph);
 	if (!ph)
 		return -1;
 

@@ -47,7 +47,7 @@ static const char locales[] = "locales/";
 struct locale_folder {
 	struct locale_folder *parent;
 	size_t length;
-	char name[1];
+	char name[];
 };
 
 struct locale_container {
@@ -67,7 +67,7 @@ struct locale_search {
 	struct locale_root *root;
 	struct locale_search_node *head;
 	int refcount;
-	char definition[1];
+	char definition[];
 };
 
 struct locale_root {
@@ -102,7 +102,7 @@ static int add_folder(struct locale_container *container, const char *name)
 	if (folders != NULL) {
 		container->folders = folders;
 		length = strlen(name);
-		folders[count] = malloc(sizeof **folders + length);
+		folders[count] = malloc(sizeof **folders + 1 + length);
 		if (folders[count] != NULL) {
 			folders[count]->parent = NULL;
 			folders[count]->length = length;
@@ -362,7 +362,7 @@ static struct locale_search *create_search(struct locale_root *root, const char 
 	struct locale_search_node *node;
 
 	/* allocate the structure */
-	search = malloc(sizeof *search + length);
+	search = malloc(sizeof *search + 1 + length);
 	if (search == NULL) {
 		errno = ENOMEM;
 	} else {

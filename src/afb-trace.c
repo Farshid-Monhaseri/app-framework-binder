@@ -67,7 +67,7 @@
 /* struct for tags */
 struct tag {
 	struct tag *next;	/* link to the next */
-	char tag[1];		/* name of the tag */
+	char tag[];		/* name of the tag */
 };
 
 /* struct for events */
@@ -1073,7 +1073,7 @@ static struct tag *trace_get_tag(struct afb_trace *trace, const char *name, int 
 
 	if (!tag && alloc) {
 		/* creation if needed */
-		tag = malloc(sizeof * tag + strlen(name));
+		tag = malloc(sizeof * tag + 1 + strlen(name));
 		if (tag) {
 			strcpy(tag->tag, name);
 			tag->next = trace->tags;

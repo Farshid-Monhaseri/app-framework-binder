@@ -145,7 +145,7 @@ struct afb_stub_ws
 	uint8_t is_client;
 
 	/* the api name */
-	char apiname[1];
+	char apiname[];
 };
 
 static struct afb_proto_ws *afb_stub_ws_create_proto(struct afb_stub_ws *stubws, struct fdev *fdev, uint8_t server);
@@ -673,7 +673,7 @@ static struct afb_stub_ws *afb_stub_ws_create(struct fdev *fdev, const char *api
 {
 	struct afb_stub_ws *stubws;
 
-	stubws = calloc(1, sizeof *stubws + strlen(apiname));
+	stubws = calloc(1, sizeof *stubws + 1 + strlen(apiname));
 	if (stubws == NULL)
 		errno = ENOMEM;
 	else {

@@ -666,7 +666,7 @@ struct origin
 	struct afb_cred *cred;
 
 	/* the origin */
-	char name[1];
+	char name[];
 };
 
 /* get the credentials for the message */
@@ -710,7 +710,7 @@ static struct origin *afb_api_dbus_server_origin_get(struct api_dbus *api, const
 	}
 
 	/* not found, create it */
-	origin = malloc(strlen(sender) + sizeof *origin);
+	origin = malloc(strlen(sender) + 1 + sizeof *origin);
 	if (origin == NULL)
 		errno = ENOMEM;
 	else {

@@ -43,7 +43,7 @@ struct api_ws_server
 	struct afb_apiset *apiset;	/* the apiset for calling */
 	struct fdev *fdev;		/* fdev handler */
 	uint16_t offapi;		/* api name of the interface */
-	char uri[1];			/* the uri of the server socket */
+	char uri[];			/* the uri of the server socket */
 };
 
 /******************************************************************************/
@@ -206,7 +206,7 @@ int afb_api_ws_add_server(const char *uri, struct afb_apiset *declare_set, struc
 	/* make the structure */
 	lapi = strlen(api);
 	extra = luri == (api - uri) + lapi ? 0 : lapi + 1;
-	apiws = malloc(sizeof * apiws + luri + extra);
+	apiws = malloc(sizeof * apiws + 1 + luri + extra);
 	if (!apiws) {
 		ERROR("out of memory");
 		errno = ENOMEM;
