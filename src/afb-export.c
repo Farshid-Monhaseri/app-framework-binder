@@ -1372,7 +1372,7 @@ static struct afb_export *create(
 			return NULL;
 	}
 	lenapi = strlen(apiname);
-	export = calloc(1, sizeof *export + 1 + lenapi + (path == apiname || !path ? 0 : strlen(path)));
+	export = calloc(1, sizeof *export + 1 + lenapi + (path == apiname || !path ? 0 : 1 + strlen(path)));
 	if (!export)
 		errno = ENOMEM;
 	else {
