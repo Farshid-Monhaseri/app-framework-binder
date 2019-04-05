@@ -6,5 +6,5 @@
 /opt/AGL/bin/afb-exprefs
 /opt/AGL/bin/afb-client-demo
 /opt/AGL/bin/afb-genskel
-/etc/profile.d/AGL-app-framework-binder.sh
+/etc/profile.d/agl-app-framework-binder.sh
 /opt/AGL/lib/*/afb/monitoring/*

@@ -96,7 +96,7 @@ EOF
 
 #app-framework-binder demo
 %{_libdir}/afb/*.so
-%config(noreplace) %{_sysconfdir}/profile.d/AGL-%{name}.sh
+%config(noreplace) %{_sysconfdir}/profile.d/%{name}.sh
 
 #app-framework-binder monitoring
 %dir %{_libdir}/afb/monitoring

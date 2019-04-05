@@ -48,13 +48,13 @@ install: build
 	# Add here commands to install the package into debian/tmp
 	cd build;make install DESTDIR=/usr/src/packages/BUILD/debian/tmp
 	mkdir -p debian/tmp/etc/profile.d
-	echo '#----------  AGL app-framework-binder options Start ---------" '                          > debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo '# Object: AGL cmake option for  binder/bindings'                                          >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo 'export LD_LIBRARY_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH):$${LD_LIBRARY_PATH}'            >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo 'export LIBRARY_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH):$${LIBRARY_PATH}'                  >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo 'export PKG_CONFIG_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH)/pkgconfig:$${PKG_CONFIG_PATH}'  >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo 'export PATH=/opt/AGL/bin:$${PATH}'                                                        >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
-	echo '#----------  AGL options End ---------'                                                   >> debian/tmp/etc/profile.d/AGL-app-framework-binder.sh
+	echo '#----------  AGL app-framework-binder options Start ---------" '                          > debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo '# Object: AGL cmake option for  binder/bindings'                                          >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo 'export LD_LIBRARY_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH):$${LD_LIBRARY_PATH}'            >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo 'export LIBRARY_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH):$${LIBRARY_PATH}'                  >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo 'export PKG_CONFIG_PATH=/opt/AGL/lib/$(DEB_HOST_MULTIARCH)/pkgconfig:$${PKG_CONFIG_PATH}'  >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo 'export PATH=/opt/AGL/bin:$${PATH}'                                                        >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
+	echo '#----------  AGL options End ---------'                                                   >> debian/tmp/etc/profile.d/agl-app-framework-binder.sh
 	# Move all files in their corresponding package
 	dh_install --list-missing -s --sourcedir=debian/tmp
 	# empty dependency_libs in .la files
