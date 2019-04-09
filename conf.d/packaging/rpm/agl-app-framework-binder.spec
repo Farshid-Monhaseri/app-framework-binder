@@ -66,7 +66,7 @@ export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
 %make_install
 
 mkdir -p %{buildroot}%{_sysconfdir}/profile.d
-cat << EOF > %{buildroot}%{_sysconfdir}/profile.d/AGL-%{name}.sh
+cat << EOF > %{buildroot}%{_sysconfdir}/profile.d/%{name}.sh
 #----------  AGL %%{name} options Start ---------"
 # Object: AGL cmake option for  binder/bindings
 export LD_LIBRARY_PATH=%{_libdir}:\${LD_LIBRARY_PATH}
