@@ -60,7 +60,7 @@ ldflags = -ldl -lrt -lpthread \
 
 cflags = $(ccflags) $(ldflags)
 
-defs = 	-DAGL_DEVEL \
+defs = 	-DAGL_DEVEL=1 \
 	-DWITH_MONITORING_OPTION \
 	-DAFB_VERSION=\"cov\" \
 	-DUSE_SIG_MONITOR_DUMPSTACK=1 \
@@ -69,6 +69,12 @@ defs = 	-DAGL_DEVEL \
 	-DUSE_SIG_MONITOR_TIMERS=1 \
 	-DWITH_AFB_HOOK=1 \
 	-DWITH_AFB_TRACE=1 \
+	-DWITH_LEGACY_BINDING_V1=0 \
+	-DWITH_LEGACY_BINDING_V2=1 \
+	-DWITH_LEGACY_BINDING_VDYN=0 \
+	-DWITH_DBUS_TRANSPARENCY=0 \
+	-DWITH_SUPERVISION=0 \
+	-DWITH_DYNAMIC_BINDING=1 \
 	-DBINDING_INSTALL_DIR=\"$(shell pwd)/fake\"
 
 afb_lib_src = $(shell ls $(srcdir)/*.c | egrep -v '/afs-|/main-|/fdev-epoll.c|/afb-ws-client.c' )
