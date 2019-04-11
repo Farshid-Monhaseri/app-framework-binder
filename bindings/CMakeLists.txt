@@ -18,5 +18,5 @@
 
 ADD_SUBDIRECTORY(intrinsics)
 ADD_SUBDIRECTORY(samples)
-ADD_SUBDIRECTORY(tutorial)
+ADD_SUBDIRECTORY(tutorials)
 

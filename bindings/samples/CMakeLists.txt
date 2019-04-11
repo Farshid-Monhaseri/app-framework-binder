@@ -16,78 +16,18 @@
 # limitations under the License.
 ###########################################################################
 
+macro(sample name source)
+  add_library(${name} MODULE ${source})
+  set_target_properties(${name} PROPERTIES PREFIX "" LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map")
+#  target_link_libraries(${name} ${link_libraries})
+  target_link_libraries(${name} ${json-c_LDFLAGS} ${CMAKE_THREAD_LIBS_INIT})
+  install(TARGETS ${name} LIBRARY DESTINATION ${install_datadir}/bindings/samples)
+endmacro(sample)
 
-INCLUDE_DIRECTORIES(${include_dirs})
-
-##################################################
-# AuthLogin
-##################################################
-ADD_LIBRARY(authLogin MODULE AuthLogin.c)
-SET_TARGET_PROPERTIES(authLogin PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(authLogin ${link_libraries})
-INSTALL(TARGETS authLogin
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# DemoContext
-##################################################
-ADD_LIBRARY(demoContext MODULE DemoContext.c)
-SET_TARGET_PROPERTIES(demoContext PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(demoContext ${link_libraries})
-INSTALL(TARGETS demoContext
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# DemoPost
-##################################################
-ADD_LIBRARY(demoPost MODULE DemoPost.c)
-SET_TARGET_PROPERTIES(demoPost PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(demoPost ${link_libraries})
-INSTALL(TARGETS demoPost
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# tic-tac-toe
-##################################################
-ADD_LIBRARY(tic-tac-toe MODULE tic-tac-toe.c)
-SET_TARGET_PROPERTIES(tic-tac-toe PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(tic-tac-toe ${link_libraries})
-INSTALL(TARGETS tic-tac-toe
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# hello2
-##################################################
-ADD_LIBRARY(hello2 MODULE hello2.c)
-SET_TARGET_PROPERTIES(hello2 PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(hello2 ${link_libraries})
-INSTALL(TARGETS hello2
-        LIBRARY DESTINATION ${binding_install_dir})
-
-##################################################
-# hello3
-##################################################
-ADD_LIBRARY(hello3 MODULE hello3.c)
-SET_TARGET_PROPERTIES(hello3 PROPERTIES
-	PREFIX ""
-	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
-)
-TARGET_LINK_LIBRARIES(hello3 ${link_libraries})
-INSTALL(TARGETS hello3
-        LIBRARY DESTINATION ${binding_install_dir})
+sample(authLogin    AuthLogin.c)
+sample(demoContext  DemoContext.c)
+sample(demoPost     DemoPost.c)
+sample(tic-tac-toe  tic-tac-toe.c)
+sample(hello2       hello2.c)
+sample(hello3       hello3.c)
 

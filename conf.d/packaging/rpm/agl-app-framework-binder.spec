@@ -51,13 +51,19 @@ Summary:        AGL app-framework-binder-devel
 Provides a test agl binder service which can be used to test agl bindings on Linux PC
 This service is evolving permanently and is only designed as a helper for developper.
 
+%package samples
+Requires:       %{name} = %{version}
+Summary:        AGL app-framework-binder-samples
+%description samples
+Provides sample bindings for testing AGL framework binder
+
 
 %prep
 %setup -q -n app-framework-binder-%{version}
 
 %build
 export PKG_CONFIG_PATH=%{_libdir}/pkgconfig
-%cmake  -DAGL_DEVEL=1 -DINCLUDE_MONITORING=ON"
+%cmake  -DAGL_DEVEL=1 -DINCLUDE_MONITORING=ON
 %__make %{?_smp_mflags}
 
 
@@ -111,6 +117,12 @@ EOF
 %{_includedir}/afb/*
 %dir %{_libdir}/pkgconfig
 %{_libdir}/pkgconfig/*.pc
+
+%files samples
+%defattr(-,root,root)
+%dir %{_datadir}
+%dir %{_datadir}/af-binder
+%{_datadir}/af-binder/*
 
 %changelog
 * Wed Sep 27 2017 Dominig

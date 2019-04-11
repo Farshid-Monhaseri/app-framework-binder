@@ -157,6 +157,7 @@ IF(ONLY_DEVTOOLS)
 	MESSAGE(WARNING "Only DEVTOOLS are compiled, not the binder!")
 ELSE()
 	SET(binding_install_dir ${CMAKE_INSTALL_FULL_LIBDIR}/afb)
+	SET(install_datadir ${CMAKE_INSTALL_FULL_DATADIR}/af-binder)
 
 	###########################################################################
 	# activates the monitoring by default

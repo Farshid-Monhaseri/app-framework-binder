@@ -17,15 +17,14 @@
 ###########################################################################
 
 
-#INCLUDE_DIRECTORIES(${include_dirs})
-
 MACRO(tuto num ext)
   ADD_LIBRARY(tuto-${num} MODULE tuto-${num}.${ext})
   SET_TARGET_PROPERTIES(tuto-${num} PROPERTIES
 	PREFIX ""
 	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
   )
-  TARGET_LINK_LIBRARIES(tuto-${num} ${link_libraries})
+  TARGET_LINK_LIBRARIES(tuto-${num}  ${json-c_LDFLAGS})
+  install(TARGETS tuto-${num} LIBRARY DESTINATION ${install_datadir}/bindings/tutorials)
 ENDMACRO(tuto)
 
 

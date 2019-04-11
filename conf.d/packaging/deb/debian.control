@@ -24,3 +24,9 @@ Architecture: any
 Depends: agl-app-framework-binder-bin
 Description: agl-app-framework-binder-devel
 
+Package: agl-app-framework-binder-samples
+Section: libs
+Architecture: any
+Depends: agl-app-framework-binder-bin
+Description: agl-app-framework-binder-samples
+

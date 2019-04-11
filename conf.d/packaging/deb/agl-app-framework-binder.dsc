@@ -1,6 +1,6 @@
 Format: 1.0
 Source: agl-app-framework-binder
-Binary: agl-app-framework-binder-bin, agl-app-framework-binder-dev
+Binary: agl-app-framework-binder-bin, agl-app-framework-binder-dev, agl-app-framework-binder-samples
 Architecture: any
 Version: 2.0-0
 Maintainer: unknown <unknown@debian.org>
