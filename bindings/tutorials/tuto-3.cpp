@@ -1,3 +1,5 @@
+#include <string>
+
 #include <string.h>
 #include <json-c/json.h>
 
@@ -6,10 +8,20 @@
 
 afb::event event_login, event_logout;
 
+class session
+{
+private:
+	std::string user_;
+public:
+	session(const char *user) : user_(user) {}
+	~session() {}
+	operator const char *() const { return user_.c_str(); }
+};
+
 void login(afb::req req)
 {
 	json_object *args, *user, *passwd;
-	char *usr;
+	const char *usr;
 
 	args = req.json();
 	if (!json_object_object_get_ex(args, "user", &user)
@@ -23,10 +35,10 @@ void login(afb::req req)
 		AFB_REQ_ERROR(req, "login, unauthorized: %s", json_object_get_string(args));
 		req.fail("unauthorized");
 	} else {
-		usr = strdup(json_object_get_string(user));
+		usr = json_object_get_string(user);
 		AFB_REQ_NOTICE(req, "login user: %s", usr);
+		req.context<session>().set(new session(usr));
 		req.session_set_LOA(1);
-//		req.context(1, nullptr, free, usr);
 		req.success();
 		event_login.push(json_object_new_string(usr));
 	}
@@ -35,19 +47,17 @@ void login(afb::req req)
 void action(afb::req req)
 {
 	json_object *args, *val;
-	char *usr;
+	session &usr = req.context<session>();
 
 	args = req.json();
-//	usr = (char*)req.context_get();
-usr = nullptr;
-	AFB_REQ_NOTICE(req, "action for user %s: %s", usr, json_object_get_string(args));
+	AFB_REQ_NOTICE(req, "action for user %s: %s", (const char*)usr, json_object_get_string(args));
 	if (json_object_object_get_ex(args, "subscribe", &val)) {
 		if (json_object_get_boolean(val)) {
-			AFB_REQ_NOTICE(req, "user %s subscribes to events", usr);
+			AFB_REQ_NOTICE(req, "user %s subscribes to events", (const char*)usr);
 			req.subscribe(event_login);
 			req.subscribe(event_logout);
 		} else {
-			AFB_REQ_NOTICE(req, "user %s unsubscribes to events", usr);
+			AFB_REQ_NOTICE(req, "user %s unsubscribes to events", (const char*)usr);
 			req.unsubscribe(event_login);
 			req.unsubscribe(event_logout);
 		}
@@ -57,22 +67,16 @@ usr = nullptr;
 
 void logout(afb::req req)
 {
-	char *usr;
+	session &usr = req.context<session>();
 
-//	usr = (char*)req.context_get();
-usr = nullptr;
-	AFB_REQ_NOTICE(req, "login user %s out", usr);
-	event_logout.push(json_object_new_string(usr));
+	AFB_REQ_NOTICE(req, "login user %s out", (const char*)usr);
+	event_logout.push(json_object_new_string((const char*)usr));
 	req.session_set_LOA(0);
-//	req.context_clear();
+	req.context<session>().clear();
 	req.success();
 }
 
-int init(
-#if AFB_BINDING_VERSION >= 3
-	afb_api_t api
-#endif
-)
+int init(afb_api_t api)
 {
 	AFB_NOTICE("init");
 	event_login = afb_daemon_make_event("login");
@@ -91,5 +95,4 @@ const afb_verb_t verbs[] = {
 };
 
 const afb_binding_t afbBindingExport = afb::binding("tuto-3", verbs, "third tutorial: C++", init);
-
 

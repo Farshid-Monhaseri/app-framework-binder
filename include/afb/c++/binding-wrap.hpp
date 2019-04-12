@@ -258,8 +258,6 @@ public:
 	void failf(const char *error, const char *info, ...) const;
 	void failv(const char *error, const char *info, va_list args) const;
 
-	template < class T > T *context() const;
-
 	void addref() const;
 
 	void unref() const;
@@ -294,6 +292,54 @@ public:
 	int get_uid() const;
 
 	json_object *get_client_info() const;
+
+	template < class T = void >
+	class contextclass {
+
+		friend class req;
+		afb_req_t req_;
+		contextclass(afb_req_t r) : req_(r) {}
+
+	public:
+		inline operator T *() const { return get(); }
+		inline operator T &() const { return *get(); }
+		inline T* get() const {
+			return reinterpret_cast<T*>(
+				afb_req_context(req_, 0,
+					nullptr,
+					nullptr,
+					nullptr));
+		}
+
+		inline void set(T *value, void (*destroyer)(T*) = [](T*t){delete t;}) const {
+			afb_req_context(req_, 1,
+				nullptr,
+				reinterpret_cast<void(*)(void*)>(destroyer),
+				reinterpret_cast<void*>(value));
+		}
+
+		inline void unset() { set(nullptr); }
+		inline void clear() { set(nullptr); }
+
+		inline T *lazy(T *(*allocator)() = []()->T*{return new T();}, void (*destroyer)(T*) = [](T*t){delete t;}) const {
+			return reinterpret_cast<T*>(
+				afb_req_context(req_, 0,
+					[allocator](void*)->T*{return allocator();},
+					reinterpret_cast<void(*)(void*)>(destroyer),
+					nullptr));
+		}
+
+		template <class I>
+		inline T *lazy(I *i, T *(*allocator)(I*) = [](I*i)->T*{return new T(i);}, void (*destroyer)(T*) = [](T*t){delete t;}) const {
+			return reinterpret_cast<T*>(
+				afb_req_context(req_, 0,
+					[allocator](void*i)->T*{return allocator(reinterpret_cast<I*>(i));},
+					reinterpret_cast<void(*)(void*)>(destroyer),
+					reinterpret_cast<void*>(i)));
+		}
+	};
+
+	template < class T > contextclass<T> context() const { return contextclass<T>(req_); }
 };
 
 /*************************************************************************/
@@ -474,16 +520,6 @@ inline void req::failf(const char *error, const char *info, ...) const
 	va_start(args, info);
 	failv(error, info, args);
 	va_end(args);
-}
-
-template < class T >
-inline T *req::context() const
-{
-	T* (*creater)(void*) = [](){return new T();};
-	void (*freer)(T*) = [](T*t){delete t;};
-	return reinterpret_cast<T*>(afb_req_context(req_, 0,
-			reinterpret_cast<void *(*)(void*)>(creater),
-			reinterpret_cast<void (*)(void*)>(freer), nullptr));
 }
 
 inline void req::addref() const { afb_req_addref(req_); }
