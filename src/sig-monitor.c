@@ -154,7 +154,7 @@ static inline int timeout_create()
 		rc = timer_create(CLOCK_THREAD_CPUTIME_ID, &sevp, &thread_timerid);
 		thread_timer_set = !rc;
 	}
-	return 0;
+	return rc;
 }
 
 /*

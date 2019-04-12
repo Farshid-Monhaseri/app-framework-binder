@@ -913,6 +913,7 @@ static void api (afb_req_t request)
 		}
 		sapi->api = afb_api_new_api(api, apiname, NULL, 1, apipreinit, NULL);
 		if (!sapi->api) {
+			free(sapi);
 			afb_req_reply_f(request, NULL, "cant-create", "%m");
 			goto end;
 		}

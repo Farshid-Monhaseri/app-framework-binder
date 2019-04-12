@@ -307,11 +307,13 @@ static struct afb_wsj1_msg *wsj1_msg_make(struct afb_wsj1 *wsj1, char *text, siz
 
 	/* scan */
 	n = wsj1_msg_scan(text, items);
-	if (n < 0)
+	if (n <= 0)
 		goto bad_header;
 
 	/* scans code: 2|3|4|5 */
-	if (items[0][1] != 1) goto bad_header;
+	if (items[0][1] != 1)
+		goto bad_header;
+
 	switch (text[items[0][0]]) {
 	case '2': msg->code = CALL; break;
 	case '3': msg->code = RETOK; break;
