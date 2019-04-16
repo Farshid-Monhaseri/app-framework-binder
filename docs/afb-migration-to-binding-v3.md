@@ -177,8 +177,8 @@ of the context and event subscriptions. The new design allows you to specify:
  - whether the caller or the service or both or none will receive the
    eventually events during the subcall.
 
-See [calls](reference-v3/func-api/#calls-and-job-functions) and
-[subcalls](reference-v3/func-req/#subcall-functions).
+See [calls](reference-v3/func-api.html#calls-and-job-functions) and
+[subcalls](reference-v3/func-req.html#subcall-functions).
 
 The table below list the changes to apply:
 
@@ -197,4 +197,4 @@ Consider use of event handlers
 Binding V3 brings new ways of handling event in services. You can register
 functions that will handle specific events and that accept closure arguments.
 
-See [**afb_api_event_handler_add** and **afb_api_event_handler_del**](reference-v3/func-api/#event-functions)
+See [**afb_api_event_handler_add** and **afb_api_event_handler_del**](reference-v3/func-api.html#event-functions)
