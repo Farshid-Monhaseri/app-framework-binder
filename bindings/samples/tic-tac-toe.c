@@ -470,7 +470,7 @@ static void join(afb_req_t req)
 
 	/* none is a special id for joining a new session */
 	if (strcmp(id, "none") == 0) {
-		new_board = get_new_board(req);
+		new_board = get_new_board();
 		goto setctx;
 	}
 
