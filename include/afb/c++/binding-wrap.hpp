@@ -631,28 +631,28 @@ inline bool callsync(const char *api, const char *verb, struct json_object *args
 
 constexpr afb_auth auth_no()
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_No;
 	return r;
 }
 
 constexpr afb_auth auth_yes()
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_Yes;
 	return r;
 }
 
 constexpr afb_auth auth_token()
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_Token;
 	return r;
 }
 
 constexpr afb_auth auth_LOA(unsigned loa)
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_LOA;
 	r.loa = loa;
 	return r;
@@ -660,7 +660,7 @@ constexpr afb_auth auth_LOA(unsigned loa)
 
 constexpr afb_auth auth_permission(const char *permission)
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_Permission;
 	r.text = permission;
 	return r;
@@ -668,7 +668,7 @@ constexpr afb_auth auth_permission(const char *permission)
 
 constexpr afb_auth auth_not(const afb_auth *other)
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_Not;
 	r.first = other;
 	return r;
@@ -681,7 +681,7 @@ constexpr afb_auth auth_not(const afb_auth &other)
 
 constexpr afb_auth auth_or(const afb_auth *first, const afb_auth *next)
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_Or;
 	r.first = first;
 	r.next = next;
@@ -695,7 +695,7 @@ constexpr afb_auth auth_or(const afb_auth &first, const afb_auth &next)
 
 constexpr afb_auth auth_and(const afb_auth *first, const afb_auth *next)
 {
-	afb_auth r = { afb_auth_No, 0, 0};
+	afb_auth r = { afb_auth_No, {0}, nullptr};
 	r.type = afb_auth_And;
 	r.first = first;
 	r.next = next;
@@ -723,7 +723,7 @@ constexpr afb_verb_t verb(
 	r.info = info;
 	r.session = session;
 	r.auth = auth;
-	r.glob = (unsigned)glob;
+	r.glob = (uint16_t)glob;
 	r.vcbdata = vcbdata;
 	return r;
 }
