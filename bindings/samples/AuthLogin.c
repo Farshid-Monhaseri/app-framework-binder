@@ -112,7 +112,7 @@ static const struct afb_verb_v3 verbs[]= {
   {.verb="refresh" , .session=AFB_SESSION_LOA_1 | AFB_SESSION_RENEW, .callback=clientContextRefresh,.info="Refresh Client Authentication Token"},
   {.verb="check"   , .session=AFB_SESSION_LOA_1                    , .callback=clientContextCheck  ,.info="Check Client Authentication Token"},
   {.verb="logout"  , .session=AFB_SESSION_LOA_1 | AFB_SESSION_CLOSE, .callback=clientContextLogout ,.info="Logout Client and Free resources"},
-  {NULL}
+  {0, 0, 0, 0, 0, 0, 0}
 };
 
 const struct afb_binding_v3 afbBindingV3 =

@@ -127,7 +127,7 @@ static const struct afb_verb_v3 verbs[]= {
   {.verb="check_loa_ge_1", .session=AFB_SESSION_LOA_1, .callback=clientCheckLOA ,.vcbdata=(void*)(intptr_t)1 ,.info="Check whether level of assurance is greater or equal to 1"},
   {.verb="check_loa_ge_2", .session=AFB_SESSION_LOA_2, .callback=clientCheckLOA ,.vcbdata=(void*)(intptr_t)2 ,.info="Check whether level of assurance is greater or equal to 2"},
   {.verb="check_loa_ge_3", .session=AFB_SESSION_LOA_3, .callback=clientCheckLOA ,.vcbdata=(void*)(intptr_t)3 ,.info="Check whether level of assurance is greater or equal to 3"},
-  {NULL}
+  {0, 0, 0, 0, 0, 0, 0}
 };
 
 const struct afb_binding_v3 afbBindingV3 =
