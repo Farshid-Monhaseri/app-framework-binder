@@ -21,17 +21,34 @@ vg() {
 	fi
 }
 
-mk() {
+mkbefore() {
 	echo
 	echo "*******************************************************************"
 	echo "** $*"
 	echo "*******************************************************************"
 	lcov -c -i -d $R/bin -o $R/fake.info
-	"$@"
+}
+
+mkafter() {
 	lcov -c -d $R/bin -o $R/tmp.info
 	mv $R/lcov-out.info $R/previous.info
 	lcov -a $R/tmp.info -a $R/previous.info -o $R/lcov-out.info
 	rm $R/previous.info $R/fake.info  $R/tmp.info
+}
+
+mk() {
+	mkbefore "$@"
+	"$@"
+	mkafter "$@"
+}
+
+mkdbgwait() {
+	mkbefore "$@"
+	"$@" &
+	sleep 1
+	kill -INT %%
+	sleep 1
+	mkafter "$@"
 }
 
 mkdir /tmp/ldpaths
@@ -70,9 +87,9 @@ typeset +x LISTEN_FDNAMES LISTEN_FDS
 
 mk $R/bin/afb-daemon-cov --weak-ldpaths $R/ldpath/weak --binding $R/bin/demat.so --ws-server sd:demat --call "demat/exit:0"
 
-AFB_DEBUG_BREAK=zero,one,two,main-start  AFB_DEBUG_WAIT="here I am"
+AFB_DEBUG_BREAK=zero,one,two,main-start  AFB_DEBUG_WAIT="here I am,main-args"
 typeset -x AFB_DEBUG_BREAK AFB_DEBUG_WAIT
-mk $R/bin/afb-daemon-cov --rootdir $R/i-will-never-exist
+mkdbgwait $R/bin/afb-daemon-cov --rootdir $R/i-will-never-exist
 typeset +x AFB_DEBUG_BREAK AFB_DEBUG_WAIT
 
 mk $R/bin/afb-daemon-cov --workdir=/etc/you/should/not/be/able/to/create/me
@@ -89,7 +106,7 @@ mk $R/bin/test-session
 mk $R/bin/test-wrap-json
 
 ##########################################################
-# true life test
+# true life test: run parts as direct client
 ##########################################################
 mk \
 vg \
@@ -144,7 +161,7 @@ $R/bin/afb-daemon-cov \
 	--exec $R/scripts/run-parts.sh @p @t
 
 ##########################################################
-# true life test
+# true life test: run parts as in-direct client
 ##########################################################
 mk \
 vg \
@@ -171,7 +188,7 @@ $R/bin/afb-daemon-cov \
 	--ws-server unix:$R/apis/ws/salut \
 	--ws-server localhost:9595/salut \
 	--exec \
-            afb-daemon \
+	    $R/bin/afb-daemon-nocov \
 		--auto-api $R/apis/auto \
 		--auto-api $R/apis/ws \
 		--ws-client localhost:@p/salut2 \
