@@ -24,7 +24,7 @@ MACRO(tuto num ext)
 	LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map"
   )
   TARGET_LINK_LIBRARIES(tuto-${num}  ${json-c_LDFLAGS})
-  install(TARGETS tuto-${num} LIBRARY DESTINATION ${install_datadir}/bindings/tutorials)
+  install(TARGETS tuto-${num} LIBRARY DESTINATION ${SAMPLE_INSTALL_DIR}/bindings/tutorials)
 ENDMACRO(tuto)
 
 

@@ -29,5 +29,5 @@ SET_TARGET_PROPERTIES(afb-dbus-binding PROPERTIES
 )
 TARGET_LINK_LIBRARIES(afb-dbus-binding ${json-c_LDFLAGS} ${libsystemd_LDFLAGS})
 INSTALL(TARGETS afb-dbus-binding
-        LIBRARY DESTINATION ${binding_install_dir})
+        LIBRARY DESTINATION ${INTRINSIC_BINDING_DIR})
 

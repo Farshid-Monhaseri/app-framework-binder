@@ -38,9 +38,6 @@
 #define _d2s_(x)  #x
 #define d2s(x)    _d2s_(x)
 
-#if !defined(BINDING_INSTALL_DIR)
-#error "you should define BINDING_INSTALL_DIR"
-#endif
 #if !defined(AFB_VERSION)
 #error "you should define AFB_VERSION"
 #endif
@@ -176,7 +173,12 @@ static struct option_desc optdefs[] = {
 	{SET_ROOT_DIR,        1, "rootdir",     "Root Directory of the application [default: workdir] relative to workdir"},
 
 #if WITH_DYNAMIC_BINDING
-	{ADD_LDPATH,          1, "ldpaths",     "Load bindings from dir1:dir2:... [default = " BINDING_INSTALL_DIR "]"},
+
+	{ADD_LDPATH,          1, "ldpaths",     "Load bindings from dir1:dir2:..."
+#if defined(INTRINSIC_BINDING_DIR)
+	                                        "[default = " INTRINSIC_BINDING_DIR "]"
+#endif
+	                                        },
 	{ADD_BINDING,         1, "binding",     "Load the binding of path"},
 	{ADD_WEAK_LDPATH,     1, "weak-ldpaths","Same as --ldpaths but ignore errors"},
 	{SET_NO_LDPATH,       0, "no-ldpaths",  "Discard default ldpaths loading"},
@@ -232,7 +234,7 @@ static struct option_desc optdefs[] = {
 };
 
 #if defined(WITH_MONITORING_OPTION)
-static const char MONITORING_ALIAS[] = "/monitoring:"BINDING_INSTALL_DIR"/monitoring";
+static const char MONITORING_ALIAS[] = "/monitoring:"INTRINSIC_BINDING_DIR"/monitoring";
 #endif
 
 static const struct {
@@ -995,9 +997,9 @@ static void fulfill_config(struct json_object *config)
 	if (config_has_bool(config, SET_RANDOM_TOKEN))
 		config_del(config, SET_TOKEN);
 
-#if WITH_DYNAMIC_BINDING
+#if WITH_DYNAMIC_BINDING && defined(INTRINSIC_BINDING_DIR)
 	if (!config_has(config, ADD_LDPATH) && !config_has(config, ADD_WEAK_LDPATH) && !config_has_bool(config, SET_NO_LDPATH))
-		config_add_str(config, ADD_LDPATH, BINDING_INSTALL_DIR);
+		config_add_str(config, ADD_LDPATH, INTRINSIC_BINDING_DIR);
 #endif
 
 #if defined(WITH_MONITORING_OPTION)

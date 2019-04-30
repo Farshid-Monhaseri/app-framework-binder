@@ -51,6 +51,8 @@ set(AFS_SUPERVISION_SOCKET "@urn:AGL:afs:supervision:socket" CACHE STRING "Inter
 set(AFS_SUPERVISOR_PORT 1619 CACHE STRING "Port of service for the supervisor")
 set(AFS_SUPERVISOR_TOKEN HELLO CACHE STRING "Secret token for the supervisor")
 set(UNITDIR_SYSTEM ${CMAKE_INSTALL_LIBDIR}/systemd/system CACHE STRING "Path to systemd system unit files")
+set(INTRINSIC_BINDING_DIR ${CMAKE_INSTALL_FULL_LIBDIR}/afb CACHE STRING "Path to install intrinsic bindings")
+set(SAMPLE_INSTALL_DIR ${CMAKE_INSTALL_FULL_DATADIR}/af-binder CACHE STRING "Path to install samples")
 
 ###########################################################################
 
@@ -156,8 +158,6 @@ ADD_SUBDIRECTORY(src/devtools)
 IF(ONLY_DEVTOOLS)
 	MESSAGE(WARNING "Only DEVTOOLS are compiled, not the binder!")
 ELSE()
-	SET(binding_install_dir ${CMAKE_INSTALL_FULL_LIBDIR}/afb)
-	SET(install_datadir ${CMAKE_INSTALL_FULL_DATADIR}/af-binder)
 
 	###########################################################################
 	# activates the monitoring by default
@@ -166,7 +166,7 @@ ELSE()
 		INSTALL(DIRECTORY
 			${CMAKE_CURRENT_SOURCE_DIR}/test/monitoring
 			DESTINATION
-			${binding_install_dir}
+			${INTRINSIC_BINDING_DIR}
 		)
 	endif()
 

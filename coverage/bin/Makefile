@@ -75,7 +75,7 @@ defs = 	-DAGL_DEVEL=1 \
 	-DWITH_DBUS_TRANSPARENCY=0 \
 	-DWITH_SUPERVISION=0 \
 	-DWITH_DYNAMIC_BINDING=1 \
-	-DBINDING_INSTALL_DIR=\"$(shell pwd)/fake\"
+	-DINTRINSIC_BINDING_DIR=\"$(shell pwd)/fake\"
 
 afb_lib_src = $(shell ls $(srcdir)/*.c | egrep -v '/afs-|/main-|/fdev-epoll.c|/afb-ws-client.c' )
 afb_lib_obj = $(patsubst $(srcdir)/%.c,%.o,$(afb_lib_src))
@@ -93,7 +93,7 @@ tst_flags = $(cflags) \
 	-I$(srcdir) \
 	$(shell pkg-config --cflags --libs check)
 
-tst_defs = '-DAFB_VERSION="cov"' '-DBINDING_INSTALL_DIR="fake"'
+tst_defs = '-DAFB_VERSION="cov"' '-DINTRINSIC_BINDING_DIR="fake"'
 tst_flags = $(cflags) \
 	-I$(srcdir) \
 	$(shell pkg-config --cflags --libs check)

@@ -21,7 +21,7 @@ macro(sample name source)
   set_target_properties(${name} PROPERTIES PREFIX "" LINK_FLAGS "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export.map")
 #  target_link_libraries(${name} ${link_libraries})
   target_link_libraries(${name} ${json-c_LDFLAGS} ${CMAKE_THREAD_LIBS_INIT})
-  install(TARGETS ${name} LIBRARY DESTINATION ${install_datadir}/bindings/samples)
+  install(TARGETS ${name} LIBRARY DESTINATION ${SAMPLE_INSTALL_DIR}/bindings/samples)
 endmacro(sample)
 
 sample(authLogin    AuthLogin.c)
