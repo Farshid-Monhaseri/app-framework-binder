@@ -5,6 +5,7 @@ bin/bugs
 run-test.output
 bin/afb-client
 bin/afb-daemon-cov
+bin/afb-daemon-nocov
 bin/test-apiset
 bin/test-session
 bin/test-wrap-json

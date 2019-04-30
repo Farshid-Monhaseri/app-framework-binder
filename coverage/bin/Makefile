@@ -25,6 +25,7 @@ tests = \
 	test-wrap-json
 
 targets = \
+	afb-daemon-nocov \
 	afb-daemon-cov \
 	afb-client \
 	$(tests) \
@@ -82,7 +83,7 @@ afb_lib_obj = $(patsubst $(srcdir)/%.c,%.o,$(afb_lib_src))
 afb_lib = afb-lib.a
 afb_lib_defs = $(defs)
 
-afb_daemon_srcs = $(srcdir)/main-afb-daemon.c $(afb_lib_obj)
+afb_daemon_srcs = $(srcdir)/main-afb-daemon.c
 afb_daemon_defs = $(afb_lib_defs)
 
 afb_client_srcs = $(srcdir)/main-afb-client-demo.c $(srcdir)/afb-ws-client.c $(afb_lib_src)
@@ -111,9 +112,13 @@ binding_flags = -shared -fPIC -Wl,--version-script=$(samdir)/export.map
 	@echo creation of $@
 	@gcc -c -o $@ $< --coverage $(afb_lib_defs) $(ccflags)
 
-afb-daemon-cov: $(afb_daemon_srcs)
+afb-daemon-cov: $(afb_daemon_srcs) $(afb_lib_obj)
 	@echo creation of $@
-	@gcc -o $@ $(afb_daemon_srcs) --coverage $(afb_daemon_defs) $(cflags)
+	@gcc -o $@ $(afb_daemon_srcs) $(afb_lib_obj) --coverage $(afb_daemon_defs) $(cflags)
+
+afb-daemon-nocov: $(afb_daemon_srcs) $(afb_lib_src)
+	@echo creation of $@
+	@gcc -o $@ $(afb_daemon_srcs) $(afb_lib_src) $(afb_daemon_defs) $(cflags)
 
 afb-client: $(afb_client_srcs)
 	@echo creation of $@
