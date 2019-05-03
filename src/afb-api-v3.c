@@ -365,7 +365,7 @@ int afb_api_v3_set_binding_fields(const struct afb_binding_v3 *desc, struct afb_
 	if (!rc && desc->require_class)
 		rc =  afb_api_x3_require_class(api, desc->require_class);
 	if (!rc && desc->require_api)
-		rc =  afb_api_x3_require_api(api, desc->require_api, 1);
+		rc =  afb_api_x3_require_api(api, desc->require_api, 0);
 	return rc;
 }
 

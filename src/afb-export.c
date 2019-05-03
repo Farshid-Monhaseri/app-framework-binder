@@ -345,9 +345,11 @@ static int require_api_cb(struct afb_api_x3 *closure, const char *name, int init
 	char *iter, *end, save;
 
 	/* emit a warning about unexpected require in preinit */
-	if (export->state == Api_State_Pre_Init)
-		WARNING("[API %s] requiring apis in pre-init may lead to unexpected result (requires%s: %s)",
-			export->api.apiname, initialized ? " initialized" : "", name);
+	if (export->state == Api_State_Pre_Init && initialized) {
+		ERROR("[API %s] requiring initialized apis in pre-init is forbiden", export->api.apiname);
+		errno = EINVAL;
+		return -1;
+	}
 
 	/* scan the names in a local copy */
 	rc = 0;
@@ -367,10 +369,20 @@ static int require_api_cb(struct afb_api_x3 *closure, const char *name, int init
 		*end = 0;
 
 		/* check the required api */
-		if (export->state == Api_State_Pre_Init)
-			rc2 = afb_apiset_require(export->declare_set, export->api.apiname, name);
-		else
+		if (export->state == Api_State_Pre_Init) {
+			rc2 = afb_apiset_require(export->declare_set, export->api.apiname, iter);
+			if (rc2 < 0) {
+				if (rc == 0)
+					WARNING("[API %s] requiring apis pre-init may lead to unexpected result", export->api.apiname);
+				ERROR("[API %s] requiring api %s in pre-init failed", export->api.apiname, iter);
+			}
+		} else {
 			rc2 = -!((initialized ? afb_apiset_lookup_started : afb_apiset_lookup)(export->call_set, iter, 1));
+			if (rc2 < 0) {
+				ERROR("[API %s] requiring api %s%s failed", export->api.apiname,
+					 iter, initialized ? " initialized" : "");
+			}
+		}
 		if (rc2 < 0)
 			rc = rc2;
 

@@ -2,7 +2,7 @@ match [kilil]: NOT FOUND
 search [kilil]: NOT FOUND
 add [kilil]: 0, Success
 match [kilil]: found by kilil
-search [kilil]: found 
+search [kilil]: found kilil
 match [kil]: NOT FOUND
 del [error]: -1, No such file or directory
 add [kilil]: -1, File exists

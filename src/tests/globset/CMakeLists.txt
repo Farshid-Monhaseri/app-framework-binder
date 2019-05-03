@@ -19,5 +19,5 @@
 add_executable(test-globset test-globset.c)
 target_include_directories(test-globset PRIVATE ../..)
 target_link_libraries(test-globset afb-lib ${link_libraries})
-add_test(NAME globset COMMAND test-globset)
+add_test(NAME globset COMMAND test-globset ${CMAKE_CURRENT_SOURCE_DIR}/globset.in ${CMAKE_CURRENT_SOURCE_DIR}/globset.out)
 

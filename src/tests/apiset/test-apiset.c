@@ -429,11 +429,11 @@ START_TEST (check_settings)
 	afb_apiset_start_all_services(a);
 	ck_assert_int_eq(nn, set_count);
 
-	set_count = 0;
 #if WITH_AFB_HOOK
+	set_count = 0;
 	afb_apiset_update_hooks(a, NULL);
-#endif
 	ck_assert_int_eq(nn, set_count);
+#endif
 
 	for (mask = 1 ; !(mask >> 10) ; mask <<= 1) {
 		set_count = 0;

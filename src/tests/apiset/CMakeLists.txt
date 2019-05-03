@@ -16,6 +16,10 @@
 # limitations under the License.
 ###########################################################################
 
+add_definitions(
+  -DAGL_DEVEL=$<BOOL:${AGL_DEVEL}>
+  -DWITH_AFB_HOOK=$<BOOL:${WITH_AFB_HOOK}>
+)
 add_executable(test-apiset test-apiset.c)
 target_include_directories(test-apiset PRIVATE ../..)
 target_link_libraries(test-apiset afb-lib ${link_libraries})
