@@ -1,4 +1,4 @@
-Functions of class **afb_req_t**
+Functions of class **afb_req**
 ============================
 
 ## General function
@@ -14,7 +14,7 @@ Functions of class **afb_req_t**
  * @return 0 if not valid or 1 if valid.
  */
 int afb_req_is_valid(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_api
@@ -28,7 +28,7 @@ int afb_req_is_valid(
  * @return the api serving the request
  */
 afb_api_t afb_req_get_api(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_vcbdata
@@ -43,7 +43,7 @@ afb_api_t afb_req_get_api(
  * @return the callback data attached to the verb description
  */
 void *afb_req_get_vcbdata(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_called_api
@@ -60,7 +60,7 @@ void *afb_req_get_vcbdata(
  * @see afb_api_add_alias
  */
 const char *afb_req_get_called_api(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_called_verb
@@ -74,7 +74,7 @@ const char *afb_req_get_called_api(
  * @return the name of the called verb
  */
 const char *afb_req_get_called_verb(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_addref
@@ -87,8 +87,8 @@ const char *afb_req_get_called_verb(
  *
  * @return returns the request req
  */
-afb_req_t*afb_req_addref(
-			afb_req_t*req);
+afb_req_t *afb_req_addref(
+			afb_req_t req);
 ```
 
 ### afb_req_unref
@@ -100,7 +100,7 @@ afb_req_t*afb_req_addref(
  * @param req the request
  */
 void afb_req_unref(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 
@@ -130,7 +130,7 @@ void afb_req_unref(
  * @see syslog
  */
 int afb_req_wants_log_level(
-			afb_req_t*req,
+			afb_req_t req,
 			int level);
 ```
 
@@ -166,7 +166,7 @@ int afb_req_wants_log_level(
  * @see afb_req_verbose
  */
 void afb_req_vverbose(
-			afb_req_t*req,
+			afb_req_t req,
 			int level, const char *file,
 			int line,
 			const char * func,
@@ -205,7 +205,7 @@ void afb_req_vverbose(
  * @see printf
  */
 void afb_req_verbose(
-			afb_req_t*req,
+			afb_req_t req,
 			int level, const char *file,
 			int line,
 			const char * func,
@@ -242,7 +242,7 @@ void afb_req_verbose(
  * @see afb_req_path
  */
 struct afb_arg afb_req_get(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *name);
 ```
 
@@ -265,7 +265,7 @@ struct afb_arg afb_req_get(
  * @see afb_req_path
  */
 const char *afb_req_value(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *name);
 ```
 
@@ -288,7 +288,7 @@ const char *afb_req_value(
  * @see afb_req_value
  */
 const char *afb_req_path(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *name);
 ```
 
@@ -309,7 +309,7 @@ const char *afb_req_path(
  * @see afb_req_path
  */
 struct json_object *afb_req_json(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ## Reply functions
@@ -350,7 +350,7 @@ These functions are now implemented as the following macros:
  * @see afb_req_reply_f
  */
 void afb_req_reply(
-			afb_req_t*req,
+			afb_req_t req,
 			struct json_object *obj,
 			const char *error,
 			const char *info);
@@ -378,7 +378,7 @@ void afb_req_reply(
  * @see vprintf
  */
 void afb_req_reply_v(
-			afb_req_t*req,
+			afb_req_t req,
 			struct json_object *obj,
 			const char *error,
 			const char *info,
@@ -407,7 +407,7 @@ void afb_req_reply_v(
  * @see printf
  */
 void afb_req_reply_f(
-			afb_req_t*req,
+			afb_req_t req,
 			struct json_object *obj,
 			const char *error,
 			const char *info,
@@ -469,7 +469,7 @@ void afb_req_reply_f(
  * @see also 'afb_req_subcall_sync'
  */
 void afb_req_subcall(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *api,
 			const char *verb,
 			struct json_object *args,
@@ -479,7 +479,7 @@ void afb_req_subcall(
 					struct json_object *object,
 					const char *error,
 					const char * info,
-					afb_req_t*req),
+					afb_req_t req),
 			void *closure);
 ```
 
@@ -512,7 +512,7 @@ void afb_req_subcall(
  * @return 0 in case of success or -1 in case of error
  */
 int afb_req_subcall_sync(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *api,
 			const char *verb,
 			struct json_object *args,
@@ -537,7 +537,7 @@ int afb_req_subcall_sync(
  * @return 0 in case of successful subscription or -1 in case of error.
  */
 int afb_req_subscribe(
-			afb_req_t*req,
+			afb_req_t req,
 			afb_event_t event);
 ```
 
@@ -555,7 +555,7 @@ int afb_req_subscribe(
  * @return 0 in case of successful subscription or -1 in case of error.
  */
 int afb_req_unsubscribe(
-			afb_req_t*req,
+			afb_req_t req,
 			afb_event_t event);
 ```
 
@@ -586,7 +586,7 @@ int afb_req_unsubscribe(
  * @return the stored value
  */
 void *afb_req_context(
-			afb_req_t*req,
+			afb_req_t req,
 			int replace,
 			void *(*create_context)(void *closure),
 			void (*free_context)(void*),
@@ -607,7 +607,7 @@ void *afb_req_context(
  * @return the previously stored value
  */
 void *afb_req_context_get(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_context_set
@@ -626,7 +626,7 @@ void *afb_req_context_get(
  * @param free_context the cleaning function for the stored context (can be NULL)
  */
 void afb_req_context_set(
-			afb_req_t*req,
+			afb_req_t req,
 			void *context,
 			void (*free_context)(void*));
 ```
@@ -643,7 +643,7 @@ void afb_req_context_set(
  * @param req the request
  */
 void afb_req_context_clear(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_session_close
@@ -656,7 +656,7 @@ void afb_req_context_clear(
  * @param req the request
  */
 void afb_req_session_close(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_session_set_LOA
@@ -673,7 +673,7 @@ void afb_req_session_close(
  * @return 0 on success or -1 if failed.
  */
 int afb_req_session_set_LOA(
-			afb_req_t*req,
+			afb_req_t req,
 			unsigned level);
 ```
 
@@ -692,7 +692,7 @@ int afb_req_session_set_LOA(
  * @return 1 if the permission is granted or 0 otherwise.
  */
 int afb_req_has_permission(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *permission);
 ```
 
@@ -713,7 +713,7 @@ int afb_req_has_permission(
  * @return the string for the application id of the client MUST BE FREED
  */
 char *afb_req_get_application_id(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_uid
@@ -729,7 +729,7 @@ char *afb_req_get_application_id(
  *
  */
 int afb_req_get_uid(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ### afb_req_get_client_info
@@ -754,7 +754,7 @@ int afb_req_get_uid(
  * @return a JSON object that must be freed using @ref json_object_put
  */
 struct json_object *afb_req_get_client_info(
-			afb_req_t*req);
+			afb_req_t req);
 ```
 
 ## Legacy functions
@@ -788,7 +788,7 @@ struct json_object *afb_req_get_client_info(
  * @see afb_req_subcall_sync
  */
 void afb_req_subcall_legacy(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *api,
 			const char *verb,
 			struct json_object *args,
@@ -796,7 +796,7 @@ void afb_req_subcall_legacy(
 					void *closure,
 					int iserror,
 					struct json_object *result,
-					afb_req_t*req),
+					afb_req_t req),
 			void *closure);
 ```
 
@@ -829,7 +829,7 @@ void afb_req_subcall_legacy(
  * @see afb_req_subcall_sync
  */
 int afb_req_subcall_sync_legacy(
-			afb_req_t*req,
+			afb_req_t req,
 			const char *api,
 			const char *verb,
 			struct json_object *args,

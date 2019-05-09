@@ -1,4 +1,4 @@
-Functions of class **afb_event_t**
+Functions of class **afb_event**
 ==============================
 
 ## General functions
