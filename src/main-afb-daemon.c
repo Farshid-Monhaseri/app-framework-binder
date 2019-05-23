@@ -358,8 +358,12 @@ static struct afb_hsrv *start_http_server()
 	}
 
 	if (afb_hreq_init_download_path(uploaddir)) {
-		ERROR("unable to set the upload directory %s", uploaddir);
-		return NULL;
+		static const char fallback_uploaddir[] = "/tmp";
+		WARNING("unable to set the upload directory %s", uploaddir);
+		if (afb_hreq_init_download_path(fallback_uploaddir)) {
+			ERROR("unable to fallback to upload directory %s", fallback_uploaddir);
+			return NULL;
+		}
 	}
 
 	hsrv = afb_hsrv_create();
