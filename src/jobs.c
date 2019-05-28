@@ -389,6 +389,7 @@ static void thread_run_internal(volatile struct thread *me)
 				abort();
 			}
 			/* run the events */
+			evmgr_prepare_run(evmgr);
 			pthread_mutex_unlock(&mutex);
 			sig_monitor(0, (void(*)(int,void*))evmgr_job_run, evmgr);
 			pthread_mutex_lock(&mutex);

@@ -48,6 +48,14 @@ struct evmgr
 #define EVLOOP_STATE_RUN            2U
 
 /**
+ * prepare the evmgr to run
+ */
+void evmgr_prepare_run(struct evmgr *evmgr)
+{
+	evmgr->state = EVLOOP_STATE_WAIT|EVLOOP_STATE_RUN;
+}
+
+/**
  * Run the event loop is set.
  */
 void evmgr_run(struct evmgr *evmgr)

@@ -20,6 +20,7 @@
 
 struct evmgr;
 
+extern void evmgr_prepare_run(struct evmgr *evmgr);
 extern void evmgr_run(struct evmgr *evmgr);
 extern void evmgr_job_run(int signum, struct evmgr *evmgr);
 extern int evmgr_can_run(struct evmgr *evmgr);
