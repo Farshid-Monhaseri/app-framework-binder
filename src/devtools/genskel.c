@@ -192,7 +192,7 @@ char *cify(const char *str)
 char *make_info(const char *text, int split)
 {
 	const char *a, *b;
-	char *desc, c, buf[3];
+	char *desc, c, buf[3] = {0};
 	size_t len;
 	int i, pos, e;
 
@@ -221,6 +221,7 @@ char *make_info(const char *text, int split)
 			switch ((c = *b++)) {
 			case 0:
 				b--;
+				buf[0] = 0;
 				break;
 			case '/':
 				buf[0] = '/';
