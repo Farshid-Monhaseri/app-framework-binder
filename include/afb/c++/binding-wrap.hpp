@@ -753,15 +753,7 @@ constexpr afb_verb_t verb(
 	void *vcbdata = nullptr
 )
 {
-	afb_verb_t r = { 0, 0, 0, 0, 0, 0, 0 };
-	r.verb = name;
-	r.callback = callback;
-	r.info = info;
-	r.session = session;
-	r.auth = auth;
-	r.glob = (uint16_t)glob;
-	r.vcbdata = vcbdata;
-	return r;
+	return { name, callback, auth, info, vcbdata, session, glob };
 }
 
 void __attribute__((weak)) __afb__verb__cb__for__global__(afb_req_t r)
@@ -776,12 +768,11 @@ void __attribute__((weak)) __afb__verb__cb__for__global__(afb_req_t r)
 
 constexpr afb_verb_t verb(
 	const char *name,
-	void (&callback)(req),
+	void (*callback)(req),
 	const char *info = nullptr,
 	uint16_t session = 0,
 	const afb_auth *auth = nullptr,
-	bool glob = false,
-	void *vcbdata = nullptr
+	bool glob = false
 )
 {
 	return verb(
@@ -797,8 +788,7 @@ constexpr afb_verb_t verb(
 
 constexpr afb_verb_t verbend()
 {
-	afb_verb_t r = verb(nullptr, nullptr);
-	return r;
+	return { 0, 0, 0, 0, 0, 0, 0 };
 }
 
 constexpr afb_binding_t binding(
@@ -813,17 +803,9 @@ constexpr afb_binding_t binding(
 	void *userdata = nullptr
 )
 {
-	afb_binding_t r = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	r.api = name;
-	r.specification = specification;
-	r.info = info;
-	r.verbs = verbs;
-	r.preinit = preinit;
-	r.init = init;
-	r.onevent = onevent;
-	r.noconcurrency = noconcurrency ? 1 : 0;
-	r.userdata = userdata;
-	return r;
+	return {
+		name, specification, info, verbs, preinit, init, onevent, userdata,
+		nullptr, nullptr, nullptr, static_cast<unsigned int>(noconcurrency) };
 };
 
 /*************************************************************************/
