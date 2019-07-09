@@ -198,6 +198,8 @@ ENDIF()
 IF(INCLUDE_SUPERVISOR)
 	CONFIGURE_FILE(afs-supervisor.service.in afs-supervisor.service @ONLY)
 	INSTALL(FILES
+	    ${CMAKE_CURRENT_SOURCE_DIR}/afm-api-supervisor.service
+	    ${CMAKE_CURRENT_SOURCE_DIR}/afm-api-supervisor.socket
 	    ${CMAKE_CURRENT_BINARY_DIR}/afs-supervisor.service
 	    DESTINATION
 	    ${UNITDIR_SYSTEM}

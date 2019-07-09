@@ -39,6 +39,7 @@
 #include "afb-api-v3.h"
 #include "afb-apiset.h"
 #include "afb-fdev.h"
+#include "afb-socket.h"
 
 #include "fdev.h"
 #include "verbose.h"
@@ -86,50 +87,6 @@ static afb_event_t event_del_pid;
 
 
 /*************************************************************************************/
-
-/**
- * Creates the supervisor socket for 'path' and return it
- * return -1 in case of failure
- */
-static int create_supervision_socket(const char *path)
-{
-	int fd, rc;
-	struct sockaddr_un addr;
-	size_t length;
-
-	/* check the path's length */
-	length = strlen(path);
-	if (length >= 108) {
-		ERROR("Path name of supervision socket too long: %d", (int)length);
-		errno = ENAMETOOLONG;
-		return -1;
-	}
-
-	/* create a socket */
-	fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd < 0) {
-		ERROR("Can't create socket: %m");
-		return fd;
-	}
-
-	/* setup the bind to a path */
-	memset(&addr, 0, sizeof addr);
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, path);
-	if (addr.sun_path[0] == '@')
-		addr.sun_path[0] = 0; /* abstract sockets */
-	else
-		unlink(path);
-
-	/* binds the socket to the path */
-	rc = bind(fd, (struct sockaddr *) &addr, (socklen_t)(sizeof addr));
-	if (rc < 0) {
-		ERROR("can't bind socket to %s", path);
-		close(fd);
-		return rc;
-	}
-	return fd;
-}
 
 /**
  * send on 'fd' an initiator with 'command'
@@ -451,8 +408,6 @@ static void f_debug_break(afb_req_t req)
  */
 static int init_supervisor(afb_api_t api)
 {
-	int rc, fd;
-
 	event_add_pid = afb_api_make_event(api, "add-pid");
 	if (!afb_event_is_valid(event_add_pid)) {
 		ERROR("Can't create added event");
@@ -473,25 +428,13 @@ static int init_supervisor(afb_api_t api)
 	}
 
 	/* create the supervision socket */
-	fd = create_supervision_socket(supervision_socket_path);
-	if (fd < 0)
-		return fd;
+	supervision_fdev = afb_socket_open_fdev(supervision_socket_path, 1);
+	if (!supervision_fdev)
+		return -1;
 
-	/* listen the socket */
-	rc = listen(fd, 5);
-	if (rc < 0) {
-		ERROR("refused to listen on socket");
-		return rc;
-	}
-
-	/* integrate the socket to the loop */
-	supervision_fdev = afb_fdev_create(fd);
-	if (rc < 0) {
-		ERROR("handling socket event isn't possible");
-		return rc;
-	}
 	fdev_set_events(supervision_fdev, EPOLLIN);
-	fdev_set_callback(supervision_fdev, listening, (void*)(intptr_t)fd);
+	fdev_set_callback(supervision_fdev, listening,
+			  (void*)(intptr_t)fdev_fd(supervision_fdev));
 
 	return 0;
 }
