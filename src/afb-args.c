@@ -366,7 +366,7 @@ static void printVersion(FILE * file)
 #endif
 		"HOOK "
 
-#if WITH_TRACE
+#if WITH_AFB_TRACE
 		"+"
 #else
 		"-"
