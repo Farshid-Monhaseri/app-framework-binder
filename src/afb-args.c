@@ -375,29 +375,21 @@ static void printVersion(FILE * file)
 
 		"["
 #if WITH_DYNAMIC_BINDING
+		"+"
+#else
+		"-"
+#endif
 		"BINDINGS "
-		"+"
-#else
-		"-"
-#endif
 #if WITH_LEGACY_BINDING_V1
-		"+"
-#else
-		"-"
+		"+V1 "
 #endif
-		"V1 "
 #if WITH_LEGACY_BINDING_VDYN
-		"+"
-#else
-		"-"
+		"+VDYN "
 #endif
-		"VDYN "
 #if WITH_LEGACY_BINDING_V2
-		"+"
-#else
-		"-"
+		"+V2 "
 #endif
-		"V2 +V3]\n"
+		"+V3]\n"
 		"\n",
 		AFB_VERSION
 	);
