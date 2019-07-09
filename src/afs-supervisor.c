@@ -282,7 +282,7 @@ static void listening(void *closure, uint32_t revents, struct fdev *fdev)
 {
 	if ((revents & EPOLLIN) != 0)
 		accept_supervision_link((int)(intptr_t)closure);
-	if ((revents & EPOLLHUP) != 0) {
+	else if ((revents & EPOLLHUP) != 0) {
 		ERROR("supervision socket closed");
 		exit(1);
 	}

@@ -120,6 +120,7 @@ static void aws_disconnect(struct afb_ws *ws, int call_on_hangup)
 	struct websock *wsi = ws->ws;
 	if (wsi != NULL) {
 		ws->ws = NULL;
+		fdev_set_callback(ws->fdev, NULL, 0);
 		fdev_unref(ws->fdev);
 		websock_destroy(wsi);
 		free(ws->buffer.buffer);
@@ -133,7 +134,7 @@ static void fdevcb(void *ws, uint32_t revents, struct fdev *fdev)
 {
 	if ((revents & EPOLLIN) != 0)
 		aws_on_readable(ws);
-	if ((revents & EPOLLHUP) != 0)
+	else if ((revents & EPOLLHUP) != 0)
 		afb_ws_hangup(ws);
 }
 

@@ -130,7 +130,9 @@ static void api_ws_server_accept(struct api_ws_server *apiws)
 			close(fd);
 		} else {
 			server = afb_stub_ws_create_server(fdev, &apiws->uri[apiws->offapi], apiws->apiset);
-			if (!server)
+			if (server)
+				afb_stub_ws_set_on_hangup(server, afb_stub_ws_unref);
+			else
 				ERROR("can't serve accepted connection to %s: %m", apiws->uri);
 		}
 	}
@@ -144,7 +146,7 @@ static void api_ws_server_listen_callback(void *closure, uint32_t revents, struc
 
 	if ((revents & EPOLLIN) != 0)
 		api_ws_server_accept(apiws);
-	if ((revents & EPOLLHUP) != 0)
+	else if ((revents & EPOLLHUP) != 0)
 		api_ws_server_connect(apiws);
 }
 

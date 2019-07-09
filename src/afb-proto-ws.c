@@ -132,9 +132,6 @@ struct afb_proto_ws
 	/* count of references */
 	int refcount;
 
-	/* file descriptor */
-	struct fdev *fdev;
-
 	/* resource control */
 	pthread_mutex_t mutex;
 
@@ -985,9 +982,9 @@ static void on_hangup(void *closure)
 		free(cd);
 	}
 
-	if (protows->fdev) {
-		fdev_unref(protows->fdev);
-		protows->fdev = 0;
+	if (protows->ws) {
+		afb_ws_destroy(protows->ws);
+		protows->ws = 0;
 		if (protows->on_hangup)
 			protows->on_hangup(protows->closure);
 	}
@@ -1027,7 +1024,6 @@ static struct afb_proto_ws *afb_proto_ws_create(struct fdev *fdev, const struct 
 		fcntl(fdev_fd(fdev), F_SETFL, O_NONBLOCK);
 		protows->ws = afb_ws_create(fdev, itf, protows);
 		if (protows->ws != NULL) {
-			protows->fdev = fdev;
 			protows->refcount = 1;
 			protows->closure = closure;
 			protows->server_itf = itfs;
@@ -1054,7 +1050,6 @@ void afb_proto_ws_unref(struct afb_proto_ws *protows)
 {
 	if (protows && !__atomic_sub_fetch(&protows->refcount, 1, __ATOMIC_RELAXED)) {
 		afb_proto_ws_hangup(protows);
-		afb_ws_destroy(protows->ws);
 		pthread_mutex_destroy(&protows->mutex);
 		free(protows);
 	}
@@ -1077,7 +1072,8 @@ int afb_proto_ws_is_server(struct afb_proto_ws *protows)
 
 void afb_proto_ws_hangup(struct afb_proto_ws *protows)
 {
-	afb_ws_hangup(protows->ws);
+	if (protows->ws)
+		afb_ws_hangup(protows->ws);
 }
 
 void afb_proto_ws_on_hangup(struct afb_proto_ws *protows, void (*on_hangup)(void *closure))
