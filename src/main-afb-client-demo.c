@@ -120,8 +120,9 @@ static void usage(int status, char *arg0)
 		"  --help, -h          Display this help\n"
 		"  --human, -H         Display human readable JSON\n"
 		"  --raw, -r           Raw output (default)\n"
-		"  --sync, -s          Synchronous: wait for answers\n"
+		"  --sync, -s          Synchronous: wait for answers (like -p 1)\n"
 		"  --keep-running, -k  Keep running until disconnect, even if input closed\n"
+		"  --pipe, -p COUNT    Allow to pipe COUNT requests\n"
 		"Example:\n"
 		" %s --human 'localhost:1234/api?token=HELLO&uuid=magic' hello ping\n"
 		"\n", name
@@ -134,44 +135,50 @@ static void usage(int status, char *arg0)
 int main(int ac, char **av, char **env)
 {
 	int rc;
-	char *a0;
+	char *a0, *an;
 
 	/* get the program name */
 	a0 = av[0];
 
 	/* check options */
-	while (ac > 1 && av[1][0] == '-') {
-		if (av[1][1] == '-') {
+	while (ac > 1 && (an = av[1])[0] == '-') {
+		if (an[1] == '-') {
 			/* long option */
 
-			if (!strcmp(av[1], "--human")) /* request for human output */
+			if (!strcmp(an, "--human")) /* request for human output */
 				human = 1;
 
-			else if (!strcmp(av[1], "--raw")) /* request for raw output */
+			else if (!strcmp(an, "--raw")) /* request for raw output */
 				raw = 1;
 
-			else if (!strcmp(av[1], "--direct")) /* request for direct api */
+			else if (!strcmp(an, "--direct")) /* request for direct api */
 				direct = 1;
 
-			else if (!strcmp(av[1], "--break")) /* request to break connection */
+			else if (!strcmp(an, "--break")) /* request to break connection */
 				breakcon = 1;
 
-			else if (!strcmp(av[1], "--keep-running")) /* request to break connection */
+			else if (!strcmp(an, "--keep-running")) /* request to break connection */
 				keeprun = 1;
 
-			else if (!strcmp(av[1], "--sync")) /* request to break connection */
+			else if (!strcmp(an, "--sync")) /* request to break connection */
 				synchro = 1;
 
-			else if (!strcmp(av[1], "--echo")) /* request to echo inputs */
+			else if (!strcmp(an, "--echo")) /* request to echo inputs */
 				echo = 1;
+
+			else if (!strcmp(an, "--pipe") && av[2] && atoi(av[2]) > 0) {
+				synchro = atoi(av[2]);
+				av++;
+				ac--;
+			}
 
 			/* emit usage and exit */
 			else
-				usage(strcmp(av[1], "--help") ? Exit_Bad_Arg : Exit_Success, a0);
+				usage(strcmp(an, "--help") ? Exit_Bad_Arg : Exit_Success, a0);
 		} else {
 			/* short option(s) */
-			for (rc = 1 ; av[1][rc] ; rc++)
-				switch (av[1][rc]) {
+			for (rc = 1 ; an[rc] ; rc++)
+				switch (an[rc]) {
 				case 'H': human = 1; break;
 				case 'r': raw = 1; break;
 				case 'd': direct = 1; break;
@@ -179,7 +186,8 @@ int main(int ac, char **av, char **env)
 				case 'k': keeprun = 1; break;
 				case 's': synchro = 1; break;
 				case 'e': echo = 1; break;
-				default: usage(av[1][rc] != 'h' ? Exit_Bad_Arg : Exit_Success, a0);
+				case 'p': if (av[2] && atoi(av[2]) > 0) { synchro = atoi(av[2]); av++; ac--; break; } /*@fallthrough@*/
+				default: usage(an[rc] != 'h' ? Exit_Bad_Arg : Exit_Success, a0);
 				}
 		}
 		av++;
@@ -247,7 +255,7 @@ static void idle()
 				exit(exitcode);
 			sd_event_run(loop, 30000000);
 		}
-		else if (!synchro || !callcount) {
+		else if (!synchro || callcount < synchro) {
 			if (!process_stdin() && usein)
 				sd_event_run(loop, 100000);
 		} else {
@@ -401,7 +409,7 @@ static int process_stdin()
 		}
 	}
 	count += (size_t)rc;
-	if (synchro && callcount)
+	if (synchro && callcount >= synchro)
 		return 0;
 
 	/* normalise the buffer content */
