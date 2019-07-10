@@ -274,6 +274,7 @@ static inline int afb_req_x1_session_set_LOA(struct afb_req_x1 req, unsigned lev
  *
  * Establishes for the client link identified by 'req' a subscription
  * to the 'event'.
+ * Establishing subscriptions MUST be called BEFORE replying to the request.
  * Returns 0 in case of successful subscription or -1 in case of error.
  */
 static inline int afb_req_x1_subscribe(struct afb_req_x1 req, struct afb_event_x1 event)
@@ -286,6 +287,7 @@ static inline int afb_req_x1_subscribe(struct afb_req_x1 req, struct afb_event_x
  *
  * Revokes the subscription established to the 'event' for the client
  * link identified by 'req'.
+ * Revoking subscription MUST be called BEFORE replying to the request.
  * Returns 0 in case of successful subscription or -1 in case of error.
  */
 static inline int afb_req_x1_unsubscribe(struct afb_req_x1 req, struct afb_event_x1 event)
