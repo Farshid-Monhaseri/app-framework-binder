@@ -45,7 +45,7 @@ static inline int afb_event_x2_is_valid(struct afb_event_x2 *event)
  * @param event the event to broadcast
  * @param object the companion object to associate to the broadcasted event (can be NULL)
  *
- * @return the count of clients that received the event.
+ * @return 0 in case of success or -1 in case of error
  */
 static inline int afb_event_x2_broadcast(
 			struct afb_event_x2 *event,
@@ -65,7 +65,10 @@ static inline int afb_event_x2_broadcast(
  * @param event the event to push
  * @param object the companion object to associate to the pushed event (can be NULL)
  *
- * @return the count of clients that received the event.
+ * @Return
+ *   *  1 if at least one client listen for the event
+ *   *  0 if no more client listen for the event
+ *   * -1 in case of error (the event can't be delivered)
  */
 static inline int afb_event_x2_push(
 			struct afb_event_x2 *event,

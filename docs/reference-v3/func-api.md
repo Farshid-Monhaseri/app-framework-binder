@@ -428,7 +428,7 @@ int afb_api_queue_job(
  * @param name the event name suffix
  * @param object the object that comes with the event
  *
- * @return the count of clients that received the event.
+ * @return 0 in case of success or -1 in case of error
  */
 int afb_api_broadcast_event(
 			afb_api_t api,

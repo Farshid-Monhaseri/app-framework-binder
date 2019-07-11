@@ -939,7 +939,7 @@ int main(int argc, char *argv[])
 	afb_debug("main-start");
 
 	/* enter job processing */
-	jobs_start(3, 0, 50, start, NULL);
+	jobs_start(3, 0, 100, start, NULL);
 	WARNING("hoops returned from jobs_enter! [report bug]");
 	return 1;
 }

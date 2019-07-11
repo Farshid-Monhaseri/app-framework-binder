@@ -68,7 +68,7 @@ static inline struct sd_bus *afb_daemon_get_system_bus_v1(struct afb_daemon_x1 d
  *
  * Calling this function is only forbidden during preinit.
  *
- * Returns the count of clients that received the event.
+ * Returns 0 in case of success or -1 in case of error
  */
 static inline int afb_daemon_broadcast_event_v1(struct afb_daemon_x1 daemon, const char *name, struct json_object *object)
 {
