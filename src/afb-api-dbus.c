@@ -635,7 +635,7 @@ error:
 static void afb_api_dbus_server_event_add(void *closure, const char *event, int eventid);
 static void afb_api_dbus_server_event_remove(void *closure, const char *event, int eventid);
 static void afb_api_dbus_server_event_push(void *closure, const char *event, int eventid, struct json_object *object);
-static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object);
+static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const char *uuid);
 
 /* the interface for events broadcasting */
 static const struct afb_evt_itf evt_broadcast_itf = {
@@ -917,7 +917,7 @@ static void afb_api_dbus_server_event_push(void *closure, const char *event, int
 	json_object_put(object);
 }
 
-static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object)
+static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const char *uuid)
 {
 	int rc;
 	struct api_dbus *api;

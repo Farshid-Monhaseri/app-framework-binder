@@ -424,7 +424,7 @@ static void broadcast(afb_req_t request)
 			afb_req_success(request, NULL, NULL);
 		pthread_mutex_unlock(&mutex);
 	} else if (name != NULL) {
-		if (0 > afb_daemon_broadcast_event(name, object))
+		if (0 > afb_daemon_broadcast_event(name, json_object_get(object)))
 			afb_req_fail(request, "failed", "broadcast error");
 		else
 			afb_req_success(request, NULL, NULL);

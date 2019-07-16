@@ -341,12 +341,12 @@ static void server_event_push_cb(void *closure, const char *event, int eventid, 
 	json_object_put(object);
 }
 
-static void server_event_broadcast_cb(void *closure, const char *event, struct json_object *object)
+static void server_event_broadcast_cb(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop)
 {
 	struct afb_stub_ws *stubws = closure;
 
 	if (stubws->proto != NULL)
-		afb_proto_ws_server_event_broadcast(stubws->proto, event, object);
+		afb_proto_ws_server_event_broadcast(stubws->proto, event, object, uuid, hop);
 	json_object_put(object);
 }
 
@@ -457,9 +457,9 @@ static void client_on_event_push_cb(void *closure, const char *event_name, int e
 		ERROR("unreadable push event");
 }
 
-static void client_on_event_broadcast_cb(void *closure, const char *event_name, struct json_object *data)
+static void client_on_event_broadcast_cb(void *closure, const char *event_name, struct json_object *data, const uuid_binary_t uuid, uint8_t hop)
 {
-	afb_evt_broadcast(event_name, data);
+	afb_evt_rebroadcast(event_name, data, uuid, hop);
 }
 
 /*****************************************************/

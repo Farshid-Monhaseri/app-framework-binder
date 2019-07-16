@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "uuid.h"
+
 struct afb_event_x1;
 struct afb_event_x2;
 struct afb_evtid;
@@ -27,7 +29,7 @@ struct afb_evt_listener;
 struct afb_evt_itf
 {
 	void (*push)(void *closure, const char *event, int evtid, struct json_object *object);
-	void (*broadcast)(void *closure, const char *event, struct json_object *object);
+	void (*broadcast)(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop);
 	void (*add)(void *closure, const char *event, int evtid);
 	void (*remove)(void *closure, const char *event, int evtid);
 };
@@ -35,6 +37,7 @@ struct afb_evt_itf
 extern struct afb_evt_listener *afb_evt_listener_create(const struct afb_evt_itf *itf, void *closure);
 
 extern int afb_evt_broadcast(const char *event, struct json_object *object);
+extern int afb_evt_rebroadcast(const char *event, struct json_object *object, const  uuid_binary_t uuid, uint8_t hop);
 
 extern struct afb_evt_listener *afb_evt_listener_addref(struct afb_evt_listener *listener);
 extern void afb_evt_listener_unref(struct afb_evt_listener *listener);

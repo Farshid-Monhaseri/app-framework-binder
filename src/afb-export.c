@@ -1255,7 +1255,7 @@ static void listener_of_pushed_events(void *closure, const char *event, int even
 	listener_of_events(closure, event, eventid, object);
 }
 
-static void listener_of_broadcasted_events(void *closure, const char *event, struct json_object *object)
+static void listener_of_broadcasted_events(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop)
 {
 	listener_of_events(closure, event, 0, object);
 }

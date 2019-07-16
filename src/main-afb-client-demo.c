@@ -60,7 +60,7 @@ static void on_pws_event_remove(void *closure, const char *event_name, int event
 static void on_pws_event_subscribe(void *closure, void *request, const char *event_name, int event_id);
 static void on_pws_event_unsubscribe(void *closure, void *request, const char *event_name, int event_id);
 static void on_pws_event_push(void *closure, const char *event_name, int event_id, struct json_object *data);
-static void on_pws_event_broadcast(void *closure, const char *event_name, struct json_object *data);
+static void on_pws_event_broadcast(void *closure, const char *event_name, struct json_object *data, const afb_proto_ws_uuid_t uuid, uint8_t hop);
 
 static void idle();
 static int process_stdin();
@@ -530,7 +530,7 @@ static void on_pws_event_push(void *closure, const char *event_name, int event_i
 	fflush(stdout);
 }
 
-static void on_pws_event_broadcast(void *closure, const char *event_name, struct json_object *data)
+static void on_pws_event_broadcast(void *closure, const char *event_name, struct json_object *data, const afb_proto_ws_uuid_t uuid, uint8_t hop)
 {
 	if (raw)
 		printf("ON-EVENT-BROADCAST: [%s]\n%s\n", event_name, json_object_to_json_string_ext(data, JSON_C_TO_STRING_NOSLASHESCAPE));

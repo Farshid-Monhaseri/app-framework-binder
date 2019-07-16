@@ -560,11 +560,12 @@ static void client_on_event_unsubscribe(struct afb_proto_ws *protows, struct rea
 /* receives broadcasted events */
 static void client_on_event_broadcast(struct afb_proto_ws *protows, struct readbuf *rb)
 {
-	const char *event_name;
+	const char *event_name, *uuid;
+	char hop;
 	struct json_object *object;
 
-	if (protows->client_itf->on_event_broadcast && readbuf_string(rb, &event_name, NULL) && readbuf_object(rb, &object))
-		protows->client_itf->on_event_broadcast(protows->closure, event_name, object);
+	if (protows->client_itf->on_event_broadcast && readbuf_string(rb, &event_name, NULL) && readbuf_object(rb, &object) && (uuid = readbuf_get(rb, 16)) && readbuf_char(rb, &hop))
+		protows->client_itf->on_event_broadcast(protows->closure, event_name, object, (unsigned char*)uuid, (uint8_t)hop);
 	else
 		ERROR("Ignoring broadcast of event");
 }
@@ -909,9 +910,9 @@ static int server_event_send(struct afb_proto_ws *protows, char order, const cha
 	int rc;
 
 	if (writebuf_char(&wb, order)
-	 && (order == CHAR_FOR_EVT_BROADCAST || writebuf_uint32(&wb, event_id))
+	 && writebuf_uint32(&wb, event_id)
 	 && writebuf_string(&wb, event_name)
-	 && (order == CHAR_FOR_EVT_ADD || order == CHAR_FOR_EVT_DEL || writebuf_object(&wb, data))) {
+	 && (order != CHAR_FOR_EVT_PUSH || writebuf_object(&wb, data))) {
 		pthread_mutex_lock(&protows->mutex);
 		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
 		pthread_mutex_unlock(&protows->mutex);
@@ -936,9 +937,26 @@ int afb_proto_ws_server_event_push(struct afb_proto_ws *protows, const char *eve
 	return server_event_send(protows, CHAR_FOR_EVT_PUSH, event_name, event_id, data);
 }
 
-int afb_proto_ws_server_event_broadcast(struct afb_proto_ws *protows, const char *event_name, struct json_object *data)
+int afb_proto_ws_server_event_broadcast(struct afb_proto_ws *protows, const char *event_name, struct json_object *data, const unsigned char uuid[16], uint8_t hop)
 {
-	return server_event_send(protows, CHAR_FOR_EVT_BROADCAST, event_name, 0, data);
+	struct writebuf wb = { .count = 0 };
+	int rc;
+
+	if (!hop--)
+		return 0;
+
+	if (writebuf_char(&wb, CHAR_FOR_EVT_BROADCAST)
+	 && writebuf_string(&wb, event_name)
+	 && writebuf_object(&wb, data)
+	 && writebuf_put(&wb, uuid, 16)
+	 && writebuf_char(&wb, (char)hop)) {
+		pthread_mutex_lock(&protows->mutex);
+		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
+		pthread_mutex_unlock(&protows->mutex);
+		if (rc >= 0)
+			return 0;
+	}
+	return -1;
 }
 
 /*****************************************************/

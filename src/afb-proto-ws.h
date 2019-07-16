@@ -29,6 +29,8 @@ struct afb_proto_ws;
 struct afb_proto_ws_call;
 struct afb_proto_ws_describe;
 
+typedef unsigned char afb_proto_ws_uuid_t[16];
+
 struct afb_proto_ws_client_itf
 {
 	/* can't be NULL */
@@ -40,7 +42,7 @@ struct afb_proto_ws_client_itf
 	void (*on_event_subscribe)(void *closure, void *request, const char *event_name, int event_id);
 	void (*on_event_unsubscribe)(void *closure, void *request, const char *event_name, int event_id);
 	void (*on_event_push)(void *closure, const char *event_name, int event_id, struct json_object *data);
-	void (*on_event_broadcast)(void *closure, const char *event_name, struct json_object *data);
+	void (*on_event_broadcast)(void *closure, const char *event_name, struct json_object *data, const afb_proto_ws_uuid_t uuid, uint8_t hop);
 };
 
 struct afb_proto_ws_server_itf
@@ -70,7 +72,7 @@ extern int afb_proto_ws_client_describe(struct afb_proto_ws *protows, void (*cal
 extern int afb_proto_ws_server_event_create(struct afb_proto_ws *protows, const char *event_name, int event_id);
 extern int afb_proto_ws_server_event_remove(struct afb_proto_ws *protows, const char *event_name, int event_id);
 extern int afb_proto_ws_server_event_push(struct afb_proto_ws *protows, const char *event_name, int event_id, struct json_object *data);
-extern int afb_proto_ws_server_event_broadcast(struct afb_proto_ws *protows, const char *event_name, struct json_object *data);
+extern int afb_proto_ws_server_event_broadcast(struct afb_proto_ws *protows, const char *event_name, struct json_object *data, const afb_proto_ws_uuid_t uuid, uint8_t hop);
 
 extern void afb_proto_ws_call_addref(struct afb_proto_ws_call *call);
 extern void afb_proto_ws_call_unref(struct afb_proto_ws_call *call);
