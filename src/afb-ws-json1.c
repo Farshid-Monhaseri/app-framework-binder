@@ -44,9 +44,10 @@ struct afb_ws_json1;
 struct afb_wsreq;
 
 /* predeclaration of websocket callbacks */
-static void aws_on_hangup(struct afb_ws_json1 *ws, struct afb_wsj1 *wsj1);
-static void aws_on_call(struct afb_ws_json1 *ws, const char *api, const char *verb, struct afb_wsj1_msg *msg);
-static void aws_on_event(struct afb_ws_json1 *ws, const char *event, int eventid, struct json_object *object);
+static void aws_on_hangup_cb(void *closure, struct afb_wsj1 *wsj1);
+static void aws_on_call_cb(void *closure, const char *api, const char *verb, struct afb_wsj1_msg *msg);
+static void aws_on_push_cb(void *closure, const char *event, int eventid, struct json_object *object);
+static void aws_on_broadcast_cb(void *closure, const char *event, struct json_object *object);
 
 /* predeclaration of wsreq callbacks */
 static void wsreq_destroy(struct afb_xreq *xreq);
@@ -77,8 +78,8 @@ struct afb_wsreq
 
 /* interface for afb_ws_json1 / afb_wsj1 */
 static struct afb_wsj1_itf wsj1_itf = {
-	.on_hangup = (void*)aws_on_hangup,
-	.on_call = (void*)aws_on_call
+	.on_hangup = aws_on_hangup_cb,
+	.on_call = aws_on_call_cb
 };
 
 /* interface for xreq */
@@ -89,8 +90,8 @@ const struct afb_xreq_query_itf afb_ws_json1_xreq_itf = {
 
 /* the interface for events */
 static const struct afb_evt_itf evt_itf = {
-	.broadcast = (void*)aws_on_event,
-	.push = (void*)aws_on_event
+	.broadcast = aws_on_broadcast_cb,
+	.push = aws_on_push_cb
 };
 
 /***************************************************************
@@ -163,13 +164,15 @@ void afb_ws_json1_unref(struct afb_ws_json1 *ws)
 	}
 }
 
-static void aws_on_hangup(struct afb_ws_json1 *ws, struct afb_wsj1 *wsj1)
+static void aws_on_hangup_cb(void *closure, struct afb_wsj1 *wsj1)
 {
+	struct afb_ws_json1 *ws = closure;
 	afb_ws_json1_unref(ws);
 }
 
-static void aws_on_call(struct afb_ws_json1 *ws, const char *api, const char *verb, struct afb_wsj1_msg *msg)
+static void aws_on_call_cb(void *closure, const char *api, const char *verb, struct afb_wsj1_msg *msg)
 {
+	struct afb_ws_json1 *ws = closure;
 	struct afb_wsreq *wsreq;
 
 	DEBUG("received websocket request for %s/%s: %s", api, verb, afb_wsj1_msg_object_s(msg));
@@ -205,8 +208,14 @@ static void aws_on_call(struct afb_ws_json1 *ws, const char *api, const char *ve
 	afb_xreq_process(&wsreq->xreq, ws->apiset);
 }
 
-static void aws_on_event(struct afb_ws_json1 *aws, const char *event, int eventid, struct json_object *object)
+static void aws_on_push_cb(void *closure, const char *event, int eventid, struct json_object *object)
 {
+	aws_on_broadcast_cb(closure, event, object);
+}
+
+static void aws_on_broadcast_cb(void *closure, const char *event, struct json_object *object)
+{
+	struct afb_ws_json1 *aws = closure;
 	afb_wsj1_send_event_j(aws->wsj1, event, afb_msg_json_event(event, object));
 }
 

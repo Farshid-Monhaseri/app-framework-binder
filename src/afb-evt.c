@@ -115,9 +115,9 @@ struct afb_evt_watch {
 };
 
 /*
- * structure for job of broadcasting string events
+ * structure for job of broadcasting events
  */
-struct job_string
+struct job_broadcast
 {
 	/** object atached to the event */
 	struct json_object *object;
@@ -176,24 +176,24 @@ static int event_id_wrapped = 0;
  * Create structure for job of broadcasting string 'event' with 'object'
  * Returns the created structure or NULL if out of memory
  */
-static struct job_string *make_job_string(const char *event, struct json_object *object)
+static struct job_broadcast *make_job_broadcast(const char *event, struct json_object *object)
 {
 	size_t sz = 1 + strlen(event);
-	struct job_string *js = malloc(sz + sizeof *js);
-	if (js) {
-		js->object = object;
-		memcpy(js->event, event, sz);
+	struct job_broadcast *jb = malloc(sz + sizeof *jb);
+	if (jb) {
+		jb->object = object;
+		memcpy(jb->event, event, sz);
 	}
-	return js;
+	return jb;
 }
 
 /*
- * Destroy structure 'js' for job of broadcasting string events
+ * Destroy structure 'jb' for job of broadcasting string events
  */
-static void destroy_job_string(struct job_string *js)
+static void destroy_job_broadcast(struct job_broadcast *jb)
 {
-	json_object_put(js->object);
-	free(js);
+	json_object_put(jb->object);
+	free(jb);
 }
 
 /*
@@ -223,7 +223,7 @@ static void destroy_job_evtid(struct job_evtid *je)
 /*
  * Broadcasts the 'event' of 'id' with its 'object'
  */
-static void broadcast(const char *event, struct json_object *object, int id)
+static void broadcast(const char *event, struct json_object *object)
 {
 	struct afb_evt_listener *listener;
 
@@ -231,7 +231,7 @@ static void broadcast(const char *event, struct json_object *object, int id)
 	listener = listeners;
 	while(listener) {
 		if (listener->itf->broadcast != NULL)
-			listener->itf->broadcast(listener->closure, event, id, json_object_get(object));
+			listener->itf->broadcast(listener->closure, event, json_object_get(object));
 		listener = listener->next;
 	}
 	pthread_rwlock_unlock(&listeners_rwlock);
@@ -240,73 +240,36 @@ static void broadcast(const char *event, struct json_object *object, int id)
 /*
  * Jobs callback for broadcasting string asynchronously
  */
-static void broadcast_job_string(int signum, void *closure)
+static void broadcast_job(int signum, void *closure)
 {
-	struct job_string *js = closure;
+	struct job_broadcast *jb = closure;
 
 	if (signum == 0)
-		broadcast(js->event, js->object, 0);
-	destroy_job_string(js);
-}
-
-/*
- * Jobs callback for broadcasting evtid asynchronously
- */
-static void broadcast_job_evtid(int signum, void *closure)
-{
-	struct job_evtid *je = closure;
-
-	if (signum == 0)
-		broadcast(je->evtid->fullname, je->object, je->evtid->id);
-	destroy_job_evtid(je);
+		broadcast(jb->event, jb->object);
+	destroy_job_broadcast(jb);
 }
 
 /*
  * Broadcasts the string 'event' with its 'object'
  */
-static int broadcast_string(const char *event, struct json_object *object)
+static int unhooked_broadcast(const char *event, struct json_object *object)
 {
-	struct job_string *js;
+	struct job_broadcast *jb;
 	int rc;
 
-	js = make_job_string(event, object);
-	if (js == NULL) {
+	jb = make_job_broadcast(event, object);
+	if (jb == NULL) {
 		ERROR("Cant't create broadcast string job item for %s(%s)",
 			event, json_object_to_json_string(object));
 		json_object_put(object);
 		return -1;
 	}
 
-	rc = jobs_queue(BROADCAST_JOB_GROUP, 0, broadcast_job_string, js);
+	rc = jobs_queue(BROADCAST_JOB_GROUP, 0, broadcast_job, jb);
 	if (rc) {
 		ERROR("cant't queue broadcast string job item for %s(%s)",
 			event, json_object_to_json_string(object));
-		destroy_job_string(js);
-	}
-	return rc;
-}
-
-/*
- * Broadcasts the 'evtid' with its 'object'
- */
-static int broadcast_evtid(struct afb_evtid *evtid, struct json_object *object)
-{
-	struct job_evtid *je;
-	int rc;
-
-	je = make_job_evtid(evtid, object);
-	if (je == NULL) {
-		ERROR("Cant't create broadcast evtid job item for %s(%s)",
-			evtid->fullname, json_object_to_json_string(object));
-		json_object_put(object);
-		return -1;
-	}
-
-	rc = jobs_queue(BROADCAST_JOB_GROUP, 0, broadcast_job_evtid, je);
-	if (rc) {
-		ERROR("cant't queue broadcast evtid job item for %s(%s)",
-			evtid->fullname, json_object_to_json_string(object));
-		destroy_job_evtid(je);
+		destroy_job_broadcast(jb);
 	}
 	return rc;
 }
@@ -318,7 +281,7 @@ static int broadcast_evtid(struct afb_evtid *evtid, struct json_object *object)
  */
 int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *object)
 {
-	return broadcast_evtid(evtid, object);
+	return unhooked_broadcast(evtid->fullname, object);
 }
 
 #if WITH_AFB_HOOK
@@ -336,7 +299,7 @@ int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *
 	if (evtid->hookflags & afb_hook_flag_evt_broadcast_before)
 		afb_hook_evt_broadcast_before(evtid->fullname, evtid->id, object);
 
-	result = broadcast_evtid(evtid, object);
+	result = afb_evt_evtid_broadcast(evtid, object);
 
 	if (evtid->hookflags & afb_hook_flag_evt_broadcast_after)
 		afb_hook_evt_broadcast_after(evtid->fullname, evtid->id, object, result);
@@ -354,21 +317,20 @@ int afb_evt_evtid_hooked_broadcast(struct afb_evtid *evtid, struct json_object *
  */
 int afb_evt_broadcast(const char *event, struct json_object *object)
 {
-#if WITH_AFB_HOOK
 	int result;
 
+#if WITH_AFB_HOOK
 	json_object_get(object);
-
 	afb_hook_evt_broadcast_before(event, 0, object);
-	result = broadcast_string(event, object);
-	afb_hook_evt_broadcast_after(event, 0, object, result);
-
-	json_object_put(object);
-
-	return result;
-#else
-	return broadcast_string(event, object);
 #endif
+
+	result = unhooked_broadcast(event, object);
+
+#if WITH_AFB_HOOK
+	afb_hook_evt_broadcast_after(event, 0, object, result);
+	json_object_put(object);
+#endif
+	return result;
 }
 
 /*

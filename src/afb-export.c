@@ -1250,10 +1250,20 @@ static void listener_of_events(void *closure, const char *event, int eventid, st
 	json_object_put(object);
 }
 
+static void listener_of_pushed_events(void *closure, const char *event, int eventid, struct json_object *object)
+{
+	listener_of_events(closure, event, eventid, object);
+}
+
+static void listener_of_broadcasted_events(void *closure, const char *event, struct json_object *object)
+{
+	listener_of_events(closure, event, 0, object);
+}
+
 /* the interface for events */
 static const struct afb_evt_itf evt_itf = {
-	.broadcast = listener_of_events,
-	.push = listener_of_events
+	.broadcast = listener_of_broadcasted_events,
+	.push = listener_of_pushed_events
 };
 
 /* ensure an existing listener */

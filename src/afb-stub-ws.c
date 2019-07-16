@@ -341,7 +341,7 @@ static void server_event_push_cb(void *closure, const char *event, int eventid, 
 	json_object_put(object);
 }
 
-static void server_event_broadcast_cb(void *closure, const char *event, int eventid, struct json_object *object)
+static void server_event_broadcast_cb(void *closure, const char *event, struct json_object *object)
 {
 	struct afb_stub_ws *stubws = closure;
 

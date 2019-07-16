@@ -27,7 +27,7 @@ struct afb_evt_listener;
 struct afb_evt_itf
 {
 	void (*push)(void *closure, const char *event, int evtid, struct json_object *object);
-	void (*broadcast)(void *closure, const char *event, int evtid, struct json_object *object);
+	void (*broadcast)(void *closure, const char *event, struct json_object *object);
 	void (*add)(void *closure, const char *event, int evtid);
 	void (*remove)(void *closure, const char *event, int evtid);
 };
