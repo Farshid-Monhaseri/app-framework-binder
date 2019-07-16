@@ -123,6 +123,7 @@ SET(AFB_LIB_SOURCES
 	sig-monitor.c
 	subpath.c
 	systemd.c
+	uuid.c
 	verbose.c
 	watchdog.c
 	websock.c

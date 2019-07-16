@@ -24,16 +24,14 @@
 #include <stdint.h>
 #include <limits.h>
 #include <string.h>
-#include <uuid/uuid.h>
 #include <errno.h>
-#include <unistd.h>
 
 #include "afb-session.h"
 #include "afb-hook.h"
 #include "verbose.h"
 #include "pearson.h"
+#include "uuid.h"
 
-#define SIZEUUID	37
 #define HEADCOUNT	16
 #define COOKIECOUNT	8
 #define COOKIEMASK	(COOKIECOUNT - 1)
@@ -69,8 +67,8 @@ struct afb_session
 	uint8_t closed: 1;      /**< is the session closed ? */
 	uint8_t autoclose: 1;   /**< close the session when unreferenced */
 	uint8_t notinset: 1;	/**< session removed from the set of sessions */
-	char uuid[SIZEUUID];    /**< long term authentication of remote client */
-	char token[SIZEUUID];   /**< short term authentication of remote client */
+	uuid_stringz_t uuid;    /**< long term authentication of remote client */
+	uuid_stringz_t token;   /**< short term authentication of remote client */
 };
 
 /**
@@ -81,7 +79,7 @@ static struct {
 	int max;                /**< maximum count of sessions */
 	int timeout;            /**< common initial timeout */
 	struct afb_session *heads[HEADCOUNT]; /**< sessions */
-	char initok[SIZEUUID];  /**< common initial token */
+	uuid_stringz_t initok;  /**< common initial token */
 	pthread_mutex_t mutex;  /**< declare a mutex to protect hash table */
 } sessions = {
 	.count = 0,
@@ -100,65 +98,6 @@ static inline time_t time_now()
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 	return ts.tv_sec;
-}
-
-/**
- * generate a new fresh 'uuid'
- */
-static void new_uuid(char uuid[SIZEUUID])
-{
-	uuid_t newuuid;
-
-#if defined(USE_UUID_GENERATE)
-	uuid_generate(newuuid);
-#else
-	struct timespec ts;
-	static uint16_t pid;
-	static uint16_t counter;
-	static char state[32];
-	static struct random_data rdata;
-
-	int32_t x;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-	if (pid == 0) {
-		pid = (uint16_t)getpid();
-		counter = (uint16_t)(ts.tv_nsec >> 8);
-		rdata.state = NULL;
-		initstate_r((((unsigned)pid) << 16) + ((unsigned)counter),
-					state, sizeof state, &rdata);
-	}
-	ts.tv_nsec ^= (long)ts.tv_sec;
-	if (++counter == 0)
-		counter = 1;
-
-	newuuid[0] = (char)(ts.tv_nsec >> 24);
-	newuuid[1] = (char)(ts.tv_nsec >> 16);
-	newuuid[2] = (char)(ts.tv_nsec >> 8);
-	newuuid[3] = (char)(ts.tv_nsec);
-
-	newuuid[4] = (char)(pid >> 8);
-	newuuid[5] = (char)(pid);
-
-	random_r(&rdata, &x);
-	newuuid[6] = (char)(((x >> 16) & 0x0f) | 0x40); /* pseudo-random version */
-	newuuid[7] = (char)(x >> 8);
-
-	random_r(&rdata, &x);
-	newuuid[8] = (char)(((x >> 16) & 0x3f) | 0x80); /* variant RFC4122 */
-	newuuid[9] = (char)(x >> 8);
-
-	random_r(&rdata, &x);
-	newuuid[10] = (char)(x >> 16);
-	newuuid[11] = (char)(x >> 8);
-
-	random_r(&rdata, &x);
-	newuuid[12] = (char)(x >> 16);
-	newuuid[13] = (char)(x >> 8);
-
-	newuuid[14] = (char)(counter >> 8);
-	newuuid[15] = (char)(counter);
-#endif
-	uuid_unparse_lower(newuuid, uuid);
 }
 
 /* lock the set of sessions for exclusive access */
@@ -206,12 +145,12 @@ static int sessionset_add(struct afb_session *session, uint8_t hashidx)
 }
 
 /* make a new uuid not used in the set of sessions */
-static uint8_t sessionset_make_uuid (char uuid[SIZEUUID])
+static uint8_t sessionset_make_uuid (uuid_stringz_t uuid)
 {
 	uint8_t hashidx;
 
 	do {
-		new_uuid(uuid);
+		uuid_new_stringz(uuid);
 		hashidx = pearson4(uuid);
 	} while(sessionset_search(uuid, hashidx));
 	return hashidx;
@@ -384,7 +323,7 @@ int afb_session_init (int max_session_count, int timeout, const char *initok)
 	sessions.max = max_session_count;
 	sessions.timeout = timeout;
 	if (initok == NULL)
-		new_uuid(sessions.initok);
+		uuid_new_stringz(sessions.initok);
 	else
 		strcpy(sessions.initok, initok);
 	sessionset_unlock();
@@ -480,7 +419,7 @@ int afb_session_what_remains(struct afb_session *session)
 /* This function will return exiting session or newly created session */
 struct afb_session *afb_session_get (const char *uuid, int timeout, int *created)
 {
-	char _uuid_[SIZEUUID];
+	uuid_stringz_t _uuid_;
 	uint8_t hashidx;
 	struct afb_session *session;
 	time_t now;
@@ -598,7 +537,7 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 void afb_session_new_token (struct afb_session *session)
 {
 	session_lock(session);
-	new_uuid(session->token);
+	uuid_new_stringz(session->token);
 	session_update_expiration(session, NOW);
 #if WITH_AFB_HOOK
 	afb_hook_session_renew(session);
