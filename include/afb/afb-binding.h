@@ -41,7 +41,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
-struct json_object;
+#include <json-c/json.h>
 
 /**
  * @def AFB_BINDING_INTERFACE_VERSION
