@@ -350,7 +350,7 @@ static int do_sync(
 
 	afb_xreq_unhooked_unref(&callreq->xreq);
 interr:
-	return store_reply(NULL, _internal_error_, NULL, object, info, error);
+	return store_reply(NULL, _internal_error_, NULL, object, error, info);
 }
 
 /******************************************************************************/
