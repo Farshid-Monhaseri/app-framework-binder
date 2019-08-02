@@ -28,7 +28,7 @@ Building the AGL framework binder has been tested under
 It requires the following libraries:
 
  * libmagic ("libmagic-dev" under Ubuntu, "file-devel" under Fedora);
- * libmicrohttpd >= 0.9.55  (fetch and build from "http://ftp.gnu.org/gnu/libmicrohttpd");
+ * libmicrohttpd >= 0.9.60  (fetch and build from "http://ftp.gnu.org/gnu/libmicrohttpd");
  * json-c ("libjson-c-dev/devel");
  * uuid ("uuid-dev/libuuid-devel");
  * openssl ("libssl-dev/openssl-devel");
