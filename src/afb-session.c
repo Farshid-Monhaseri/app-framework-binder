@@ -579,7 +579,7 @@ static int cookeyidx(const void *key)
  * @param makecb	the creation function or NULL
  * @param freecb	the release function or NULL
  * @param closure	an argument for makecb or the value if makecb==NULL
- * @param replace	a boolean enforcing replecement of the previous value
+ * @param replace	a boolean enforcing replacement of the previous value
  *
  * @return the value of the cookie
  *

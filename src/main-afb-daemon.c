@@ -403,15 +403,25 @@ static struct afb_hsrv *start_http_server()
  | execute_command
  +--------------------------------------------------------- */
 
-static void wait_child_and_exit()
+static void exit_at_end()
 {
+	exit(0);
+}
+
+static void wait_child(int signum, void* arg)
+{
+	pid_t pid = (pid_t)(intptr_t)arg;
 	pid_t pidchld = childpid;
 
-	childpid = 0;
-	if (!SELF_PGROUP)
-		killpg(pidchld, SIGKILL);
-	waitpid(pidchld, NULL, 0);
-	exit(0);
+	if (pidchld == pid) {
+		childpid = 0;
+		if (!SELF_PGROUP)
+			killpg(pidchld, SIGKILL);
+		waitpid(pidchld, NULL, 0);
+		jobs_exit(exit_at_end);
+	} else {
+		waitpid(pid, NULL, 0);
+	}
 }
 
 static void on_sigchld(int signum, siginfo_t *info, void *uctx)
@@ -421,7 +431,7 @@ static void on_sigchld(int signum, siginfo_t *info, void *uctx)
 		case CLD_EXITED:
 		case CLD_KILLED:
 		case CLD_DUMPED:
-			jobs_exit(wait_child_and_exit);
+			jobs_queue_lazy(0, 0, wait_child, (void*)(intptr_t)info->si_pid);
 		default:
 			break;
 		}
