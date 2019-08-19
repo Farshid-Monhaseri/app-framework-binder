@@ -131,20 +131,20 @@ The configuration options are:
 
 ```
 $ ${AFB_DAEMON_DIR}/build/src/afb-daemon --help
-$ ${AFB_DAEMON_DIR}/build/src/afb-daemon --port=1234 --token='' --ldpaths=${AFB_DAEMON_DIR}/build --sessiondir=/tmp --rootdir=${AFB_DAEMON_DIR}/test
+$ ${AFB_DAEMON_DIR}/build/src/afb-daemon --port=1234 --token='' --ldpaths=${AFB_DAEMON_DIR}/build --workdir=/tmp --rootdir=${AFB_DAEMON_DIR}/test
 ```
 
 ### Starting
 
 ```
 $ afb-daemon --help
-$ afb-daemon --verbose --port=<port> --token='' --sessiondir=<working directory> --rootdir=<web directory (index.html)>
+$ afb-daemon --verbose --port=<port> --token='' --workdir=<working directory> --rootdir=<web directory (index.html)>
 ```
 
 ### Example
 
 ```
-$ afb-daemon --verbose --port=1234 --token='' --sessiondir=/tmp --rootdir=/srv/www/htdocs --alias=icons:/usr/share/icons
+$ afb-daemon --verbose --port=1234 --token='' --workdir=/tmp --rootdir=/srv/www/htdocs --alias=icons:/usr/share/icons
 ```
 
 ### Directories & Paths
