@@ -144,10 +144,10 @@ static void api_ws_server_listen_callback(void *closure, uint32_t revents, struc
 {
 	struct api_ws_server *apiws = closure;
 
-	if ((revents & EPOLLIN) != 0)
-		api_ws_server_accept(apiws);
-	else if ((revents & EPOLLHUP) != 0)
+	if ((revents & EPOLLHUP) != 0)
 		api_ws_server_connect(apiws);
+	else if ((revents & EPOLLIN) != 0)
+		api_ws_server_accept(apiws);
 }
 
 static void api_ws_server_disconnect(struct api_ws_server *apiws)

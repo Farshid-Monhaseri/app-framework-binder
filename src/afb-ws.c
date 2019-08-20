@@ -132,10 +132,10 @@ static void aws_disconnect(struct afb_ws *ws, int call_on_hangup)
 
 static void fdevcb(void *ws, uint32_t revents, struct fdev *fdev)
 {
-	if ((revents & EPOLLIN) != 0)
-		aws_on_readable(ws);
-	else if ((revents & EPOLLHUP) != 0)
+	if ((revents & EPOLLHUP) != 0)
 		afb_ws_hangup(ws);
+	else if ((revents & EPOLLIN) != 0)
+		aws_on_readable(ws);
 }
 
 /*
