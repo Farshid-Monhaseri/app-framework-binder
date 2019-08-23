@@ -9,7 +9,7 @@ The launch options for binder **afb-daemon** are:
  -l, --log=xxxx          Tune log level
      --foreground        Get all in foreground mode
      --background        Get all in background mode
-     --daemon            Get all in background mode
+ -D, --daemon            Get all in background mode
  -n, --name=xxxx         Set the visible name
  -p, --port=xxxx         HTTP listening TCP port  [default 1234]
      --roothttp=xxxx     HTTP Root Directory [default no root http (files not served but apis still available)]
@@ -20,9 +20,9 @@ The launch options for binder **afb-daemon** are:
      --cntxtimeout=xxxx  Client Session Context Timeout [default 32000000]
      --cache-eol=xxxx    Client cache end of live [default 100000]
  -w, --workdir=xxxx      Set the working directory [default: $PWD or current working directory]
- -u, --uploaddir=xxxx    Directory for uploading files [default: workdir]
-     --rootdir=xxxx      Root Directory of the application [default: workdir]
-     --ldpaths=xxxx      Load bindings from dir1:dir2:... [default = /opt/jobol/lib64/afb]
+ -u, --uploaddir=xxxx    Directory for uploading files [default: workdir] relative to workdir
+     --rootdir=xxxx      Root Directory of the application [default: workdir] relative to workdir
+     --ldpaths=xxxx      Load bindings from dir1:dir2:... [default: path of afb-dbus-binding.so]
  -b, --binding=xxxx      Load the binding of path
      --weak-ldpaths=xxxx Same as --ldpaths but ignore errors
      --no-ldpaths        Discard default ldpaths loading
@@ -41,14 +41,15 @@ The launch options for binder **afb-daemon** are:
      --traceglob=xxxx    Log the globals: none, all
      --traceditf=xxxx    Log the daemons: no, common, all
      --tracesvc=xxxx     Log the services: no, all
-     --call=xxxx         call at start format of val: API/VERB:json-args
+     --call=xxxx         call at start, format of val: API/VERB:json-args
      --no-httpd          Forbid HTTP service
  -e, --exec              Execute the remaining arguments
  -M, --monitoring        Enable HTTP monitoring at <ROOT>/monitoring/
  -C, --config=xxxx       Load options from the given config file
  -Z, --dump-config       Dump the config to stdout and exit
  -s, --set=xxxx          Set parameters ([API]/[KEY]:JSON or {"API":{"KEY":JSON}}
- -o, --output=xxxx       Redirect stdout and stderr to output file
+ -o, --output=xxxx       Redirect stdout and stderr to output file (when --daemon)
+     --trap-faults=xxxx  Trap faults: on, off, yes, no, true, false, 1, 0 (default: true)
 ```
 
 ## help

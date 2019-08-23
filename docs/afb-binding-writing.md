@@ -105,7 +105,7 @@ gcc -fPIC -shared tuto-1.c -o tuto-1.so $(pkg-config --cflags-only-I afb-daemon)
 Running:
 
 ```bash
-afb-daemon --binding tuto-1.so --port 3333 --token ''
+afb-daemon --binding ./tuto-1.so --port 3333 --token ''
 ```
 
 At this point, afb-daemon has started, it loaded the binding tuto-1.so and now
@@ -356,7 +356,7 @@ gcc -fPIC -shared tuto-2.c -o tuto-2.so $(pkg-config --cflags --libs afb-daemon)
 Running:
 
 ```bash
-afb-daemon --binding tuto-2.so --port 3333 --token ''
+afb-daemon --binding ./tuto-2.so --port 3333 --token ''
 ```
 
 Testing:
@@ -401,7 +401,7 @@ ON-REPLY 4:tuto-2/action: OK
 }
 ```
 
-In an other terminal:
+In another terminal:
 
 ```bash
 $ afb-client-demo -H localhost:3333/api?token=toto
