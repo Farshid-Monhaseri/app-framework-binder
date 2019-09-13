@@ -70,7 +70,6 @@ add_compile_options(-Werror=implicit-function-declaration)
 add_compile_options(-ffunction-sections -fdata-sections)
 add_compile_options(-fPIC)
 add_compile_options(-g -O2)
-add_compile_options(-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.)
 set (CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_C_FLAGS_PROFILING    "-g -O2 -pg -U_FORTIFY_SOURCE")
