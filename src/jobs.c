@@ -510,7 +510,7 @@ static int queue_job(
 		enum start_mode start_mode)
 {
 	struct job *job;
-	int rc;
+	int rc, busy;
 
 	pthread_mutex_lock(&mutex);
 
@@ -527,8 +527,9 @@ static int queue_job(
 		goto error;
 
 	/* start a thread if needed */
+	busy = busy_thread_count == started_thread_count;
 	if (start_mode != Start_Lazy
-	 && busy_thread_count == started_thread_count
+	 && busy
 	 && (start_mode == Start_Urgent || remaining_job_count + started_thread_count < allowed_job_count)
 	 && started_thread_count < allowed_thread_count) {
 		/* all threads are busy and a new can be started */
@@ -537,10 +538,15 @@ static int queue_job(
 			ERROR("can't start initial thread: %m");
 			goto error2;
 		}
+		busy = 0;
 	}
 
 	/* queues the job */
 	job_add(job);
+
+	/* wakeup an evloop if needed */
+	if (busy)
+		evloop_wakeup();
 
 	/* signal an existing job */
 	pthread_cond_signal(&cond);
