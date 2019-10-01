@@ -75,16 +75,16 @@ int afb_api_so_v3_add(const char *path, void *handle, struct afb_apiset *declare
 	struct afb_api_v3 *api;
 	struct afb_export *export;
 
-	/* retrieves the register function */
-	a.root = dlsym(handle, afb_api_so_v3_root);
+	/* retrieves important exported symbols */
 	a.desc = dlsym(handle, afb_api_so_v3_desc);
 	a.entry = dlsym(handle, afb_api_so_v3_entry);
-	if (!a.root && !a.desc && !a.entry)
+	if (!a.desc && !a.entry)
 		return 0;
 
 	INFO("binding [%s] looks like an AFB binding V3", path);
 
 	/* basic checks */
+	a.root = dlsym(handle, afb_api_so_v3_root);
 	if (!a.root) {
 		ERROR("binding [%s] incomplete symbol set: %s is missing",
 			path, afb_api_so_v3_root);
