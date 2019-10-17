@@ -915,6 +915,7 @@ void jobs_exit(void (*handler)())
 	}
 
 	/* wake up the threads */
+	evloop_wakeup();
 	pthread_cond_broadcast(&cond);
 
 	/* leave */

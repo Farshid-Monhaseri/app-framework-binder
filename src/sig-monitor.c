@@ -284,15 +284,37 @@ static void on_rescue_exit(int signum)
 }
 
 /*
- * Do a safe exit
+ * Do a direct safe exit
  */
-static void safe_exit(int code)
+static void direct_safe_exit(int code)
 {
 	set_signals_handler(on_rescue_exit, sigerr);
 	set_signals_handler(on_rescue_exit, sigterm);
 	exiting = code;
 	exit(code);
 }
+
+/*
+ * Do a safe exit
+ */
+#if WITH_SIG_MONITOR_NO_DEFERRED_EXIT
+#  define safe_exit(x) direct_safe_exit(x)
+#else
+#include "jobs.h"
+static void exit_job(int signum, void* arg)
+{
+	exiting = (int)(intptr_t)arg;
+	if (signum)
+		on_rescue_exit(signum);
+	exit(exiting);
+}
+
+static void safe_exit(int code)
+{
+	if (jobs_queue(safe_exit, 0, exit_job, (void*)(intptr_t)code))
+		direct_safe_exit(code);
+}
+#endif
 
 #if !WITH_SIG_MONITOR_DUMPSTACK
 
