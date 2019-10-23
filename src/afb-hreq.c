@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -735,6 +736,24 @@ const char *afb_hreq_get_header(struct afb_hreq *hreq, const char *name)
 	return MHD_lookup_connection_value(hreq->connection, MHD_HEADER_KIND, name);
 }
 
+const char *afb_hreq_get_authorization_bearer(struct afb_hreq *hreq)
+{
+	static const char bearer[] = "Bearer";
+	const char *value = afb_hreq_get_header(hreq, MHD_HTTP_HEADER_AUTHORIZATION);
+	if (value) {
+		if (strncasecmp(value, bearer, sizeof bearer - 1) == 0) {
+			value += sizeof bearer - 1;
+			if (isblank(*value++)) {
+				while (isblank(*value))
+					value++;
+				if (*value)
+					return value;
+			}
+		}
+	}
+	return NULL;
+}
+
 int afb_hreq_post_add(struct afb_hreq *hreq, const char *key, const char *data, size_t size)
 {
 	void *p;
@@ -948,19 +967,27 @@ int afb_hreq_init_context(struct afb_hreq *hreq)
 	if (hreq->xreq.context.session != NULL)
 		return 0;
 
+	/* get the uuid of the session */
 	uuid = afb_hreq_get_header(hreq, long_key_for_uuid);
-	if (uuid == NULL)
+	if (uuid == NULL) {
 		uuid = afb_hreq_get_argument(hreq, long_key_for_uuid);
-	if (uuid == NULL)
-		uuid = afb_hreq_get_cookie(hreq, cookie_name);
-	if (uuid == NULL)
-		uuid = afb_hreq_get_argument(hreq, short_key_for_uuid);
+		if (uuid == NULL) {
+			uuid = afb_hreq_get_cookie(hreq, cookie_name);
+			if (uuid == NULL)
+				uuid = afb_hreq_get_argument(hreq, short_key_for_uuid);
+		}
+	}
 
-	token = afb_hreq_get_header(hreq, long_key_for_token);
-	if (token == NULL)
-		token = afb_hreq_get_argument(hreq, long_key_for_token);
-	if (token == NULL)
-		token = afb_hreq_get_argument(hreq, short_key_for_token);
+	/* get the authorisation token */
+	token = afb_hreq_get_authorization_bearer(hreq);
+	if (token == NULL) {
+		token = afb_hreq_get_header(hreq, long_key_for_token);
+		if (token == NULL) {
+			token = afb_hreq_get_argument(hreq, long_key_for_token);
+			if (token == NULL)
+				token = afb_hreq_get_argument(hreq, short_key_for_token);
+		}
+	}
 
 	return afb_context_connect(&hreq->xreq.context, uuid, token);
 }
