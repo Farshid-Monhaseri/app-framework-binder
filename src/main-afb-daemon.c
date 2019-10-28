@@ -659,8 +659,7 @@ static void startup_call_current(struct startup_req *sreq)
 		json = strchr(verb, ':');
 		if (json) {
 			afb_xreq_init(&sreq->xreq, &startup_xreq_itf);
-			afb_context_init(&sreq->xreq.context, sreq->session, NULL);
-			sreq->xreq.context.validated = 1;
+			afb_context_init_validated(&sreq->xreq.context, sreq->session);
 			sreq->api = strndup(api, verb - api);
 			sreq->verb = strndup(verb + 1, json - verb - 1);
 			sreq->xreq.request.called_api = sreq->api;

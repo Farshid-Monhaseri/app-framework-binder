@@ -28,6 +28,7 @@
 
 #include "afb-session.h"
 #include "afb-hook.h"
+#include "afb-token.h"
 #include "verbose.h"
 #include "pearson.h"
 #include "uuid.h"
@@ -68,7 +69,7 @@ struct afb_session
 	uint8_t autoclose: 1;   /**< close the session when unreferenced */
 	uint8_t notinset: 1;	/**< session removed from the set of sessions */
 	uuid_stringz_t uuid;    /**< long term authentication of remote client */
-	uuid_stringz_t token;   /**< short term authentication of remote client */
+	struct afb_token *token;/**< short term authentication of remote client */
 };
 
 /**
@@ -79,14 +80,14 @@ static struct {
 	int max;                /**< maximum count of sessions */
 	int timeout;            /**< common initial timeout */
 	struct afb_session *heads[HEADCOUNT]; /**< sessions */
-	uuid_stringz_t initok;  /**< common initial token */
+	struct afb_token *initok;/**< common initial token */
 	pthread_mutex_t mutex;  /**< declare a mutex to protect hash table */
 } sessions = {
 	.count = 0,
 	.max = 10,
 	.timeout = 3600,
 	.heads = { 0 },
-	.initok = { 0 },
+	.initok = 0,
 	.mutex = PTHREAD_MUTEX_INITIALIZER
 };
 
@@ -203,6 +204,7 @@ static void session_destroy (struct afb_session *session)
 	afb_hook_session_destroy(session);
 #endif
 	pthread_mutex_destroy(&session->mutex);
+	afb_token_unref(session->token);
 	free(session->lang);
 	free(session);
 }
@@ -249,12 +251,13 @@ static struct afb_session *session_add(const char *uuid, int timeout, time_t now
 	pthread_mutex_init(&session->mutex, NULL);
 	session->refcount = 1;
 	strcpy(session->uuid, uuid);
-	strcpy(session->token, sessions.initok);
+	session->token = afb_token_addref(sessions.initok);
 	session->timeout = timeout;
 	session_update_expiration(session, now);
 
 	/* add */
 	if (sessionset_add(session, hashidx)) {
+		afb_token_unref(session->token);
 		free(session);
 		return NULL;
 	}
@@ -309,6 +312,9 @@ static time_t sessionset_cleanup (int force)
  */
 int afb_session_init (int max_session_count, int timeout, const char *initok)
 {
+	int rc;
+	uuid_stringz_t uuid;
+
 	/* check parameters */
 	if (initok && strlen(initok) >= sizeof sessions.initok) {
 		ERROR("initial token '%s' too long (max length %d)",
@@ -322,10 +328,16 @@ int afb_session_init (int max_session_count, int timeout, const char *initok)
 	sessionset_cleanup(1);
 	sessions.max = max_session_count;
 	sessions.timeout = timeout;
-	if (initok == NULL)
-		uuid_new_stringz(sessions.initok);
-	else
-		strcpy(sessions.initok, initok);
+	if (initok == NULL) {
+		uuid_new_stringz(uuid);
+		initok = uuid;
+	}
+	sessions.initok = 0;
+	if (*initok) {
+		rc = afb_token_get(&sessions.initok, initok);
+		if (rc < 0)
+			return rc;
+	}
 	sessionset_unlock();
 	return 0;
 }
@@ -367,7 +379,7 @@ void afb_session_purge()
  */
 const char *afb_session_initial_token()
 {
-	return sessions.initok;
+	return sessions.initok ? afb_token_string(sessions.initok) : "";
 }
 
 /* Searchs the session of 'uuid' */
@@ -528,7 +540,7 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 	session_lock(session);
 	r = !session->closed
 	  && session->expiration >= NOW
-	  && !(session->token[0] && strcmp (token, session->token));
+	  && !(session->token && strcmp(token, afb_session_token(session)));
 	session_unlock(session);
 	return r;
 }
@@ -536,12 +548,23 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 /* generate a new token and update client context */
 void afb_session_new_token (struct afb_session *session)
 {
+	int rc;
+	uuid_stringz_t uuid;
+	struct afb_token *previous, *next;
 	session_lock(session);
-	uuid_new_stringz(session->token);
-	session_update_expiration(session, NOW);
+	uuid_new_stringz(uuid);
+	rc = afb_token_get(&next, uuid);
+	if (rc < 0)
+		ERROR("can't renew token");
+	else {
+		previous = session->token;
+		session->token = next;
+		session_update_expiration(session, NOW);
 #if WITH_AFB_HOOK
-	afb_hook_session_renew(session);
+		afb_hook_session_renew(session);
 #endif
+		afb_token_unref(previous);
+	}
 	session_unlock(session);
 }
 
@@ -554,7 +577,7 @@ const char *afb_session_uuid (struct afb_session *session)
 /* Returns the token of 'session' */
 const char *afb_session_token (struct afb_session *session)
 {
-	return session->token;
+	return afb_token_string(session->token);
 }
 
 /**

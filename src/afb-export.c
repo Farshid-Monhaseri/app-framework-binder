@@ -1952,7 +1952,6 @@ void afb_export_process_xreq(struct afb_export *export, struct afb_xreq *xreq)
 
 void afb_export_context_init(struct afb_export *export, struct afb_context *context)
 {
-	afb_context_init(context, export->session, NULL);
-	context->validated = 1;
+	afb_context_init_validated(context, export->session);
 }
 

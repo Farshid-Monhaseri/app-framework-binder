@@ -104,6 +104,7 @@ SET(AFB_LIB_SOURCES
 	afb-socket.c
 	afb-stub-ws.c
 	afb-supervision.c
+	afb-token.c
 	afb-trace.c
 	afb-websock.c
 	afb-ws-client.c

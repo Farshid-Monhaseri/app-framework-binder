@@ -50,12 +50,19 @@ void afb_context_init(struct afb_context *context, struct afb_session *session, 
 	init_context(context, afb_session_addref(session), token);
 }
 
+void afb_context_init_validated(struct afb_context *context, struct afb_session *session)
+{
+	afb_context_init(context, session, NULL);
+	context->validated = 1;
+}
+
 void afb_context_subinit(struct afb_context *context, struct afb_context *super)
 {
 	context->session = super->session;
 	context->flags = 0;
 	context->super = super;
 	context->api_key = NULL;
+	context->token = NULL;
 	context->validated = super->validated;
 }
 
@@ -73,6 +80,14 @@ int afb_context_connect(struct afb_context *context, const char *uuid, const cha
 		/* context->refreshing = 1; */
 	}
 	return 0;
+}
+
+int afb_context_connect_validated(struct afb_context *context, const char *uuid)
+{
+	int rc = afb_context_connect(context, uuid, NULL);
+	if (!rc)
+		context->validated = 1;
+	return rc;
 }
 
 void afb_context_disconnect(struct afb_context *context)

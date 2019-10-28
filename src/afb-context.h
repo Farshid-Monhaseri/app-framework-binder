@@ -18,10 +18,12 @@
 #pragma once
 
 struct afb_session;
+struct afb_token;
 
 struct afb_context
 {
 	struct afb_session *session;
+	struct afb_token *token;
 	const void *api_key;
 	struct afb_context *super;
 	union {
@@ -39,8 +41,10 @@ struct afb_context
 };
 
 extern void afb_context_init(struct afb_context *context, struct afb_session *session, const char *token);
+extern void afb_context_init_validated(struct afb_context *context, struct afb_session *session);
 extern void afb_context_subinit(struct afb_context *context, struct afb_context *super);
 extern int afb_context_connect(struct afb_context *context, const char *uuid, const char *token);
+extern int afb_context_connect_validated(struct afb_context *context, const char *uuid);
 extern void afb_context_disconnect(struct afb_context *context);
 extern const char *afb_context_sent_token(struct afb_context *context);
 extern const char *afb_context_sent_uuid(struct afb_context *context);

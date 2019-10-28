@@ -34,6 +34,7 @@
 #include "afb-xreq.h"
 #include "afb-context.h"
 #include "afb-evt.h"
+#include "afb-token.h"
 
 #include "systemd.h"
 #include "verbose.h"
@@ -62,6 +63,7 @@ struct afb_ws_json1
 	void (*cleanup)(void*);
 	void *cleanup_closure;
 	struct afb_session *session;
+	struct afb_token *token;
 	struct afb_evt_listener *listener;
 	struct afb_wsj1 *wsj1;
 	struct afb_cred *cred;
@@ -121,6 +123,7 @@ struct afb_ws_json1 *afb_ws_json1_create(struct fdev *fdev, struct afb_apiset *a
 	result->cleanup = cleanup;
 	result->cleanup_closure = cleanup_closure;
 	result->session = afb_session_addref(context->session);
+	result->token = afb_token_addref(context->token);
 	result->new_session = context->created != 0;
 	if (result->session == NULL)
 		goto error2;
@@ -141,6 +144,7 @@ error4:
 	afb_wsj1_unref(result->wsj1);
 error3:
 	afb_session_unref(result->session);
+	afb_token_unref(result->token);
 error2:
 	free(result);
 error:
@@ -161,6 +165,7 @@ void afb_ws_json1_unref(struct afb_ws_json1 *ws)
 		afb_wsj1_unref(ws->wsj1);
 		if (ws->cleanup != NULL)
 			ws->cleanup(ws->cleanup_closure);
+		afb_token_unref(ws->token);
 		afb_session_unref(ws->session);
 		afb_cred_unref(ws->cred);
 		afb_apiset_unref(ws->apiset);

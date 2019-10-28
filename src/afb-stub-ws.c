@@ -523,9 +523,8 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 	wreq->call = call;
 
 	/* init the context */
-	if (afb_context_connect(&wreq->xreq.context, sessionid, NULL) < 0)
+	if (afb_context_connect_validated(&wreq->xreq.context, sessionid) < 0)
 		goto unconnected;
-	wreq->xreq.context.validated = 1;
 	server_record_session(stubws, wreq->xreq.context.session);
 	if (wreq->xreq.context.created)
 		afb_session_set_autoclose(wreq->xreq.context.session, 1);
