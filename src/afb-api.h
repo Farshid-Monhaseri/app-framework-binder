@@ -30,7 +30,7 @@ struct afb_api_itf
 #endif
 	int (*get_logmask)(void *closure);
 	void (*set_logmask)(void *closure, int level);
-	struct json_object *(*describe)(void *closure);
+	void (*describe)(void *closure, void (*describecb)(void *, struct json_object *), void *clocb);
 	void (*unref)(void *closure);
 };
 

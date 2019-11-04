@@ -1823,7 +1823,7 @@ static void api_call_cb(void *closure, struct afb_xreq *xreq)
 	}
 }
 
-static struct json_object *api_describe_cb(void *closure)
+static void api_describe_cb(void *closure, void (*describecb)(void *, struct json_object *), void *clocb)
 {
 	struct afb_export *export = closure;
 	struct json_object *result;
@@ -1846,7 +1846,7 @@ static struct json_object *api_describe_cb(void *closure)
 		result = NULL;
 		break;
 	}
-	return result;
+	describecb(clocb, result);
 }
 
 static int api_service_start_cb(void *closure)

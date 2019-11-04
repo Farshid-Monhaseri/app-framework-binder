@@ -60,7 +60,7 @@ extern void afb_apiset_update_hooks(struct afb_apiset *set, const char *name);
 extern void afb_apiset_set_logmask(struct afb_apiset *set, const char *name, int mask);
 extern int afb_apiset_get_logmask(struct afb_apiset *set, const char *name);
 
-extern struct json_object *afb_apiset_describe(struct afb_apiset *set, const char *name);
+extern void afb_apiset_describe(struct afb_apiset *set, const char *name, void (*describecb)(void *, struct json_object *), void *closure);
 
 extern const char **afb_apiset_get_names(struct afb_apiset *set, int rec, int type);
 extern void afb_apiset_enum(

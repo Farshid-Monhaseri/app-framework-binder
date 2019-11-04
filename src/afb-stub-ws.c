@@ -71,16 +71,6 @@ struct client_event
 };
 
 /**
- * structure for recording describe requests on the client side
- */
-struct client_describe
-{
-	struct afb_stub_ws *stubws;	/**< the stub */
-	struct jobloop *jobloop;	/**< the jobloop to leave */
-	struct json_object *result;	/**< result */
-};
-
-/**
  * structure for jobs of describing
  */
 struct server_describe
@@ -280,38 +270,17 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 	}
 }
 
-static void client_on_description_cb(void *closure, struct json_object *data)
+/* get the description */
+static void client_api_describe_cb(void * closure, void (*describecb)(void *, struct json_object *), void *clocb)
 {
-	struct client_describe *desc = closure;
-
-	desc->result = data;
-	jobs_leave(desc->jobloop);
-}
-
-static void client_send_describe_cb(int signum, void *closure, struct jobloop *jobloop)
-{
-	struct client_describe *desc = closure;
+	struct afb_stub_ws *stubws = closure;
 	struct afb_proto_ws *proto;
 
-	proto = client_get_proto(desc->stubws);
-	if (signum || proto == NULL)
-		jobs_leave(jobloop);
-	else {
-		desc->jobloop = jobloop;
-		afb_proto_ws_client_describe(proto, client_on_description_cb, desc);
-	}
-}
-
-/* get the description */
-static struct json_object *client_api_describe_cb(void * closure)
-{
-	struct client_describe desc;
-
-	/* synchronous job: send the request and wait its result */
-	desc.stubws = closure;
-	desc.result = NULL;
-	jobs_enter(NULL, 0, client_send_describe_cb, &desc);
-	return desc.result;
+	proto = client_get_proto(stubws);
+	if (proto)
+		afb_proto_ws_client_describe(proto, describecb, clocb);
+	else
+		describecb(clocb, NULL);
 }
 
 /******************* server part: manage events **********************************/
@@ -546,42 +515,19 @@ out_of_memory:
 	afb_proto_ws_call_unref(call);
 }
 
-static void server_describe_cb(int signum, void *closure)
+static void server_on_description_cb(void *closure, struct json_object *description)
 {
-	struct json_object *obj;
-	struct server_describe *desc = closure;
-
-	/* get the description if possible */
-	obj = !signum ? afb_apiset_describe(desc->stubws->apiset, desc->stubws->apiname) : NULL;
-
-	/* send it */
-	afb_proto_ws_describe_put(desc->describe, obj);
-	json_object_put(obj);
-	afb_stub_ws_unref(desc->stubws);
+	struct afb_proto_ws_describe *describe = closure;
+	afb_proto_ws_describe_put(describe, description);
+	json_object_put(description);
 }
 
-static void server_describe_job(int signum, void *closure)
-{
-	server_describe_cb(signum, closure);
-	free(closure);
-}
 
 static void server_on_describe_cb(void *closure, struct afb_proto_ws_describe *describe)
 {
-	struct server_describe *desc, sdesc;
 	struct afb_stub_ws *stubws = closure;
 
-	/* allocate (if possible) and init */
-	desc = malloc(sizeof *desc);
-	if (desc == NULL)
-		desc = &sdesc;
-	desc->stubws = stubws;
-	desc->describe = describe;
-	afb_stub_ws_addref(stubws);
-
-	/* process */
-	if (desc == &sdesc || jobs_queue(NULL, 0, server_describe_job, desc) < 0)
-		jobs_call(NULL, 0, server_describe_cb, desc);
+	afb_apiset_describe(stubws->apiset, stubws->apiname, server_on_description_cb, describe);
 }
 
 /*****************************************************/

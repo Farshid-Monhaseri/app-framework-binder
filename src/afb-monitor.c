@@ -36,6 +36,17 @@
 
 #include "monitor-api.inc"
 
+
+static const char _verbosity_[] = "verbosity";
+static const char _apis_[] = "apis";
+
+static const char _debug_[] = "debug";
+static const char _info_[] = "info";
+static const char _notice_[] = "notice";
+static const char _warning_[] = "warning";
+static const char _error_[] = "error";
+
+
 static struct afb_apiset *target_set;
 
 int afb_monitor_init(struct afb_apiset *declare_set, struct afb_apiset *call_set)
@@ -47,12 +58,6 @@ int afb_monitor_init(struct afb_apiset *declare_set, struct afb_apiset *call_set
 /******************************************************************************
 **** Monitoring verbosity
 ******************************************************************************/
-
-static const char _debug_[] = "debug";
-static const char _info_[] = "info";
-static const char _notice_[] = "notice";
-static const char _warning_[] = "warning";
-static const char _error_[] = "error";
 
 /**
  * Translate verbosity indication to an integer value.
@@ -231,72 +236,141 @@ static struct json_object *get_verbosity(struct json_object *spec)
 }
 
 /******************************************************************************
-**** Monitoring apis
+**** Manage namelist of api names
 ******************************************************************************/
 
-/**
- * get apis accordling to specification in 'spec'
- * @param resu the json object to build
- * @param spec specification of the verbosity to set
- */
-static void get_one_api(struct json_object *resu, const char *name, struct json_object *spec)
-{
-	struct json_object *o;
+struct namelist {
+	struct namelist *next;
+	json_object *data;
+	char name[];
+};
 
-	o = afb_apiset_describe(target_set, name);
-	if (o || afb_apiset_lookup(target_set, name, 1))
-		json_object_object_add(resu, name, o);
+static struct namelist *reverse_namelist(struct namelist *head)
+{
+	struct namelist *previous, *next;
+
+	previous = NULL;
+	while(head) {
+		next = head->next;
+		head->next = previous;
+		previous = head;
+		head = next;
+	}
+	return previous;
+}
+
+static void add_one_name_to_namelist(struct namelist **head, const char *name, struct json_object *data)
+{
+	size_t length = strlen(name) + 1;
+	struct namelist *item = malloc(length + sizeof *item);
+	if (!item)
+		ERROR("out of memory");
+	else {
+		item->next = *head;
+		item->data = data;
+		memcpy(item->name, name, length);
+		*head = item;
+	}
+}
+
+static void get_apis_namelist_of_all_cb(void *closure, struct afb_apiset *set, const char *name, int isalias)
+{
+	struct namelist **head = closure;
+	add_one_name_to_namelist(head, name, NULL);
 }
 
 /**
- * callback for getting verbosity of all apis
- * @param set the apiset
- * @param the name of the api to set
- * @param closure the json object to build
+ * get apis names as a list accordling to specification in 'spec'
+ * @param spec specification of the apis to get
  */
-static void get_apis_of_all_cb(void *closure, struct afb_apiset *set, const char *name, int isalias)
-{
-	struct json_object *resu = closure;
-	get_one_api(resu, name, NULL);
-}
-
-/**
- * get apis accordling to specification in 'spec'
- * @param resu the json object to build
- * @param spec specification of the verbosity to set
- */
-static struct json_object *get_apis(struct json_object *spec)
+static struct namelist *get_apis_namelist(struct json_object *spec)
 {
 	int i, n;
-	struct json_object *resu;
 	struct json_object_iterator it, end;
+	struct namelist *head;
 
-	resu = json_object_new_object();
+	head = NULL;
 	if (json_object_is_type(spec, json_type_object)) {
 		it = json_object_iter_begin(spec);
 		end = json_object_iter_end(spec);
 		while (!json_object_iter_equal(&it, &end)) {
-			get_one_api(resu, json_object_iter_peek_name(&it), json_object_iter_peek_value(&it));
+			add_one_name_to_namelist(&head,
+						 json_object_iter_peek_name(&it),
+						 json_object_iter_peek_value(&it));
 			json_object_iter_next(&it);
 		}
 	} else if (json_object_is_type(spec, json_type_array)) {
 		n = (int)json_object_array_length(spec);
 		for (i = 0 ; i < n ; i++)
-			get_one_api(resu, json_object_get_string(json_object_array_get_idx(spec, i)), NULL);
+			add_one_name_to_namelist(&head,
+						 json_object_get_string(
+							 json_object_array_get_idx(spec, i)),
+						 NULL);
 	} else if (json_object_is_type(spec, json_type_string)) {
-		get_one_api(resu, json_object_get_string(spec), NULL);
+		add_one_name_to_namelist(&head, json_object_get_string(spec), NULL);
 	} else if (json_object_get_boolean(spec)) {
-		afb_apiset_enum(target_set, 1, get_apis_of_all_cb, resu);
+		afb_apiset_enum(target_set, 1, get_apis_namelist_of_all_cb, &head);
 	}
-	return resu;
+	return reverse_namelist(head);
+}
+
+/******************************************************************************
+**** Monitoring apis
+******************************************************************************/
+
+struct desc_apis {
+	struct namelist *names;
+	struct json_object *resu;
+	struct json_object *apis;
+	afb_req_t req;
+};
+
+static void describe_first_api(struct desc_apis *desc);
+
+static void on_api_description(void *closure, struct json_object *apidesc)
+{
+	struct desc_apis *desc = closure;
+	struct namelist *head = desc->names;
+
+	if (apidesc || afb_apiset_lookup(target_set, head->name, 1))
+		json_object_object_add(desc->apis, head->name, apidesc);
+	desc->names = head->next;
+	free(head);
+	describe_first_api(desc);
+}
+
+static void describe_first_api(struct desc_apis *desc)
+{
+	struct namelist *head = desc->names;
+	if (head)
+		afb_apiset_describe(target_set, head->name, on_api_description, desc);
+	else {
+		afb_req_success(desc->req, desc->resu, NULL);
+		afb_req_unref(desc->req);
+		free(desc);
+	}
+}
+
+static void describe_apis(afb_req_t req, struct json_object *resu, struct json_object *spec)
+{
+	struct desc_apis *desc;
+
+	desc = malloc(sizeof *desc);
+	if (!desc)
+		afb_req_fail(req, "out-of-memory", NULL);
+	else {
+		desc->req = afb_req_addref(req);
+		desc->resu = resu;
+		desc->apis = json_object_new_object();
+		json_object_object_add(desc->resu, _apis_, desc->apis);
+		desc->names = get_apis_namelist(spec);
+		describe_first_api(desc);
+	}
 }
 
 /******************************************************************************
 **** Implementation monitoring verbs
 ******************************************************************************/
-
-static const char _verbosity_[] = "verbosity";
-static const char _apis_[] = "apis";
 
 static void f_get(afb_req_t req)
 {
@@ -305,13 +379,23 @@ static void f_get(afb_req_t req)
 	struct json_object *verbosity = NULL;
 
 	wrap_json_unpack(afb_req_json(req), "{s?:o,s?:o}", _verbosity_, &verbosity, _apis_, &apis);
-	if (verbosity)
-		verbosity = get_verbosity(verbosity);
-	if (apis)
-		apis = get_apis(apis);
-
-	wrap_json_pack(&r, "{s:o*,s:o*}", _verbosity_, verbosity, _apis_, apis);
-	afb_req_success(req, r, NULL);
+	if (!verbosity && !apis)
+		afb_req_success(req, NULL, NULL);
+	else {
+		r = json_object_new_object();
+		if (!r)
+			afb_req_fail(req, "out-of-memory", NULL);
+		else {
+			if (verbosity) {
+				verbosity = get_verbosity(verbosity);
+				json_object_object_add(r, _verbosity_, verbosity);
+			}
+			if (!apis)
+				afb_req_success(req, r, NULL);
+			else
+				describe_apis(req, r, apis);
+		}
+	}
 }
 
 static void f_set(afb_req_t req)

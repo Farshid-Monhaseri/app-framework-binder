@@ -28,6 +28,7 @@
 #include "afb-apiset.h"
 #include "afb-context.h"
 #include "afb-xreq.h"
+#include "jobs.h"
 
 #define INCR 8		/* CAUTION: must be a power of 2 */
 
@@ -941,19 +942,24 @@ int afb_apiset_get_logmask(struct afb_apiset *set, const char *name)
 	return i->api.itf->get_logmask(i->api.closure);
 }
 
-/**
- * Get the description of the API of 'name'
- * @param set the api set
- * @param name the api whose description is required
- * @return the description or NULL
- */
-struct json_object *afb_apiset_describe(struct afb_apiset *set, const char *name)
+void afb_apiset_describe(struct afb_apiset *set, const char *name, void (*describecb)(void *, struct json_object *), void *closure)
 {
 	const struct api_desc *i;
+	struct json_object *r;
 
-	i = name ? searchrec(set, name) : NULL;
-	return i && i->api.itf->describe ? i->api.itf->describe(i->api.closure) : NULL;
+	r = NULL;
+	if (name) {
+		i = searchrec(set, name);
+		if (i) {
+			if (i->api.itf->describe) {
+				i->api.itf->describe(i->api.closure, describecb, closure);
+				return;
+			}
+		}
+	}
+	describecb(closure, r);
 }
+
 
 struct get_names {
 	union  {
