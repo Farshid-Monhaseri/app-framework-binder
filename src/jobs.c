@@ -502,7 +502,7 @@ static int start_one_thread()
  * @param start    The start mode for threads
  * @return 0 in case of success or -1 in case of error
  */
-static int queue_job(
+static int queue_job_internal(
 		const void *group,
 		int timeout,
 		void (*callback)(int, void*),
@@ -511,8 +511,6 @@ static int queue_job(
 {
 	struct job *job;
 	int rc, busy;
-
-	pthread_mutex_lock(&mutex);
 
 	/* check availability */
 	if (remaining_job_count <= 0) {
@@ -548,17 +546,48 @@ static int queue_job(
 	if (busy)
 		evloop_wakeup();
 
-	/* signal an existing job */
 	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&mutex);
 	return 0;
 
 error2:
 	job->next = first_free_job;
 	first_free_job = job;
 error:
-	pthread_mutex_unlock(&mutex);
 	return -1;
+}
+
+/**
+ * Queues a new asynchronous job represented by 'callback' and 'arg'
+ * for the 'group' and the 'timeout'.
+ * Jobs are queued FIFO and are possibly executed in parallel
+ * concurrently except for job of the same group that are
+ * executed sequentially in FIFO order.
+ * @param group    The group of the job or NULL when no group.
+ * @param timeout  The maximum execution time in seconds of the job
+ *                 or 0 for unlimited time.
+ * @param callback The function to execute for achieving the job.
+ *                 Its first parameter is either 0 on normal flow
+ *                 or the signal number that broke the normal flow.
+ *                 The remaining parameter is the parameter 'arg1'
+ *                 given here.
+ * @param arg      The second argument for 'callback'
+ * @param start    The start mode for threads
+ * @return 0 in case of success or -1 in case of error
+ */
+static int queue_job(
+		const void *group,
+		int timeout,
+		void (*callback)(int, void*),
+		void *arg,
+		enum start_mode start_mode)
+{
+	int rc;
+
+	pthread_mutex_lock(&mutex);
+	rc = queue_job_internal(group, timeout, callback, arg, start_mode);
+	pthread_mutex_unlock(&mutex);
+	return rc;
+
 }
 
 /**
@@ -673,30 +702,24 @@ static int do_sync(
 		struct sync *sync
 )
 {
-	struct job *job;
+	int rc;
 
 	pthread_mutex_lock(&mutex);
 
-	/* allocates the job */
-	job = job_create(group, timeout, sync_cb, sync);
-	if (!job) {
-		pthread_mutex_unlock(&mutex);
-		return -1;
+	rc = queue_job_internal(group, timeout, sync_cb, sync, Start_Default);
+	if (rc == 0) {
+		/* run until stopped */
+		if (current_thread)
+			thread_run_internal(&sync->thread);
+		else
+			thread_run_external(&sync->thread);
+		if (!sync->thread.leaved) {
+			errno = EINTR;
+			rc = -1;
+		}
 	}
-
-	/* queues the job */
-	job_add(job);
-
-	/* run until stopped */
-	if (current_thread)
-		thread_run_internal(&sync->thread);
-	else
-		thread_run_external(&sync->thread);
 	pthread_mutex_unlock(&mutex);
-	if (sync->thread.leaved)
-		return 0;
-	errno = EINTR;
-	return -1;
+	return rc;
 }
 
 /**
