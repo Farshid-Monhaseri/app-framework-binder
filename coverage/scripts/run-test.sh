@@ -55,9 +55,11 @@ mkdir /tmp/ldpaths
 export AFB_LDPATHS=/tmp/ldpaths
 export AFB_TRACEAPI=no
 
+echo '
 ##########################################################
 # test to check options
 ##########################################################
+'
 mk $R/bin/afb-daemon-cov --help
 
 mk $R/bin/afb-daemon-cov --version
@@ -96,18 +98,22 @@ mk $R/bin/afb-daemon-cov --workdir=/etc/you/should/not/be/able/to/create/me
 
 mk $R/bin/afb-daemon-cov --exec $R/it-doesn-t-exist
 
+echo '
 ##########################################################
 # test of the bench
 ##########################################################
+'
 mk $R/bin/test-apiset
 
 mk $R/bin/test-session
 
 mk $R/bin/test-wrap-json
 
+echo '
 ##########################################################
 # true life test: run parts as direct client
 ##########################################################
+'
 mk \
 vg \
 	--log-file=$R/valgrind.out \
@@ -160,9 +166,11 @@ $R/bin/afb-daemon-cov \
 	--ws-server unix:$R/apis/ws/salut \
 	--exec $R/scripts/run-parts.sh @p @t
 
+echo '
 ##########################################################
-# true life test: run parts as in-direct client
+# true life test: run parts as in-direct server
 ##########################################################
+'
 mk \
 vg \
 	--log-file=$R/valgrind.out \
@@ -172,14 +180,15 @@ vg \
 	--show-leak-kinds=all \
 	--num-callers=50 \
 $R/bin/afb-daemon-cov \
-	--quiet \
-	--quiet \
 	--foreground \
+	--verbose \
+	--verbose \
 	--roothttp $R/www \
 	--alias /icons:$R/www \
 	--workdir . \
 	--uploaddir . \
 	--rootdir . \
+	--port 8888 \
 	--ldpaths $R/ldpath/strong \
 	--binding $R/bin/demat.so \
 	--auto-api $R/apis/auto \
@@ -189,10 +198,53 @@ $R/bin/afb-daemon-cov \
 	--ws-server localhost:9595/salut \
 	--exec \
 	    $R/bin/afb-daemon-nocov \
+		--quiet \
+		--quiet \
+		--port 9999 \
 		--auto-api $R/apis/auto \
 		--auto-api $R/apis/ws \
-		--ws-client localhost:@p/salut2 \
-		$R/scripts/run-parts.sh @@p @@t
+		--ws-client localhost:9595/salut2 \
+		--exec $R/scripts/run-parts.sh @@p @@t
+
+echo '
+##########################################################
+# true life test: run parts as in-direct client
+##########################################################
+'
+mk \
+vg \
+	--log-file=$R/valgrind.out \
+	--trace-children=no \
+	--track-fds=yes \
+	--leak-check=full \
+	--show-leak-kinds=all \
+	--num-callers=50 \
+$R/bin/afb-daemon-nocov \
+	--quiet \
+	--quiet \
+	--foreground \
+	--roothttp $R/www \
+	--alias /icons:$R/www \
+	--workdir . \
+	--uploaddir . \
+	--rootdir . \
+	--port 8888 \
+	--ldpaths $R/ldpath/strong \
+	--binding $R/bin/demat.so \
+	--auto-api $R/apis/auto \
+	--random-token \
+	--ws-server unix:$R/apis/ws/hello \
+	--ws-server unix:$R/apis/ws/salut \
+	--ws-server localhost:9595/salut \
+	--exec \
+	    $R/bin/afb-daemon-cov \
+		--port 9999 \
+		--verbose \
+		--verbose \
+		--auto-api $R/apis/auto \
+		--auto-api $R/apis/ws \
+		--ws-client localhost:9595/salut2 \
+		--exec $R/scripts/run-parts.sh @@p @@t
 
 exit 0
 
