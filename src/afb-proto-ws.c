@@ -162,12 +162,14 @@ struct afb_proto_ws
 
 /******************* streaming objects **********************************/
 
-#define WRITEBUF_COUNT_MAX  32
+#define WRITEBUF_COUNT_MAX	32
+#define WRITEBUF_BUFSZ		(WRITEBUF_COUNT_MAX * sizeof(uint32_t))
+
 struct writebuf
 {
+	int iovcount, bufcount;
 	struct iovec iovec[WRITEBUF_COUNT_MAX];
-	uint32_t uints[WRITEBUF_COUNT_MAX];
-	int count;
+	char buf[WRITEBUF_BUFSZ];
 };
 
 struct readbuf
@@ -271,37 +273,54 @@ static int readbuf_object(struct readbuf *rb, struct json_object **object)
 
 static int writebuf_put(struct writebuf *wb, const void *value, size_t length)
 {
-	int i = wb->count;
+	int i = wb->iovcount;
 	if (i == WRITEBUF_COUNT_MAX)
 		return 0;
 	wb->iovec[i].iov_base = (void*)value;
 	wb->iovec[i].iov_len = length;
-	wb->count = i + 1;
+	wb->iovcount = i + 1;
+	return 1;
+}
+
+static int writebuf_putbuf(struct writebuf *wb, const void *value, int length)
+{
+	char *p;
+	int i = wb->iovcount, n = wb->bufcount, nafter;
+
+	/* check enough length */
+	nafter = n + length;
+	if (nafter > WRITEBUF_BUFSZ)
+		return 0;
+
+	/* get where to store */
+	p = &wb->buf[n];
+	if (i && p == (((char*)wb->iovec[i - 1].iov_base) + wb->iovec[i - 1].iov_len))
+		/* increase previous iovec */
+		wb->iovec[i - 1].iov_len += (size_t)length;
+	else if (i == WRITEBUF_COUNT_MAX)
+		/* no more iovec */
+		return 0;
+	else {
+		/* new iovec */
+		wb->iovec[i].iov_base = p;
+		wb->iovec[i].iov_len = (size_t)length;
+		wb->iovcount = i + 1;
+	}
+	/* store now */
+	memcpy(p, value, (size_t)length);
+	wb->bufcount = nafter;
 	return 1;
 }
 
 static int writebuf_char(struct writebuf *wb, char value)
 {
-	int i = wb->count;
-	if (i == WRITEBUF_COUNT_MAX)
-		return 0;
-	*(char*)&wb->uints[i] = value;
-	wb->iovec[i].iov_base = &wb->uints[i];
-	wb->iovec[i].iov_len = 1;
-	wb->count = i + 1;
-	return 1;
+	return writebuf_putbuf(wb, &value, 1);
 }
 
 static int writebuf_uint32(struct writebuf *wb, uint32_t value)
 {
-	int i = wb->count;
-	if (i == WRITEBUF_COUNT_MAX)
-		return 0;
-	wb->uints[i] = htole32(value);
-	wb->iovec[i].iov_base = &wb->uints[i];
-	wb->iovec[i].iov_len = sizeof wb->uints[i];
-	wb->count = i + 1;
-	return 1;
+	value = htole32(value);
+	return writebuf_putbuf(wb, &value, (int)sizeof value);
 }
 
 static int writebuf_string_length(struct writebuf *wb, const char *value, size_t length)
@@ -352,6 +371,27 @@ static void queue_message_processing(struct afb_proto_ws *protows, char *data, s
 	free(data);
 }
 
+/******************* sending messages *****************/
+
+static int proto_write(struct afb_proto_ws *protows, struct writebuf *wb)
+{
+	int rc;
+	struct afb_ws *ws;
+
+	pthread_mutex_lock(&protows->mutex);
+	ws = protows->ws;
+	if (ws == NULL) {
+		errno = EPIPE;
+		rc = -1;
+	} else {
+		rc = afb_ws_binary_v(ws, wb->iovec, wb->iovcount);
+		if (rc > 0)
+			rc = 0;
+	}
+	pthread_mutex_unlock(&protows->mutex);
+	return rc;
+}
+
 /******************* ws request part for server *****************/
 
 void afb_proto_ws_call_addref(struct afb_proto_ws_call *call)
@@ -372,67 +412,43 @@ void afb_proto_ws_call_unref(struct afb_proto_ws_call *call)
 int afb_proto_ws_call_reply(struct afb_proto_ws_call *call, struct json_object *obj, const char *error, const char *info)
 {
 	int rc = -1;
-	struct writebuf wb = { .count = 0 };
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 	struct afb_proto_ws *protows = call->protows;
 
 	if (writebuf_char(&wb, CHAR_FOR_REPLY)
 	 && writebuf_uint32(&wb, call->callid)
 	 && writebuf_nullstring(&wb, error)
 	 && writebuf_nullstring(&wb, info)
-	 && writebuf_object(&wb, obj)) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0) {
-			rc = 0;
-			goto success;
-		}
-	}
-success:
+	 && writebuf_object(&wb, obj))
+		rc = proto_write(protows, &wb);
 	return rc;
 }
 
 int afb_proto_ws_call_subscribe(struct afb_proto_ws_call *call, const char *event_name, int event_id)
 {
 	int rc = -1;
-	struct writebuf wb = { .count = 0 };
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 	struct afb_proto_ws *protows = call->protows;
 
 	if (writebuf_char(&wb, CHAR_FOR_EVT_SUBSCRIBE)
 	 && writebuf_uint32(&wb, call->callid)
 	 && writebuf_uint32(&wb, (uint32_t)event_id)
-	 && writebuf_string(&wb, event_name)) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0) {
-			rc = 0;
-			goto success;
-		}
-	}
-success:
+	 && writebuf_string(&wb, event_name))
+		rc = proto_write(protows, &wb);
 	return rc;
 }
 
 int afb_proto_ws_call_unsubscribe(struct afb_proto_ws_call *call, const char *event_name, int event_id)
 {
 	int rc = -1;
-	struct writebuf wb = { .count = 0 };
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 	struct afb_proto_ws *protows = call->protows;
 
 	if (writebuf_char(&wb, CHAR_FOR_EVT_UNSUBSCRIBE)
 	 && writebuf_uint32(&wb, call->callid)
 	 && writebuf_uint32(&wb, (uint32_t)event_id)
-	 && writebuf_string(&wb, event_name)) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0) {
-			rc = 0;
-			goto success;
-		}
-	}
-success:
+	 && writebuf_string(&wb, event_name))
+		rc = proto_write(protows, &wb);
 	return rc;
 }
 
@@ -680,7 +696,7 @@ int afb_proto_ws_client_call(
 {
 	int rc = -1;
 	struct client_call *call;
-	struct writebuf wb = { .count = 0 };
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 
 	/* allocate call data */
 	call = malloc(sizeof *call);
@@ -712,13 +728,9 @@ int afb_proto_ws_client_call(
 	}
 
 	/* send */
-	pthread_mutex_lock(&protows->mutex);
-	rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-	pthread_mutex_unlock(&protows->mutex);
-	if (rc >= 0) {
-		rc = 0;
+	rc = proto_write(protows, &wb);
+	if (!rc)
 		goto end;
-	}
 
 clean:
 	client_call_destroy(call);
@@ -730,7 +742,7 @@ end:
 int afb_proto_ws_client_describe(struct afb_proto_ws *protows, void (*callback)(void*, struct json_object*), void *closure)
 {
 	struct client_describe *desc, *d;
-	struct writebuf wb = { .count = 0 };
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 
 	desc = malloc(sizeof *desc);
 	if (!desc) {
@@ -759,7 +771,8 @@ int afb_proto_ws_client_describe(struct afb_proto_ws *protows, void (*callback)(
 	/* send */
 	if (writebuf_char(&wb, CHAR_FOR_DESCRIBE)
 	 && writebuf_uint32(&wb, desc->descid)
-	 && afb_ws_binary_v(protows->ws, wb.iovec, wb.count) >= 0) {
+	 && protows->ws != NULL
+	 && afb_ws_binary_v(protows->ws, wb.iovec, wb.iovcount) >= 0) {
 		pthread_mutex_unlock(&protows->mutex);
 		return 0;
 	}
@@ -824,19 +837,14 @@ overflow:
 
 static int server_send_description(struct afb_proto_ws *protows, uint32_t descid, struct json_object *descobj)
 {
-	int rc;
-	struct writebuf wb = { .count = 0 };
+	int rc = -1;
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 
 	if (writebuf_char(&wb, CHAR_FOR_DESCRIPTION)
 	 && writebuf_uint32(&wb, descid)
-	 && writebuf_object(&wb, descobj)) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0)
-			return 0;
-	}
-	return -1;
+	 && writebuf_object(&wb, descobj))
+		rc = proto_write(protows, &wb);
+	return rc;
 }
 
 int afb_proto_ws_describe_put(struct afb_proto_ws_describe *describe, struct json_object *description)
@@ -903,20 +911,15 @@ static void server_on_binary(void *closure, char *data, size_t size)
 
 static int server_event_send(struct afb_proto_ws *protows, char order, const char *event_name, int event_id, struct json_object *data)
 {
-	struct writebuf wb = { .count = 0 };
-	int rc;
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
+	int rc = -1;
 
 	if (writebuf_char(&wb, order)
 	 && writebuf_uint32(&wb, event_id)
 	 && writebuf_string(&wb, event_name)
-	 && (order != CHAR_FOR_EVT_PUSH || writebuf_object(&wb, data))) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0)
-			return 0;
-	}
-	return -1;
+	 && (order != CHAR_FOR_EVT_PUSH || writebuf_object(&wb, data)))
+		rc = proto_write(protows, &wb);
+	return rc;
 }
 
 int afb_proto_ws_server_event_create(struct afb_proto_ws *protows, const char *event_name, int event_id)
@@ -936,24 +939,19 @@ int afb_proto_ws_server_event_push(struct afb_proto_ws *protows, const char *eve
 
 int afb_proto_ws_server_event_broadcast(struct afb_proto_ws *protows, const char *event_name, struct json_object *data, const unsigned char uuid[16], uint8_t hop)
 {
-	struct writebuf wb = { .count = 0 };
-	int rc;
+	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
+	int rc = -1;
 
-	if (!hop--)
+	if (!hop)
 		return 0;
 
 	if (writebuf_char(&wb, CHAR_FOR_EVT_BROADCAST)
 	 && writebuf_string(&wb, event_name)
 	 && writebuf_object(&wb, data)
 	 && writebuf_put(&wb, uuid, 16)
-	 && writebuf_char(&wb, (char)hop)) {
-		pthread_mutex_lock(&protows->mutex);
-		rc = afb_ws_binary_v(protows->ws, wb.iovec, wb.count);
-		pthread_mutex_unlock(&protows->mutex);
-		if (rc >= 0)
-			return 0;
-	}
-	return -1;
+	 && writebuf_char(&wb, (char)(hop - 1)))
+		rc = proto_write(protows, &wb);
+	return rc;
 }
 
 /*****************************************************/
@@ -964,9 +962,16 @@ static void on_hangup(void *closure)
 	struct afb_proto_ws *protows = closure;
 	struct client_describe *cd, *ncd;
 	struct client_call *call, *ncall;
+	struct afb_ws *ws;
 
-	ncd = __atomic_exchange_n(&protows->describes, NULL, __ATOMIC_RELAXED);
-	ncall = __atomic_exchange_n(&protows->calls, NULL, __ATOMIC_RELAXED);
+	pthread_mutex_lock(&protows->mutex);
+	ncd = protows->describes;
+	protows->describes = NULL;
+	ncall = protows->calls;
+	protows->calls = NULL;
+	ws = protows->ws;
+	protows->ws = NULL;
+	pthread_mutex_unlock(&protows->mutex);
 
 	while (ncall) {
 		call= ncall;
@@ -982,9 +987,8 @@ static void on_hangup(void *closure)
 		free(cd);
 	}
 
-	if (protows->ws) {
-		afb_ws_destroy(protows->ws);
-		protows->ws = 0;
+	if (ws) {
+		afb_ws_destroy(ws);
 		if (protows->on_hangup)
 			protows->on_hangup(protows->closure);
 	}
