@@ -368,15 +368,19 @@ static int api_dbus_client_on_broadcast_event(sd_bus_message *m, void *userdata,
 {
 	struct json_object *object;
 	const char *event, *data;
+	const unsigned char *uuid;
+	size_t szuuid;
+	uint8_t hop;
 	enum json_tokener_error jerr;
-	int rc = sd_bus_message_read(m, "ss", &event, &data);
+
+	int rc = sd_bus_message_read(m, "ssayy", &event, &data, &uuid, &szuuid, &hop);
 	if (rc < 0)
 		ERROR("unreadable broadcasted event");
 	else {
 		object = json_tokener_parse_verbose(data, &jerr);
 		if (jerr != json_tokener_success)
 			object = json_object_new_string(data);
-		afb_evt_broadcast(event, object);
+		afb_evt_rebroadcast(event, object, uuid, hop);
 	}
 	return 1;
 }
@@ -635,7 +639,7 @@ error:
 static void afb_api_dbus_server_event_add(void *closure, const char *event, int eventid);
 static void afb_api_dbus_server_event_remove(void *closure, const char *event, int eventid);
 static void afb_api_dbus_server_event_push(void *closure, const char *event, int eventid, struct json_object *object);
-static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const char *uuid);
+static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop);
 
 /* the interface for events broadcasting */
 static const struct afb_evt_itf evt_broadcast_itf = {
@@ -917,14 +921,15 @@ static void afb_api_dbus_server_event_push(void *closure, const char *event, int
 	json_object_put(object);
 }
 
-static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const char *uuid)
+static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop)
 {
 	int rc;
 	struct api_dbus *api;
 
 	api = closure;
 	rc = sd_bus_emit_signal(api->sdbus, api->path, api->name, "broadcast",
-			"ss", event, json_object_to_json_string_ext(object, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE));
+			"ssayy", event, json_object_to_json_string_ext(object, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE),
+			uuid, UUID_BINARY_LENGTH, hop);
 	if (rc < 0)
 		ERROR("error while broadcasting event %s", event);
 	json_object_put(object);
