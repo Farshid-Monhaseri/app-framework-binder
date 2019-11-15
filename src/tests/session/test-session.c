@@ -55,9 +55,6 @@ START_TEST (check_creation)
 	ck_assert(afb_session_uuid(s) != NULL);
 	ck_assert(!afb_session_is_closed(s));
 
-	/* token is the initial one */
-	ck_assert(afb_session_check_token(s, GOOD_UUID));
-
 	/* query the session */
 	uuid = strdup(afb_session_uuid(s));
 	x = afb_session_search(uuid);

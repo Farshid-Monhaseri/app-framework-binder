@@ -177,12 +177,32 @@ static void aws_on_hangup_cb(void *closure, struct afb_wsj1 *wsj1)
 	afb_ws_json1_unref(ws);
 }
 
+static int aws_new_token(struct afb_ws_json1 *ws, const char *new_token_string)
+{
+	int rc;
+	struct afb_token *newtok, *oldtok;
+
+	rc = afb_token_get(&newtok, new_token_string);
+	if (rc >= 0) {
+		oldtok = ws->token;
+		ws->token = newtok;
+		afb_token_unref(oldtok);
+	}
+	return rc;
+}
+
 static void aws_on_call_cb(void *closure, const char *api, const char *verb, struct afb_wsj1_msg *msg)
 {
 	struct afb_ws_json1 *ws = closure;
 	struct afb_wsreq *wsreq;
+	const char *tok;
 
 	DEBUG("received websocket request for %s/%s: %s", api, verb, afb_wsj1_msg_object_s(msg));
+
+	/* handle new tokens */
+	tok = afb_wsj1_msg_token(msg);
+	if (tok)
+		aws_new_token(ws, tok);
 
 	/* allocate */
 	wsreq = calloc(1, sizeof *wsreq);
@@ -193,7 +213,7 @@ static void aws_on_call_cb(void *closure, const char *api, const char *verb, str
 
 	/* init the context */
 	afb_xreq_init(&wsreq->xreq, &afb_ws_json1_xreq_itf);
-	afb_context_init(&wsreq->xreq.context, ws->session, afb_wsj1_msg_token(msg));
+	afb_context_init(&wsreq->xreq.context, ws->session, ws->token);
 	if (!wsreq->xreq.context.invalidated)
 		wsreq->xreq.context.validated = 1;
 

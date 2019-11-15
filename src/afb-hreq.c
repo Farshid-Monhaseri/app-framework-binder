@@ -43,6 +43,7 @@
 #include "afb-hsrv.h"
 #include "afb-session.h"
 #include "afb-cred.h"
+#include "afb-token.h"
 #include "verbose.h"
 #include "locale-root.h"
 
@@ -966,6 +967,7 @@ int afb_hreq_init_context(struct afb_hreq *hreq)
 {
 	const char *uuid;
 	const char *token;
+	struct afb_token *tok;
 
 	if (hreq->xreq.context.session != NULL)
 		return 0;
@@ -994,8 +996,11 @@ int afb_hreq_init_context(struct afb_hreq *hreq)
 			}
 		}
 	}
+	tok = NULL;
+	if (token)
+		afb_token_get(&tok, token);
 
-	return afb_context_connect(&hreq->xreq.context, uuid, token);
+	return afb_context_connect(&hreq->xreq.context, uuid, tok);
 }
 
 int afb_hreq_init_cookie(int port, const char *path, int maxage)

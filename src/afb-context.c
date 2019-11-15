@@ -25,8 +25,9 @@
 
 #include "afb-session.h"
 #include "afb-context.h"
+#include "afb-token.h"
 
-static void init_context(struct afb_context *context, struct afb_session *session, const char *token)
+static void init_context(struct afb_context *context, struct afb_session *session, struct afb_token *token)
 {
 	assert(session != NULL);
 
@@ -35,17 +36,18 @@ static void init_context(struct afb_context *context, struct afb_session *sessio
 	context->flags = 0;
 	context->super = NULL;
 	context->api_key = NULL;
+	context->token = afb_token_addref(token);
 
 	/* check the token */
 	if (token != NULL) {
-		if (afb_session_check_token(session, token))
+		if (afb_token_check(token))
 			context->validated = 1;
 		else
 			context->invalidated = 1;
 	}
 }
 
-void afb_context_init(struct afb_context *context, struct afb_session *session, const char *token)
+void afb_context_init(struct afb_context *context, struct afb_session *session, struct afb_token *token)
 {
 	init_context(context, afb_session_addref(session), token);
 }
@@ -62,11 +64,11 @@ void afb_context_subinit(struct afb_context *context, struct afb_context *super)
 	context->flags = 0;
 	context->super = super;
 	context->api_key = NULL;
-	context->token = NULL;
+	context->token = super->token;
 	context->validated = super->validated;
 }
 
-int afb_context_connect(struct afb_context *context, const char *uuid, const char *token)
+int afb_context_connect(struct afb_context *context, const char *uuid, struct afb_token *token)
 {
 	int created;
 	struct afb_session *session;
@@ -97,6 +99,7 @@ void afb_context_disconnect(struct afb_context *context)
 			afb_context_set(context, NULL, NULL);
 			context->closed = 1;
 		}
+		afb_token_unref(context->token);
 		afb_session_unref(context->session);
 		context->session = NULL;
 	}

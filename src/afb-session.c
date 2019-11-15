@@ -61,15 +61,14 @@ struct afb_session
 	struct afb_session *next; /**< link to the next */
 	unsigned refcount;      /**< count of reference to the session */
 	int timeout;            /**< timeout of the session */
-	time_t expiration;	/**< expiration time of the token */
+	time_t expiration;	/**< expiration time of the session */
 	pthread_mutex_t mutex;  /**< mutex of the session */
 	struct cookie *cookies[COOKIECOUNT]; /**< cookies of the session */
 	char *lang;		/**< current language setting for the session */
 	uint8_t closed: 1;      /**< is the session closed ? */
 	uint8_t autoclose: 1;   /**< close the session when unreferenced */
 	uint8_t notinset: 1;	/**< session removed from the set of sessions */
-	uuid_stringz_t uuid;    /**< long term authentication of remote client */
-	struct afb_token *token;/**< short term authentication of remote client */
+	uuid_stringz_t uuid;    /**< indentification of client seesion */
 };
 
 /**
@@ -204,7 +203,6 @@ static void session_destroy (struct afb_session *session)
 	afb_hook_session_destroy(session);
 #endif
 	pthread_mutex_destroy(&session->mutex);
-	afb_token_unref(session->token);
 	free(session->lang);
 	free(session);
 }
@@ -251,13 +249,11 @@ static struct afb_session *session_add(const char *uuid, int timeout, time_t now
 	pthread_mutex_init(&session->mutex, NULL);
 	session->refcount = 1;
 	strcpy(session->uuid, uuid);
-	session->token = afb_token_addref(sessions.initok);
 	session->timeout = timeout;
 	session_update_expiration(session, now);
 
 	/* add */
 	if (sessionset_add(session, hashidx)) {
-		afb_token_unref(session->token);
 		free(session);
 		return NULL;
 	}
@@ -308,7 +304,6 @@ static time_t sessionset_cleanup (int force)
  * @param max_session_count  maximum allowed session count in the same time
  * @param timeout            the initial default timeout of sessions
  * @param initok             the initial default token of sessions
- *
  */
 int afb_session_init (int max_session_count, int timeout, const char *initok)
 {
@@ -527,22 +522,6 @@ void afb_session_set_autoclose(struct afb_session *session, int autoclose)
 int afb_session_is_closed (struct afb_session *session)
 {
 	return session->closed;
-}
-
-/*
- * check whether the token of 'session' is 'token'
- * return 1 if true or 0 otherwise
- */
-int afb_session_check_token (struct afb_session *session, const char *token)
-{
-	int r;
-
-	session_lock(session);
-	r = !session->closed
-	  && session->expiration >= NOW
-	  && !(session->token && strcmp(token, afb_token_string(session->token)));
-	session_unlock(session);
-	return r;
 }
 
 /* Returns the uuid of 'session' */
