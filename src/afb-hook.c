@@ -1544,11 +1544,6 @@ static void hook_session_destroy_cb(void *closure, const struct afb_hookid *hook
 	_hook_session_(session, "destroy");
 }
 
-static void hook_session_renew_cb(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
-{
-	_hook_session_(session, "renew -> token=%s", afb_session_token(session));
-}
-
 static void hook_session_addref_cb(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
 {
 	_hook_session_(session, "addref");
@@ -1563,7 +1558,6 @@ static struct afb_hook_session_itf hook_session_default_itf = {
 	.hook_session_create = hook_session_create_cb,
 	.hook_session_close = hook_session_close_cb,
 	.hook_session_destroy = hook_session_destroy_cb,
-	.hook_session_renew = hook_session_renew_cb,
 	.hook_session_addref = hook_session_addref_cb,
 	.hook_session_unref = hook_session_unref_cb
 };
@@ -1603,11 +1597,6 @@ void afb_hook_session_close(struct afb_session *session)
 void afb_hook_session_destroy(struct afb_session *session)
 {
 	_HOOK_SESSION_(destroy, session);
-}
-
-void afb_hook_session_renew(struct afb_session *session)
-{
-	_HOOK_SESSION_(renew, session);
 }
 
 void afb_hook_session_addref(struct afb_session *session)

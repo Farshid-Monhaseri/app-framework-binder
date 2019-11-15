@@ -61,12 +61,6 @@ START_TEST (check_creation)
 	ck_assert(afb_session_check_token(s, GOOD_UUID));
 	ck_assert(afb_session_check_token(s, afb_session_token(s)));
 
-	/* token can be renewed */
-	afb_session_new_token(s);
-	ck_assert(strcmp(afb_session_token(s), GOOD_UUID));
-	ck_assert(!afb_session_check_token(s, GOOD_UUID));
-	ck_assert(afb_session_check_token(s, afb_session_token(s)));
-
 	/* query the session */
 	uuid = strdup(afb_session_uuid(s));
 	x = afb_session_search(uuid);

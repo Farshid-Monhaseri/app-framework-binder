@@ -32,8 +32,6 @@ struct afb_context
 			unsigned created: 1;
 			unsigned validated: 1;
 			unsigned invalidated: 1;
-			unsigned refreshing: 1;
-			unsigned refreshed: 1;
 			unsigned closing: 1;
 			unsigned closed: 1;
 		};
@@ -55,7 +53,6 @@ extern int afb_context_set(struct afb_context *context, void *value, void (*free
 extern void *afb_context_make(struct afb_context *context, int replace, void *(*make_value)(void *closure), void (*free_value)(void *item), void *closure);
 
 extern void afb_context_close(struct afb_context *context);
-extern void afb_context_refresh(struct afb_context *context);
 extern int afb_context_check(struct afb_context *context);
 extern int afb_context_check_loa(struct afb_context *context, unsigned loa);
 extern int afb_context_change_loa(struct afb_context *context, unsigned loa);

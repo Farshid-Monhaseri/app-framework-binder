@@ -545,29 +545,6 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 	return r;
 }
 
-/* generate a new token and update client context */
-void afb_session_new_token (struct afb_session *session)
-{
-	int rc;
-	uuid_stringz_t uuid;
-	struct afb_token *previous, *next;
-	session_lock(session);
-	uuid_new_stringz(uuid);
-	rc = afb_token_get(&next, uuid);
-	if (rc < 0)
-		ERROR("can't renew token");
-	else {
-		previous = session->token;
-		session->token = next;
-		session_update_expiration(session, NOW);
-#if WITH_AFB_HOOK
-		afb_hook_session_renew(session);
-#endif
-		afb_token_unref(previous);
-	}
-	session_unlock(session);
-}
-
 /* Returns the uuid of 'session' */
 const char *afb_session_uuid (struct afb_session *session)
 {

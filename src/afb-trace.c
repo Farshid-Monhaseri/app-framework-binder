@@ -866,11 +866,6 @@ static void hook_session_destroy(void *closure, const struct afb_hookid *hookid,
 	hook_session(closure, hookid, session, "destroy", NULL);
 }
 
-static void hook_session_renew(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
-{
-	hook_session(closure, hookid, session, "renew", "{ss}", "token", afb_session_token(session));
-}
-
 static void hook_session_addref(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
 {
 	hook_session(closure, hookid, session, "addref", NULL);
@@ -885,7 +880,6 @@ static struct afb_hook_session_itf hook_session_itf = {
 	.hook_session_create = hook_session_create,
 	.hook_session_close = hook_session_close,
 	.hook_session_destroy = hook_session_destroy,
-	.hook_session_renew = hook_session_renew,
 	.hook_session_addref = hook_session_addref,
 	.hook_session_unref = hook_session_unref
 };

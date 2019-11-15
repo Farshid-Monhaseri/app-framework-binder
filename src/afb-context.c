@@ -77,7 +77,6 @@ int afb_context_connect(struct afb_context *context, const char *uuid, const cha
 	init_context(context, session, token);
 	if (created) {
 		context->created = 1;
-		/* context->refreshing = 1; */
 	}
 	return 0;
 }
@@ -93,10 +92,6 @@ int afb_context_connect_validated(struct afb_context *context, const char *uuid)
 void afb_context_disconnect(struct afb_context *context)
 {
 	if (context->session && !context->super) {
-		if (context->refreshing && !context->refreshed) {
-			afb_session_new_token (context->session);
-			context->refreshed = 1;
-		}
 		if (context->closing && !context->closed) {
 			afb_context_change_loa(context, 0);
 			afb_context_set(context, NULL, NULL);
@@ -111,12 +106,6 @@ const char *afb_context_sent_token(struct afb_context *context)
 {
 	if (context->session == NULL || context->closing || context->super)
 		return NULL;
-	if (!context->refreshing)
-		return NULL;
-	if (!context->refreshed) {
-		afb_session_new_token (context->session);
-		context->refreshed = 1;
-	}
 	return afb_session_token(context->session);
 }
 
@@ -155,20 +144,6 @@ int afb_context_set(struct afb_context *context, void *value, void (*free_value)
 void afb_context_close(struct afb_context *context)
 {
 	context->closing = 1;
-}
-
-void afb_context_refresh(struct afb_context *context)
-{
-	if (context->super)
-		afb_context_refresh(context->super);
-	else {
-		assert(context->validated);
-		context->refreshing = 1;
-		if (!context->refreshed) {
-			afb_session_new_token (context->session);
-			context->refreshed = 1;
-		}
-	}
 }
 
 int afb_context_check(struct afb_context *context)

@@ -140,7 +140,6 @@ static struct flag session_flags[] = { /* must be sorted by names */
 		{ "common",		afb_hook_flags_session_common },
 		{ "create",		afb_hook_flag_session_create },
 		{ "destroy",		afb_hook_flag_session_destroy },
-		{ "renew",		afb_hook_flag_session_renew },
 		{ "unref",		afb_hook_flag_session_unref },
 };
 

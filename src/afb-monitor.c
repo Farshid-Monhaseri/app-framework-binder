@@ -297,7 +297,6 @@ static struct json_object *get_apis(struct json_object *spec)
 
 static const char _verbosity_[] = "verbosity";
 static const char _apis_[] = "apis";
-static const char _refresh_token_[] = "refresh-token";
 
 static void f_get(afb_req_t req)
 {
@@ -373,7 +372,6 @@ static void f_trace(afb_req_t req)
 static void f_session(afb_req_t req)
 {
 	struct json_object *r = NULL;
-	int refresh = 0;
 	struct afb_xreq *xreq = xreq_from_req_x2(req);
 
 	/* check right to call it */
@@ -381,11 +379,6 @@ static void f_session(afb_req_t req)
 		afb_req_fail(req, "invalid", "reserved to direct clients");
 		return;
 	}
-
-	/* renew the token if required */
-	wrap_json_unpack(afb_req_json(req), "{s?:b}", _refresh_token_, &refresh);
-	if (refresh)
-		afb_context_refresh(&xreq->context);
 
 	/* make the result */
 	wrap_json_pack(&r, "{s:s,s:s,s:i,s:i}",

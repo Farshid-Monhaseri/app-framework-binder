@@ -760,9 +760,6 @@ static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
 		}
 	}
 
-	if ((sessionflags & AFB_SESSION_RENEW_X1) != 0) {
-		afb_context_refresh(&xreq->context);
-	}
 	if ((sessionflags & AFB_SESSION_CLOSE_X1) != 0) {
 		afb_context_change_loa(&xreq->context, 0);
 		afb_context_close(&xreq->context);
@@ -798,9 +795,6 @@ static int xreq_session_check_apply_v2(struct afb_xreq *xreq, uint32_t sessionfl
 		return -1;
 	}
 
-	if ((sessionflags & AFB_SESSION_REFRESH_X2) != 0) {
-		afb_context_refresh(&xreq->context);
-	}
 	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0) {
 		afb_context_close(&xreq->context);
 	}
