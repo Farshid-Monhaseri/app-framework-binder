@@ -68,7 +68,6 @@ struct afb_ws_json1
 	struct afb_wsj1 *wsj1;
 	struct afb_cred *cred;
 	struct afb_apiset *apiset;
-	int new_session;
 };
 
 /* declaration of wsreq structure */
@@ -124,7 +123,6 @@ struct afb_ws_json1 *afb_ws_json1_create(struct fdev *fdev, struct afb_apiset *a
 	result->cleanup_closure = cleanup_closure;
 	result->session = afb_session_addref(context->session);
 	result->token = afb_token_addref(context->token);
-	result->new_session = context->created != 0;
 	if (result->session == NULL)
 		goto error2;
 
@@ -198,10 +196,6 @@ static void aws_on_call_cb(void *closure, const char *api, const char *verb, str
 	afb_context_init(&wsreq->xreq.context, ws->session, afb_wsj1_msg_token(msg));
 	if (!wsreq->xreq.context.invalidated)
 		wsreq->xreq.context.validated = 1;
-	if (ws->new_session != 0) {
-		wsreq->xreq.context.created = 1;
-		ws->new_session = 0;
-	}
 
 	/* fill and record the request */
 	afb_wsj1_msg_addref(msg);

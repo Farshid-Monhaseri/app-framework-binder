@@ -107,15 +107,6 @@ const char *afb_context_uuid(struct afb_context *context)
 	return context->session ? afb_session_uuid(context->session) : "";
 }
 
-const char *afb_context_sent_uuid(struct afb_context *context)
-{
-	if (context->session == NULL || context->closing || context->super)
-		return NULL;
-	if (!context->created)
-		return NULL;
-	return afb_session_uuid(context->session);
-}
-
 void *afb_context_make(struct afb_context *context, int replace, void *(*make_value)(void *closure), void (*free_value)(void *item), void *closure)
 {
 	assert(context->session != NULL);

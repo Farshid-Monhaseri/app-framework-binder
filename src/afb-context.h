@@ -44,7 +44,6 @@ extern void afb_context_subinit(struct afb_context *context, struct afb_context 
 extern int afb_context_connect(struct afb_context *context, const char *uuid, const char *token);
 extern int afb_context_connect_validated(struct afb_context *context, const char *uuid);
 extern void afb_context_disconnect(struct afb_context *context);
-extern const char *afb_context_sent_uuid(struct afb_context *context);
 extern const char *afb_context_uuid(struct afb_context *context);
 
 extern void *afb_context_get(struct afb_context *context);

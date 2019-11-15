@@ -166,7 +166,8 @@ static void afb_hreq_reply_v(struct afb_hreq *hreq, unsigned status, struct MHD_
 		MHD_add_response_header(response, k, v);
 		k = va_arg(args, const char *);
 	}
-	v = afb_context_sent_uuid(&hreq->xreq.context);
+
+	v = afb_context_uuid(&hreq->xreq.context);
 	if (v != NULL && asprintf(&cookie, cookie_setter, v) > 0) {
 		MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, cookie);
 		free(cookie);
