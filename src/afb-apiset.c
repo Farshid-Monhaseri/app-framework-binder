@@ -21,8 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
-#include "afb-session.h"
 #include "verbose.h"
 #include "afb-api.h"
 #include "afb-apiset.h"

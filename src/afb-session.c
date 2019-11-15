@@ -33,7 +33,15 @@
 #include "pearson.h"
 #include "uuid.h"
 
-#define HEADCOUNT	16
+#define SESSION_COUNT_MIN 5
+#define SESSION_COUNT_MAX 1000
+
+/*
+ * Handling of  cookies.
+ * Cookies are stored by session.
+ * The cookie count COOKIECOUNT must be a power of 2, possible values: 1, 2, 4, 8, 16, 32, 64, ...
+ * For low memory profile, small values are better, 1 is possible.
+ */
 #define COOKIECOUNT	8
 #define COOKIEMASK	(COOKIECOUNT - 1)
 
@@ -59,7 +67,8 @@ struct cookie
 struct afb_session
 {
 	struct afb_session *next; /**< link to the next */
-	unsigned refcount;      /**< count of reference to the session */
+	uint16_t refcount;      /**< count of reference to the session */
+	uint16_t id;		/**< local id of the session */
 	int timeout;            /**< timeout of the session */
 	time_t expiration;	/**< expiration time of the session */
 	pthread_mutex_t mutex;  /**< mutex of the session */
@@ -68,24 +77,27 @@ struct afb_session
 	uint8_t closed: 1;      /**< is the session closed ? */
 	uint8_t autoclose: 1;   /**< close the session when unreferenced */
 	uint8_t notinset: 1;	/**< session removed from the set of sessions */
-	uuid_stringz_t uuid;    /**< indentification of client seesion */
+	uint8_t hash;		/**< hash value of the uuid */
+	uuid_stringz_t uuid;	/**< identification of client session */
 };
 
 /**
  * structure for managing sessions
  */
 static struct {
-	int count;              /**< current number of sessions */
-	int max;                /**< maximum count of sessions */
-	int timeout;            /**< common initial timeout */
-	struct afb_session *heads[HEADCOUNT]; /**< sessions */
+	uint16_t count;		/**< current number of sessions */
+	uint16_t max;		/**< maximum count of sessions */
+	uint16_t genid;		/**< for generating ids */
+	int timeout;		/**< common initial timeout */
+	struct afb_session *first; /**< sessions */
 	struct afb_token *initok;/**< common initial token */
-	pthread_mutex_t mutex;  /**< declare a mutex to protect hash table */
+	pthread_mutex_t mutex;	/**< declare a mutex to protect hash table */
 } sessions = {
 	.count = 0,
 	.max = 10,
+	.genid = 1,
 	.timeout = 3600,
-	.heads = { 0 },
+	.first = 0,
 	.initok = 0,
 	.mutex = PTHREAD_MUTEX_INITIALIZER
 };
@@ -121,8 +133,23 @@ static struct afb_session *sessionset_search(const char *uuid, uint8_t hashidx)
 {
 	struct afb_session *session;
 
-	session = sessions.heads[hashidx];
-	while (session && strcmp(uuid, session->uuid))
+	session = sessions.first;
+	while (session && hashidx != session->hash && strcmp(uuid, session->uuid))
+		session = session->next;
+
+	return session;
+}
+
+/*
+ * search within the set of sessions the session of 'id'.
+ * return the session or NULL
+ */
+static struct afb_session *sessionset_search_id(uint16_t id)
+{
+	struct afb_session *session;
+
+	session = sessions.first;
+	while (session && id != session->id)
 		session = session->next;
 
 	return session;
@@ -138,8 +165,8 @@ static int sessionset_add(struct afb_session *session, uint8_t hashidx)
 	}
 
 	/* add the session */
-	session->next = sessions.heads[hashidx];
-	sessions.heads[hashidx] = session;
+	session->next = sessions.first;
+	sessions.first = session;
 	sessions.count++;
 	return 0;
 }
@@ -251,6 +278,9 @@ static struct afb_session *session_add(const char *uuid, int timeout, time_t now
 	strcpy(session->uuid, uuid);
 	session->timeout = timeout;
 	session_update_expiration(session, now);
+	session->id = ++sessions.genid;
+	while (session->id == 0 || sessionset_search_id(session->id) != NULL)
+		session->id = ++sessions.genid;
 
 	/* add */
 	if (sessionset_add(session, hashidx)) {
@@ -269,29 +299,26 @@ static struct afb_session *session_add(const char *uuid, int timeout, time_t now
 static time_t sessionset_cleanup (int force)
 {
 	struct afb_session *session, **prv;
-	int idx;
 	time_t now;
 
 	/* Loop on Sessions Table and remove anything that is older than timeout */
 	now = NOW;
-	for (idx = 0 ; idx < HEADCOUNT; idx++) {
-		prv = &sessions.heads[idx];
-		while ((session = *prv)) {
-			session_lock(session);
-			if (force || session->expiration < now)
-				session_close(session);
-			if (!session->closed)
-				prv = &session->next;
-			else {
-				*prv = session->next;
-				sessions.count--;
-				session->notinset = 1;
-				if ( !session->refcount) {
-					session_destroy(session);
-					continue;
-				}
-			}
+	prv = &sessions.first;
+	while ((session = *prv)) {
+		session_lock(session);
+		if (force || session->expiration < now)
+			session_close(session);
+		if (!session->closed) {
+			prv = &session->next;
 			session_unlock(session);
+		} else {
+			*prv = session->next;
+			sessions.count--;
+			session->notinset = 1;
+			if (session->refcount)
+				session_unlock(session);
+			else
+				session_destroy(session);
 		}
 	}
 	return now;
@@ -321,7 +348,12 @@ int afb_session_init (int max_session_count, int timeout, const char *initok)
 	/* init the sessionset (after cleanup) */
 	sessionset_lock();
 	sessionset_cleanup(1);
-	sessions.max = max_session_count;
+	if (max_session_count > SESSION_COUNT_MAX)
+		sessions.max = SESSION_COUNT_MAX;
+	else if (max_session_count < SESSION_COUNT_MIN)
+		sessions.max = SESSION_COUNT_MIN;
+	else
+		sessions.max = (uint16_t)max_session_count;
 	sessions.timeout = timeout;
 	if (initok == NULL) {
 		uuid_new_stringz(uuid);
@@ -344,17 +376,14 @@ int afb_session_init (int max_session_count, int timeout, const char *initok)
 void afb_session_foreach(void (*callback)(void *closure, struct afb_session *session), void *closure)
 {
 	struct afb_session *session;
-	int idx;
 
 	/* Loop on Sessions Table and remove anything that is older than timeout */
 	sessionset_lock();
-	for (idx = 0 ; idx < HEADCOUNT; idx++) {
-		session = sessions.heads[idx];
-		while (session) {
-			if (!session->closed)
-				callback(closure, session);
-			session = session->next;
-		}
+	session = sessions.first;
+	while (session) {
+		if (!session->closed)
+			callback(closure, session);
+		session = session->next;
 	}
 	sessionset_unlock();
 }
@@ -420,7 +449,8 @@ int afb_session_timeout(struct afb_session *session)
  */
 int afb_session_what_remains(struct afb_session *session)
 {
-	return (int)(session->expiration - NOW);
+	int diff = (int)(session->expiration - NOW);
+	return diff < 0 ? 0 : diff;
 }
 
 /* This function will return exiting session or newly created session */
@@ -530,17 +560,27 @@ const char *afb_session_uuid (struct afb_session *session)
 	return session->uuid;
 }
 
+/* Returns the local id of 'session' */
+uint16_t afb_session_id (struct afb_session *session)
+{
+	return session->id;
+}
+
 /**
  * Get the index of the 'key' in the cookies array.
  * @param key the key to scan
  * @return the index of the list for key within cookies
  */
+#if COOKIEMASK
 static int cookeyidx(const void *key)
 {
 	intptr_t x = (intptr_t)key;
 	unsigned r = (unsigned)((x >> 5) ^ (x >> 15));
 	return r & COOKIEMASK;
 }
+#else
+#  define cookeyidx(key) 0
+#endif
 
 /**
  * Set, get, replace, remove a cookie of 'key' for the 'session'

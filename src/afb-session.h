@@ -32,6 +32,7 @@ extern struct afb_session *afb_session_create (int timeout);
 extern struct afb_session *afb_session_search (const char *uuid);
 extern struct afb_session *afb_session_get (const char *uuid, int timeout, int *created);
 extern const char *afb_session_uuid (struct afb_session *session);
+extern uint16_t afb_session_id (struct afb_session *session);
 
 extern struct afb_session *afb_session_addref(struct afb_session *session);
 extern void afb_session_unref(struct afb_session *session);
