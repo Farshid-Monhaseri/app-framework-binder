@@ -62,7 +62,7 @@ int afb_auth_check(struct afb_xreq *xreq, const struct afb_auth *auth)
 
 int afb_auth_has_permission(struct afb_xreq *xreq, const char *permission)
 {
-	return afb_cred_has_permission(xreq->cred, permission, afb_context_uuid(&xreq->context));
+	return afb_cred_has_permission(xreq->cred, permission, &xreq->context);
 }
 
 /*********************************************************************************/

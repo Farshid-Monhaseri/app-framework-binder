@@ -320,7 +320,7 @@ static struct json_object *xreq_get_client_info_cb(struct afb_req_x2 *closure)
 		json_object_object_add(r, "id", json_object_new_string(xreq->cred->id));
 	}
 	if (xreq->context.session) {
-		json_object_object_add(r, "uuid", json_object_new_string(afb_context_uuid(&xreq->context)));
+		json_object_object_add(r, "uuid", json_object_new_string(afb_context_uuid(&xreq->context)?:""));
 		json_object_object_add(r, "LOA", json_object_new_int(afb_context_get_loa(&xreq->context)));
 	}
 	return r;

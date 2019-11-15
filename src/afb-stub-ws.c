@@ -530,7 +530,7 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 		afb_session_set_autoclose(wreq->xreq.context.session, 1);
 
 	/* makes the call */
-	wreq->xreq.cred = afb_cred_mixed_on_behalf_import(stubws->cred, sessionid, user_creds);
+	wreq->xreq.cred = afb_cred_mixed_on_behalf_import(stubws->cred, &wreq->xreq.context, user_creds);
 	wreq->xreq.request.called_api = stubws->apiname;
 	wreq->xreq.request.called_verb = verb;
 	wreq->xreq.json = args;

@@ -981,7 +981,7 @@ static int api_dbus_server_on_object_called(sd_bus_message *message, void *userd
 
 	/* fulfill the request and emit it */
 	dreq->xreq.context.flags = flags;
-	dreq->xreq.cred = afb_cred_mixed_on_behalf_import(listener->origin->cred, uuid, creds && creds[0] ? creds : NULL);
+	dreq->xreq.cred = afb_cred_mixed_on_behalf_import(listener->origin->cred, &dreq->xreq.context, creds && creds[0] ? creds : NULL);
 	dreq->message = sd_bus_message_ref(message);
 	dreq->json = json_tokener_parse_verbose(dreq->request, &jerr);
 	if (jerr != json_tokener_success) {

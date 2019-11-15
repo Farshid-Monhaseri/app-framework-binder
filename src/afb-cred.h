@@ -19,6 +19,8 @@
 
 #include <sys/types.h>
 
+struct afb_context;
+
 struct afb_cred
 {
 	int refcount;
@@ -37,10 +39,10 @@ extern struct afb_cred *afb_cred_create_for_socket(int fd);
 extern struct afb_cred *afb_cred_addref(struct afb_cred *cred);
 extern void afb_cred_unref(struct afb_cred *cred);
 
-extern int afb_cred_has_permission(struct afb_cred *cred, const char *permission, const char *context);
+extern int afb_cred_has_permission(struct afb_cred *cred, const char *permission, struct afb_context *context);
 
 extern const char *afb_cred_export(struct afb_cred *cred);
 extern struct afb_cred *afb_cred_import(const char *string);
 
-extern struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, const char *context, const char *exported);
+extern struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, struct afb_context *context, const char *exported);
 

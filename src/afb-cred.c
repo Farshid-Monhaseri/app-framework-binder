@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -27,6 +28,8 @@
 #include <sys/socket.h>
 
 #include "afb-cred.h"
+#include "afb-context.h"
+#include "afb-token.h"
 #include "verbose.h"
 
 
@@ -219,7 +222,7 @@ struct afb_cred *afb_cred_import(const char *string)
 	return cred;
 }
 
-struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, const char *context, const char *exported)
+struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, struct afb_context *context, const char *exported)
 
 {
 	struct afb_cred *imported;
@@ -237,6 +240,12 @@ struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, const ch
 }
 
 /*********************************************************************************/
+static const char *token_of_context(struct afb_context *context)
+{
+	return context && context->token ? afb_token_string(context->token) : "X";
+}
+
+/*********************************************************************************/
 #ifdef BACKEND_PERMISSION_IS_CYNARA
 
 #include <pthread.h>
@@ -245,7 +254,7 @@ struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, const ch
 static cynara *handle;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int afb_cred_has_permission(struct afb_cred *cred, const char *permission, const char *context)
+int afb_cred_has_permission(struct afb_cred *cred, const char *permission, struct afb_context *context)
 {
 	int rc;
 
@@ -272,7 +281,7 @@ int afb_cred_has_permission(struct afb_cred *cred, const char *permission, const
 	}
 
 	/* query cynara permission */
-	rc = cynara_check(handle, cred->label, context ?: "", cred->user, permission);
+	rc = cynara_check(handle, cred->label, token_of_context(context), cred->user, permission);
 
 	pthread_mutex_unlock(&mutex);
 	return rc == CYNARA_API_ACCESS_ALLOWED;
@@ -280,7 +289,7 @@ int afb_cred_has_permission(struct afb_cred *cred, const char *permission, const
 
 /*********************************************************************************/
 #else
-int afb_cred_has_permission(struct afb_cred *cred, const char *permission, const char *context)
+int afb_cred_has_permission(struct afb_cred *cred, const char *permission, struct afb_context *context)
 {
 	WARNING("Granting permission %s by default of backend", permission ?: "(null)");
 	return !!permission;
