@@ -55,11 +55,11 @@ static void on_wsj1_event(void *closure, const char *event, struct afb_wsj1_msg 
 
 static void on_pws_hangup(void *closure);
 static void on_pws_reply(void *closure, void *request, struct json_object *result, const char *error, const char *info);
-static void on_pws_event_create(void *closure, const char *event_name, int event_id);
-static void on_pws_event_remove(void *closure, const char *event_name, int event_id);
-static void on_pws_event_subscribe(void *closure, void *request, const char *event_name, int event_id);
-static void on_pws_event_unsubscribe(void *closure, void *request, const char *event_name, int event_id);
-static void on_pws_event_push(void *closure, const char *event_name, int event_id, struct json_object *data);
+static void on_pws_event_create(void *closure, uint16_t event_id, const char *event_name);
+static void on_pws_event_remove(void *closure, uint16_t event_id);
+static void on_pws_event_subscribe(void *closure, void *request, uint16_t event_id);
+static void on_pws_event_unsubscribe(void *closure, void *request, uint16_t event_id);
+static void on_pws_event_push(void *closure, uint16_t event_id, struct json_object *data);
 static void on_pws_event_broadcast(void *closure, const char *event_name, struct json_object *data, const afb_proto_ws_uuid_t uuid, uint8_t hop);
 
 static void idle();
@@ -497,36 +497,36 @@ static void on_pws_reply(void *closure, void *request, struct json_object *resul
 	dec_callcount();
 }
 
-static void on_pws_event_create(void *closure, const char *event_name, int event_id)
+static void on_pws_event_create(void *closure, uint16_t event_id, const char *event_name)
 {
 	printf("ON-EVENT-CREATE: [%d:%s]\n", event_id, event_name);
 	fflush(stdout);
 }
 
-static void on_pws_event_remove(void *closure, const char *event_name, int event_id)
+static void on_pws_event_remove(void *closure, uint16_t event_id)
 {
-	printf("ON-EVENT-REMOVE: [%d:%s]\n", event_id, event_name);
+	printf("ON-EVENT-REMOVE: [%d]\n", event_id);
 	fflush(stdout);
 }
 
-static void on_pws_event_subscribe(void *closure, void *request, const char *event_name, int event_id)
+static void on_pws_event_subscribe(void *closure, void *request, uint16_t event_id)
 {
-	printf("ON-EVENT-SUBSCRIBE %s: [%d:%s]\n", (char*)request, event_id, event_name);
+	printf("ON-EVENT-SUBSCRIBE %s: [%d]\n", (char*)request, event_id);
 	fflush(stdout);
 }
 
-static void on_pws_event_unsubscribe(void *closure, void *request, const char *event_name, int event_id)
+static void on_pws_event_unsubscribe(void *closure, void *request, uint16_t event_id)
 {
-	printf("ON-EVENT-UNSUBSCRIBE %s: [%d:%s]\n", (char*)request, event_id, event_name);
+	printf("ON-EVENT-UNSUBSCRIBE %s: [%d]\n", (char*)request, event_id);
 	fflush(stdout);
 }
 
-static void on_pws_event_push(void *closure, const char *event_name, int event_id, struct json_object *data)
+static void on_pws_event_push(void *closure, uint16_t event_id, struct json_object *data)
 {
 	if (raw)
-		printf("ON-EVENT-PUSH: [%d:%s]\n%s\n", event_id, event_name, json_object_to_json_string_ext(data, JSON_C_TO_STRING_NOSLASHESCAPE));
+		printf("ON-EVENT-PUSH: [%d]\n%s\n", event_id, json_object_to_json_string_ext(data, JSON_C_TO_STRING_NOSLASHESCAPE));
 	if (human)
-		printf("ON-EVENT-PUSH: [%d:%s]\n%s\n", event_id, event_name, json_object_to_json_string_ext(data, JSON_C_TO_STRING_PRETTY|JSON_C_TO_STRING_NOSLASHESCAPE));
+		printf("ON-EVENT-PUSH: [%d]\n%s\n", event_id, json_object_to_json_string_ext(data, JSON_C_TO_STRING_PRETTY|JSON_C_TO_STRING_NOSLASHESCAPE));
 	fflush(stdout);
 }
 
@@ -564,7 +564,7 @@ static void pws_call(const char *verb, const char *object)
 		if (jerr != json_tokener_success)
 			o = json_object_new_string(object);
 	}
-	rc = afb_proto_ws_client_call(pws, verb, o, sessionid, key, NULL);
+	rc = afb_proto_ws_client_call(pws, verb, o, 0, 0, key, NULL);
 	json_object_put(o);
 	if (rc < 0) {
 		fprintf(stderr, "calling %s(%s) failed: %m\n", verb, object?:"");

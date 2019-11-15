@@ -43,12 +43,13 @@
 #include "afb-context.h"
 #include "afb-evt.h"
 #include "afb-xreq.h"
+#include "afb-token.h"
 #include "verbose.h"
 #include "fdev.h"
 #include "jobs.h"
+#include "u16id.h"
 
 struct afb_stub_ws;
-
 
 /**
  * structure for a ws request: requests on server side
@@ -60,32 +61,12 @@ struct server_req {
 };
 
 /**
- * structure for recording events on client side
- */
-struct client_event
-{
-	struct client_event *next;	/**< link to the next */
-	struct afb_event_x2 *event;	/**< the local event */
-	int id;				/**< the identifier */
-	int refcount;			/**< a reference count */
-};
-
-/**
  * structure for jobs of describing
  */
 struct server_describe
 {
 	struct afb_stub_ws *stubws;
 	struct afb_proto_ws_describe *describe;
-};
-
-/**
- * structure for recording sessions
- */
-struct server_session
-{
-	struct server_session *next;
-	struct afb_session *session;
 };
 
 /******************* stub description for client or servers ******************/
@@ -112,12 +93,27 @@ struct afb_stub_ws
 
 			/* credentials of the client */
 			struct afb_cred *cred;
+
+			/* event from server */
+			struct u16id2bool *event_flags;
+
+			/* transmitted sessions */
+			struct u16id2ptr *session_proxies;
+
+			/* transmitted tokens */
+			struct u16id2ptr *token_proxies;
 		};
 
 		/* client side */
 		struct {
-			/* event replica  */
-			struct client_event *events;
+			/* event from server */
+			struct u16id2ptr *event_proxies;
+
+			/* transmitted sessions */
+			struct u16id2bool *session_flags;
+
+			/* transmitted tokens */
+			struct u16id2bool *token_flags;
 
 			/* robustify */
 			struct {
@@ -173,7 +169,7 @@ static int server_req_subscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 *e
 
 	rc = afb_evt_event_x2_add_watch(wreq->stubws->listener, event);
 	if (rc >= 0)
-		rc = afb_proto_ws_call_subscribe(wreq->call,  afb_evt_event_x2_fullname(event), afb_evt_event_x2_id(event));
+		rc = afb_proto_ws_call_subscribe(wreq->call,  afb_evt_event_x2_id(event));
 	if (rc < 0)
 		ERROR("error while subscribing event");
 	return rc;
@@ -184,7 +180,7 @@ static int server_req_unsubscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 
 	int rc, rc2;
 	struct server_req *wreq = CONTAINER_OF_XREQ(struct server_req, xreq);
 
-	rc = afb_proto_ws_call_unsubscribe(wreq->call,  afb_evt_event_x2_fullname(event), afb_evt_event_x2_id(event));
+	rc = afb_proto_ws_call_unsubscribe(wreq->call,  afb_evt_event_x2_id(event));
 	rc2 = afb_evt_event_x2_remove_watch(wreq->stubws->listener, event);
 	if (rc >= 0 && rc2 < 0)
 		rc = rc2;
@@ -202,33 +198,6 @@ static const struct afb_xreq_query_itf server_req_xreq_itf = {
 
 /******************* client part **********************************/
 
-/* destroy all events */
-static void client_drop_all_events(struct afb_stub_ws *stubws)
-{
-	struct client_event *ev, *nxt;
-
-	nxt = __atomic_exchange_n(&stubws->events, NULL, __ATOMIC_RELAXED);
-	while (nxt) {
-		ev = nxt;
-		nxt = ev->next;
-		afb_evt_event_x2_unref(ev->event);
-		free(ev);
-	}
-}
-
-/* search the event */
-static struct client_event *client_event_search(struct afb_stub_ws *stubws, uint32_t eventid, const char *name)
-{
-	struct client_event *ev;
-
-	ev = stubws->events;
-	while (ev != NULL && (ev->id != eventid || 0 != strcmp(afb_evt_event_x2_fullname(ev->event), name)))
-		ev = ev->next;
-
-	DEBUG("searching event %s[%d]: %s", name, eventid, ev ? "found" : "not found");
-	return ev;
-}
-
 static struct afb_proto_ws *client_get_proto(struct afb_stub_ws *stubws)
 {
 	struct fdev *fdev;
@@ -243,12 +212,53 @@ static struct afb_proto_ws *client_get_proto(struct afb_stub_ws *stubws)
 	return proto;
 }
 
+static int client_make_ids(struct afb_stub_ws *stubws, struct afb_proto_ws *proto, struct afb_context *context, uint16_t *sessionid, uint16_t *tokenid)
+{
+	int rc, rc2;
+	uint16_t sid, tid;
+
+	rc = 0;
+
+	/* get the session */
+	if (!context->session)
+		sid = 0;
+	else {
+		sid = afb_session_id(context->session);
+		rc2 = u16id2bool_set(&stubws->session_flags, sid, 1);
+		if (rc2 < 0)
+			rc = rc2;
+		else if (rc2 == 0)
+			rc = afb_proto_ws_client_session_create(proto, sid, afb_session_uuid(context->session));
+	}
+
+	/* get the token */
+	if (!context->token)
+		tid = 0;
+	else {
+		tid = afb_token_id(context->token);
+		rc2 = u16id2bool_set(&stubws->token_flags, tid, 1);
+		if (rc2 < 0)
+			rc = rc2;
+		else if (rc2 == 0) {
+			rc2 = afb_proto_ws_client_token_create(proto, tid, afb_token_string(context->token));
+			if (rc2 < 0)
+				rc = rc2;
+		}
+	}
+
+	*sessionid = sid;
+	*tokenid = tid;
+	return rc;
+}
+
 /* on call, propagate it to the ws service */
 static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 {
 	int rc;
 	struct afb_stub_ws *stubws = closure;
 	struct afb_proto_ws *proto;
+	uint16_t sessionid;
+	uint16_t tokenid;
 
 	proto = client_get_proto(stubws);
 	if (proto == NULL) {
@@ -256,14 +266,18 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 		return;
 	}
 
-	afb_xreq_unhooked_addref(xreq);
-	rc = afb_proto_ws_client_call(
-			proto,
-			xreq->request.called_verb,
-			afb_xreq_json(xreq),
-			afb_session_uuid(xreq->context.session),
-			xreq,
-			xreq_on_behalf_cred_export(xreq));
+	rc = client_make_ids(stubws, proto, &xreq->context, &sessionid, &tokenid);
+	if (rc >= 0) {
+		afb_xreq_unhooked_addref(xreq);
+		rc = afb_proto_ws_client_call(
+				proto,
+				xreq->request.called_verb,
+				afb_xreq_json(xreq),
+				sessionid,
+				tokenid,
+				xreq,
+				xreq_on_behalf_cred_export(xreq));
+	}
 	if (rc < 0) {
 		afb_xreq_reply(xreq, NULL, "internal", "can't send message");
 		afb_xreq_unhooked_unref(xreq);
@@ -287,26 +301,35 @@ static void client_api_describe_cb(void * closure, void (*describecb)(void *, st
 
 static void server_event_add_cb(void *closure, const char *event, uint16_t eventid)
 {
+	int rc;
 	struct afb_stub_ws *stubws = closure;
 
-	if (stubws->proto != NULL)
-		afb_proto_ws_server_event_create(stubws->proto, event, eventid);
+	if (stubws->proto != NULL) {
+		rc = u16id2bool_set(&stubws->event_flags, eventid, 1);
+		if (rc == 0) {
+			rc = afb_proto_ws_server_event_create(stubws->proto, eventid, event);
+			if (rc < 0)
+				u16id2bool_set(&stubws->event_flags, eventid, 0);
+		}
+	}
 }
 
 static void server_event_remove_cb(void *closure, const char *event, uint16_t eventid)
 {
 	struct afb_stub_ws *stubws = closure;
 
-	if (stubws->proto != NULL)
-		afb_proto_ws_server_event_remove(stubws->proto, event, eventid);
+	if (stubws->proto != NULL) {
+		if (u16id2bool_set(&stubws->event_flags, eventid, 0))
+			afb_proto_ws_server_event_remove(stubws->proto, eventid);
+	}
 }
 
 static void server_event_push_cb(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	struct afb_stub_ws *stubws = closure;
 
-	if (stubws->proto != NULL)
-		afb_proto_ws_server_event_push(stubws->proto, event, eventid, object);
+	if (stubws->proto != NULL && u16id2bool_get(stubws->event_flags, eventid))
+		afb_proto_ws_server_event_push(stubws->proto, eventid, object);
 	json_object_put(object);
 }
 
@@ -329,99 +352,69 @@ static void client_on_reply_cb(void *closure, void *request, struct json_object 
 	afb_xreq_unhooked_unref(xreq);
 }
 
-static void client_on_event_create_cb(void *closure, const char *event_name, int event_id)
+static void client_on_event_create_cb(void *closure, uint16_t event_id, const char *event_name)
 {
 	struct afb_stub_ws *stubws = closure;
-	struct client_event *ev;
-
+	struct afb_event_x2 *event;
+	int rc;
+	
 	/* check conflicts */
-	ev = client_event_search(stubws, event_id, event_name);
-	if (ev != NULL) {
-		__atomic_add_fetch(&ev->refcount, 1, __ATOMIC_RELAXED);
-		return;
-	}
-
-	/* no conflict, try to add it */
-	ev = malloc(sizeof *ev);
-	if (ev != NULL) {
-		ev->event = afb_evt_event_x2_create(event_name);
-		if (ev->event != NULL) {
-			ev->refcount = 1;
-			ev->id = event_id;
-			ev->next = stubws->events;
-			stubws->events = ev;
-			return;
+	event = afb_evt_event_x2_create(event_name);
+	if (event == NULL)
+		ERROR("can't create event %s, out of memory", event_name);
+	else {
+		rc = u16id2ptr_add(&stubws->event_proxies, event_id, event);
+		if (rc < 0) {
+			ERROR("can't record event %s", event_name);
+			afb_evt_event_x2_unref(event);
 		}
-		free(ev);
 	}
-	ERROR("can't create event %s, out of memory", event_name);
 }
 
-static void client_on_event_remove_cb(void *closure, const char *event_name, int event_id)
+static void client_on_event_remove_cb(void *closure, uint16_t event_id)
 {
 	struct afb_stub_ws *stubws = closure;
-	struct client_event *ev, **prv;
+	struct afb_event_x2 *event;
+	int rc;
 
-	/* check conflicts */
-	ev = client_event_search(stubws, event_id, event_name);
-	if (ev == NULL)
-		return;
-
-	/* decrease the reference count */
-
-	if (__atomic_sub_fetch(&ev->refcount, 1, __ATOMIC_RELAXED))
-		return;
-
-	/* unlinks the event */
-	prv = &stubws->events;
-	while (*prv != ev)
-		prv = &(*prv)->next;
-	*prv = ev->next;
-
-	/* destroys the event */
-	afb_evt_event_x2_unref(ev->event);
-	free(ev);
+	rc = u16id2ptr_drop(&stubws->event_proxies, event_id, (void**)&event);
+	if (rc == 0 && event)
+		afb_evt_event_x2_unref(event);
 }
 
-static void client_on_event_subscribe_cb(void *closure, void *request, const char *event_name, int event_id)
+static void client_on_event_subscribe_cb(void *closure, void *request, uint16_t event_id)
 {
 	struct afb_stub_ws *stubws = closure;
 	struct afb_xreq *xreq = request;
-	struct client_event *ev;
+	struct afb_event_x2 *event;
+	int rc;
 
-	/* check conflicts */
-	ev = client_event_search(stubws, event_id, event_name);
-	if (ev == NULL)
-		return;
-
-	if (afb_xreq_subscribe(xreq, ev->event) < 0)
+	rc = u16id2ptr_get(stubws->event_proxies, event_id, (void**)&event);
+	if (rc < 0 || !event || afb_xreq_subscribe(xreq, event) < 0)
 		ERROR("can't subscribe: %m");
 }
 
-static void client_on_event_unsubscribe_cb(void *closure, void *request, const char *event_name, int event_id)
+static void client_on_event_unsubscribe_cb(void *closure, void *request, uint16_t event_id)
 {
 	struct afb_stub_ws *stubws = closure;
 	struct afb_xreq *xreq = request;
-	struct client_event *ev;
+	struct afb_event_x2 *event;
+	int rc;
 
-	/* check conflicts */
-	ev = client_event_search(stubws, event_id, event_name);
-	if (ev == NULL)
-		return;
-
-	if (afb_xreq_unsubscribe(xreq, ev->event) < 0)
+	rc = u16id2ptr_get(stubws->event_proxies, event_id, (void**)&event);
+	if (rc < 0 || !event || afb_xreq_unsubscribe(xreq, event) < 0)
 		ERROR("can't unsubscribe: %m");
 }
 
-static void client_on_event_push_cb(void *closure, const char *event_name, int event_id, struct json_object *data)
+static void client_on_event_push_cb(void *closure, uint16_t event_id, struct json_object *data)
 {
 	struct afb_stub_ws *stubws = closure;
-	struct client_event *ev;
+	struct afb_event_x2 *event;
+	int rc;
 
-	/* check conflicts */
-	ev = client_event_search(stubws, event_id, event_name);
-	if (ev)
-		afb_evt_event_x2_push(ev->event, data);
+	rc = u16id2ptr_get(stubws->event_proxies, event_id, (void**)&event);
+	if (rc >= 0 && event)
+		afb_evt_event_x2_push(event, data);
 	else
 		ERROR("unreadable push event");
 }
@@ -433,54 +426,94 @@ static void client_on_event_broadcast_cb(void *closure, const char *event_name, 
 
 /*****************************************************/
 
-static void server_record_session(struct afb_stub_ws *stubws, struct afb_session *session)
+static struct afb_session *server_add_session(struct afb_stub_ws *stubws, uint16_t sessionid, const char *sessionstr)
 {
-	struct server_session *s, **prv;
+	struct afb_session *session;
+	int rc, created;
 
-	/* search */
-	prv = &stubws->sessions;
-	while ((s = *prv)) {
-		if (s->session == session)
-			return;
-		if (afb_session_is_closed(s->session)) {
-			*prv = s->next;
-			afb_session_unref(s->session);
-			free(s);
+	session = afb_session_get(sessionstr, AFB_SESSION_TIMEOUT_DEFAULT, &created);
+	if (session == NULL)
+		ERROR("can't create session %s, out of memory", sessionstr);
+	else {
+		afb_session_set_autoclose(session, 1);
+		rc = u16id2ptr_add(&stubws->session_proxies, sessionid, session);
+		if (rc < 0) {
+			ERROR("can't record session %s", sessionstr);
+			afb_session_unref(session);
+			session = NULL;
 		}
-		else
-			prv = &s->next;
 	}
-
-	/* create */
-	s = malloc(sizeof *s);
-	if (s) {
-		s->session = afb_session_addref(session);
-		s->next = stubws->sessions;
-		stubws->sessions = s;
-	}
+	return session;
 }
 
-static void server_release_all_sessions(struct afb_stub_ws *stubws)
+static void server_on_session_create_cb(void *closure, uint16_t sessionid, const char *sessionstr)
 {
-	struct server_session *ses, *nses;
+	struct afb_stub_ws *stubws = closure;
 
-	nses = __atomic_exchange_n(&stubws->sessions, NULL, __ATOMIC_RELAXED);
-	while(nses) {
-		ses = nses;
-		nses = ses->next;
-		afb_session_unref(ses->session);
-		free(ses);
+	server_add_session(stubws, sessionid, sessionstr);
+}
+
+static void server_on_session_remove_cb(void *closure, uint16_t sessionid)
+{
+	struct afb_stub_ws *stubws = closure;
+	struct afb_session *session;
+	int rc;
+	
+	rc = u16id2ptr_drop(&stubws->event_proxies, sessionid, (void**)&session);
+	if (rc == 0 && session)
+		afb_session_unref(session);
+}
+
+static void server_on_token_create_cb(void *closure, uint16_t tokenid, const char *tokenstr)
+{
+	struct afb_stub_ws *stubws = closure;
+	struct afb_token *token;
+	int rc;
+
+	rc = afb_token_get(&token, tokenstr);
+	if (rc < 0)
+		ERROR("can't create token %s, out of memory", tokenstr);
+	else {
+		rc = u16id2ptr_add(&stubws->token_proxies, tokenid, token);
+		if (rc < 0) {
+			ERROR("can't record token %s", tokenstr);
+			afb_token_unref(token);
+		}
 	}
 }
 
-/*****************************************************/
+static void server_on_token_remove_cb(void *closure, uint16_t tokenid)
+{
+	struct afb_stub_ws *stubws = closure;
+	struct afb_token *token;
+	int rc;
+	
+	rc = u16id2ptr_drop(&stubws->event_proxies, tokenid, (void**)&token);
+	if (rc == 0 && token)
+		afb_token_unref(token);
+}
 
-static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, const char *sessionid, const char *user_creds)
+static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, const char *user_creds)
 {
 	struct afb_stub_ws *stubws = closure;
 	struct server_req *wreq;
+	struct afb_session *session;
+	struct afb_token *token;
+	int rc;
 
 	afb_stub_ws_addref(stubws);
+
+	/* get tokens and sessions */
+	rc = u16id2ptr_get(stubws->session_proxies, sessionid, (void**)&session);
+	if (rc < 0) {
+		if (sessionid != 0)
+			goto no_session;
+		session = server_add_session(stubws, sessionid, NULL);
+		if (!session)
+			goto out_of_memory;
+	}
+	if (!tokenid || u16id2ptr_get(stubws->token_proxies, tokenid, (void**)&token) < 0)
+		token = NULL;
 
 	/* create the request */
 	wreq = malloc(sizeof *wreq);
@@ -492,11 +525,7 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 	wreq->call = call;
 
 	/* init the context */
-	if (afb_context_connect_validated(&wreq->xreq.context, sessionid) < 0)
-		goto unconnected;
-	server_record_session(stubws, wreq->xreq.context.session);
-	if (wreq->xreq.context.created)
-		afb_session_set_autoclose(wreq->xreq.context.session, 1);
+	afb_context_init(&wreq->xreq.context, session, token);
 
 	/* makes the call */
 	wreq->xreq.cred = afb_cred_mixed_on_behalf_import(stubws->cred, &wreq->xreq.context, user_creds);
@@ -506,9 +535,8 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 	afb_xreq_process(&wreq->xreq, stubws->apiset);
 	return;
 
-unconnected:
-	free(wreq);
 out_of_memory:
+no_session:
 	json_object_put(args);
 	afb_stub_ws_unref(stubws);
 	afb_proto_ws_call_reply(call, NULL, "internal-error", NULL);
@@ -550,6 +578,10 @@ static struct afb_api_itf client_api_itf = {
 
 static const struct afb_proto_ws_server_itf server_itf =
 {
+	.on_session_create = server_on_session_create_cb,
+	.on_session_remove = server_on_session_remove_cb,
+	.on_token_create = server_on_token_create_cb,
+	.on_token_remove = server_on_token_remove_cb,
 	.on_call = server_on_call_cb,
 	.on_describe = server_on_describe_cb
 };
@@ -563,20 +595,60 @@ static const struct afb_evt_itf server_event_itf = {
 };
 
 /*****************************************************/
+/*****************************************************/
+
+static void release_all_sessions_cb(void*closure, uint16_t id, void *ptr)
+{
+	struct afb_session *session = ptr;
+	afb_session_unref(session);
+}
+
+static void release_all_tokens_cb(void*closure, uint16_t id, void *ptr)
+{
+	struct afb_token *token = ptr;
+	afb_token_unref(token);
+}
+
+static void release_all_events_cb(void*closure, uint16_t id, void *ptr)
+{
+	struct afb_event_x2 *eventid = ptr;
+	afb_evt_event_x2_unref(eventid);
+}
 
 /* disconnect */
 static void disconnect(struct afb_stub_ws *stubws)
 {
+	struct u16id2ptr *i2p;
+	struct u16id2bool *i2b;
+
 	afb_proto_ws_unref(__atomic_exchange_n(&stubws->proto, NULL, __ATOMIC_RELAXED));
-	if (stubws->is_client)
-		client_drop_all_events(stubws);
-	else {
+	if (stubws->is_client) {
+		i2p = __atomic_exchange_n(&stubws->event_proxies, NULL, __ATOMIC_RELAXED);
+		if (i2p) {
+			u16id2ptr_forall(i2p, release_all_events_cb, NULL);
+			u16id2ptr_destroy(&i2p);
+		}
+		i2b = __atomic_exchange_n(&stubws->session_flags, NULL, __ATOMIC_RELAXED);
+		u16id2bool_destroy(&i2b);
+		i2b = __atomic_exchange_n(&stubws->token_flags, NULL, __ATOMIC_RELAXED);
+		u16id2bool_destroy(&i2b);
+	} else {
 		afb_evt_listener_unref(__atomic_exchange_n(&stubws->listener, NULL, __ATOMIC_RELAXED));
 		afb_cred_unref(__atomic_exchange_n(&stubws->cred, NULL, __ATOMIC_RELAXED));
-		server_release_all_sessions(stubws);
+		i2b = __atomic_exchange_n(&stubws->event_flags, NULL, __ATOMIC_RELAXED);
+		u16id2bool_destroy(&i2b);
+		i2p = __atomic_exchange_n(&stubws->session_proxies, NULL, __ATOMIC_RELAXED);
+		if (i2p) {
+			u16id2ptr_forall(i2p, release_all_sessions_cb, NULL);
+			u16id2ptr_destroy(&i2p);
+		}
+		i2p = __atomic_exchange_n(&stubws->token_proxies, NULL, __ATOMIC_RELAXED);
+		if (i2p) {
+			u16id2ptr_forall(i2p, release_all_tokens_cb, NULL);
+			u16id2ptr_destroy(&i2p);
+		}
 	}
 }
-
 
 /* callback when receiving a hangup */
 static void on_hangup(void *closure)
