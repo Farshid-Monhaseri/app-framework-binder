@@ -292,10 +292,8 @@ int afb_supervision_init(struct afb_apiset *apiset, struct json_object *config)
 static void slist(void *closure, struct afb_session *session)
 {
 	struct json_object *list = closure;
-	struct json_object *item;
 
-	wrap_json_pack(&item, "{ss}", "token", afb_session_token(session));
-	json_object_object_add(list, afb_session_uuid(session), item);
+	json_object_object_add(list, afb_session_uuid(session), NULL);
 }
 
 /******************************************************************************

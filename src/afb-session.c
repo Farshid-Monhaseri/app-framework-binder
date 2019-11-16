@@ -540,7 +540,7 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 	session_lock(session);
 	r = !session->closed
 	  && session->expiration >= NOW
-	  && !(session->token && strcmp(token, afb_session_token(session)));
+	  && !(session->token && strcmp(token, afb_token_string(session->token)));
 	session_unlock(session);
 	return r;
 }
@@ -549,12 +549,6 @@ int afb_session_check_token (struct afb_session *session, const char *token)
 const char *afb_session_uuid (struct afb_session *session)
 {
 	return session->uuid;
-}
-
-/* Returns the token of 'session' */
-const char *afb_session_token (struct afb_session *session)
-{
-	return afb_token_string(session->token);
 }
 
 /**

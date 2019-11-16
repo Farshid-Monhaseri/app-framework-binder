@@ -102,13 +102,6 @@ void afb_context_disconnect(struct afb_context *context)
 	}
 }
 
-const char *afb_context_sent_token(struct afb_context *context)
-{
-	if (context->session == NULL || context->closing || context->super)
-		return NULL;
-	return afb_session_token(context->session);
-}
-
 const char *afb_context_uuid(struct afb_context *context)
 {
 	return context->session ? afb_session_uuid(context->session) : "";

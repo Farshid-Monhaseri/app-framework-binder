@@ -27,7 +27,7 @@ static const char _success_[] = "success";
 struct json_object *afb_msg_json_reply(struct json_object *resp, const char *error, const char *info, struct afb_context *context)
 {
 	json_object *msg, *request;
-	const char *token, *uuid;
+	const char *uuid;
 	json_object *type_reply = NULL;
 
 	msg = json_object_new_object();
@@ -45,10 +45,6 @@ struct json_object *afb_msg_json_reply(struct json_object *resp, const char *err
 		json_object_object_add(request, "info", json_object_new_string(info));
 
 	if (context != NULL) {
-		token = afb_context_sent_token(context);
-		if (token != NULL)
-			json_object_object_add(request, "token", json_object_new_string(token));
-
 		uuid = afb_context_sent_uuid(context);
 		if (uuid != NULL)
 			json_object_object_add(request, "uuid", json_object_new_string(uuid));

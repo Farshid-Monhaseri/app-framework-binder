@@ -1531,7 +1531,7 @@ static void _hook_session_(struct afb_session *session, const char *format, ...)
 
 static void hook_session_create_cb(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
 {
-	_hook_session_(session, "create -> token=%s", afb_session_token(session));
+	_hook_session_(session, "create");
 }
 
 static void hook_session_close_cb(void *closure, const struct afb_hookid *hookid, struct afb_session *session)

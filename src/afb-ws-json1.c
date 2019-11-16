@@ -260,7 +260,7 @@ static void wsreq_reply(struct afb_xreq *xreq, struct json_object *object, const
 	reply = afb_msg_json_reply(object, error, info, &xreq->context);
 
 	rc = (error ? afb_wsj1_reply_error_j : afb_wsj1_reply_ok_j)(
-			wsreq->msgj1, reply, afb_context_sent_token(&wsreq->xreq.context));
+			wsreq->msgj1, reply, NULL);
 	if (rc)
 		ERROR("Can't send reply: %m");
 }

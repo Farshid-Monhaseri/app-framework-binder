@@ -853,7 +853,7 @@ static void hook_session(void *closure, const struct afb_hookid *hookid, struct 
 
 static void hook_session_create(void *closure, const struct afb_hookid *hookid, struct afb_session *session)
 {
-	hook_session(closure, hookid, session, "create", "{ss}", "token", afb_session_token(session));
+	hook_session(closure, hookid, session, "create", NULL);
 }
 
 static void hook_session_close(void *closure, const struct afb_hookid *hookid, struct afb_session *session)

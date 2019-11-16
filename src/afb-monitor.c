@@ -381,9 +381,8 @@ static void f_session(afb_req_t req)
 	}
 
 	/* make the result */
-	wrap_json_pack(&r, "{s:s,s:s,s:i,s:i}",
+	wrap_json_pack(&r, "{s:s,s:i,s:i}",
 			"uuid", afb_session_uuid(xreq->context.session),
-			"token", afb_session_token(xreq->context.session),
 			"timeout", afb_session_timeout(xreq->context.session),
 			"remain", afb_session_what_remains(xreq->context.session));
 	afb_req_success(req, r, NULL);
