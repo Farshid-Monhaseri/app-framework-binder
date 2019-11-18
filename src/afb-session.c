@@ -28,7 +28,6 @@
 
 #include "afb-session.h"
 #include "afb-hook.h"
-#include "afb-token.h"
 #include "verbose.h"
 #include "pearson.h"
 #include "uuid.h"
@@ -90,7 +89,6 @@ static struct {
 	uint16_t genid;		/**< for generating ids */
 	int timeout;		/**< common initial timeout */
 	struct afb_session *first; /**< sessions */
-	struct afb_token *initok;/**< common initial token */
 	pthread_mutex_t mutex;	/**< declare a mutex to protect hash table */
 } sessions = {
 	.count = 0,
@@ -98,7 +96,6 @@ static struct {
 	.genid = 1,
 	.timeout = 3600,
 	.first = 0,
-	.initok = 0,
 	.mutex = PTHREAD_MUTEX_INITIALIZER
 };
 
@@ -326,25 +323,13 @@ static time_t sessionset_cleanup (int force)
 
 /**
  * Initialize the session manager with a 'max_session_count',
- * an initial common 'timeout' and an initial common token 'initok'.
+ * an initial common 'timeout'
  *
  * @param max_session_count  maximum allowed session count in the same time
  * @param timeout            the initial default timeout of sessions
- * @param initok             the initial default token of sessions
  */
-int afb_session_init (int max_session_count, int timeout, const char *initok)
+int afb_session_init (int max_session_count, int timeout)
 {
-	int rc;
-	uuid_stringz_t uuid;
-
-	/* check parameters */
-	if (initok && strlen(initok) >= sizeof sessions.initok) {
-		ERROR("initial token '%s' too long (max length %d)",
-			initok, ((int)(sizeof sessions.initok)) - 1);
-		errno = EINVAL;
-		return -1;
-	}
-
 	/* init the sessionset (after cleanup) */
 	sessionset_lock();
 	sessionset_cleanup(1);
@@ -355,16 +340,6 @@ int afb_session_init (int max_session_count, int timeout, const char *initok)
 	else
 		sessions.max = (uint16_t)max_session_count;
 	sessions.timeout = timeout;
-	if (initok == NULL) {
-		uuid_new_stringz(uuid);
-		initok = uuid;
-	}
-	sessions.initok = 0;
-	if (*initok) {
-		rc = afb_token_get(&sessions.initok, initok);
-		if (rc < 0)
-			return rc;
-	}
 	sessionset_unlock();
 	return 0;
 }
@@ -396,14 +371,6 @@ void afb_session_purge()
 	sessionset_lock();
 	sessionset_cleanup(0);
 	sessionset_unlock();
-}
-
-/**
- * @return the initial token set at initialization
- */
-const char *afb_session_initial_token()
-{
-	return sessions.initok ? afb_token_string(sessions.initok) : "";
 }
 
 /* Searchs the session of 'uuid' */

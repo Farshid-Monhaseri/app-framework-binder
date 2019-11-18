@@ -144,7 +144,7 @@ static void start(int signum, void *arg)
 	}
 
 	/* configure the daemon */
-	if (afb_session_init(main_config->nbSessionMax, main_config->cntxTimeout, main_config->token)) {
+	if (afb_session_init(main_config->nbSessionMax, main_config->cntxTimeout)) {
 		ERROR("initialisation of session manager failed");
 		goto error;
 	}

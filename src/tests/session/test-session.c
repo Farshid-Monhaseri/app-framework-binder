@@ -16,12 +16,8 @@
 /* check the initialisation */
 START_TEST (check_initialisation)
 {
-	ck_assert_int_eq(0, afb_session_init(0, 0, NULL));
-	ck_assert_int_eq(0, afb_session_init(200, 0, NULL));
-	ck_assert_int_eq(0, afb_session_init(10, 0, GOOD_UUID));
-	ck_assert_str_eq(GOOD_UUID, afb_session_initial_token());
-	ck_assert_int_eq(-1, afb_session_init(10, 0, BAD_UUID));
-	ck_assert_int_eq(errno, EINVAL);
+	ck_assert_int_eq(0, afb_session_init(0, 0));
+	ck_assert_int_eq(0, afb_session_init(200, 0));
 }
 END_TEST
 
@@ -45,7 +41,7 @@ START_TEST (check_creation)
 	struct afb_session *s, *x;
 
 	/* init */
-	ck_assert_int_eq(0, afb_session_init(10, 3600, GOOD_UUID));
+	ck_assert_int_eq(0, afb_session_init(10, 3600));
 
 	/* create a session */
 	s = afb_session_create(AFB_SESSION_TIMEOUT_DEFAULT);
@@ -83,7 +79,7 @@ END_TEST
 START_TEST (check_capacity)
 {
 	struct afb_session *s[3];
-	ck_assert_int_eq(0, afb_session_init(2, 3600, GOOD_UUID));
+	ck_assert_int_eq(0, afb_session_init(2, 3600));
 	s[0] = afb_session_create(AFB_SESSION_TIMEOUT_DEFAULT);
 	ck_assert(s[0]);
 	s[1] = afb_session_create(AFB_SESSION_TIMEOUT_DEFAULT);
@@ -124,7 +120,7 @@ START_TEST (check_cookies)
 	int i, j;
 
 	/* init */
-	ck_assert_int_eq(0, afb_session_init(10, 3600, GOOD_UUID));
+	ck_assert_int_eq(0, afb_session_init(10, 3600));
 
 	/* create a session */
 	s = afb_session_create(AFB_SESSION_TIMEOUT_DEFAULT);
@@ -235,7 +231,7 @@ START_TEST (check_hooking)
 	struct afb_session *s;
 
 	/* init */
-	ck_assert_int_eq(0, afb_session_init(10, 3600, GOOD_UUID));
+	ck_assert_int_eq(0, afb_session_init(10, 3600));
 
 	/* create the hooking */
 	hs = afb_hook_create_session(NULL, afb_hook_flags_session_all, &hookitf, NULL);

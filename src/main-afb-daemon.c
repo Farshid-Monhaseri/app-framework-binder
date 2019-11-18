@@ -544,7 +544,7 @@ static char **instanciate_command_args(struct json_object *exec, const char *por
 
 static int execute_command()
 {
-	struct json_object *exec, *oport;
+	struct json_object *exec, *oport, *otok;
 	struct sigaction siga;
 	char port[20];
 	const char *token;
@@ -579,7 +579,10 @@ static int execute_command()
 	}
 	else {
 		/* instantiate arguments and environment */
-		token = afb_session_initial_token();
+		if (json_object_object_get_ex(main_config, "token", &otok))
+			token = json_object_get_string(otok);
+		else
+			token = SUBST_STR"p";
 		args = instanciate_command_args(exec, port, token);
 		if (args && instanciate_environ(port, token) >= 0) {
 			/* run */
@@ -769,7 +772,7 @@ static void start(int signum, void *arg)
 	}
 
 	/* initialize session handling */
-	if (afb_session_init(max_session_count, session_timeout, token)) {
+	if (afb_session_init(max_session_count, session_timeout)) {
 		ERROR("initialisation of session manager failed");
 		goto error;
 	}
@@ -801,7 +804,7 @@ static void start(int signum, void *arg)
 			goto error;
 		}
 		if (addenv_int("AFB_PORT", http_port)
-		 || addenv("AFB_TOKEN", afb_session_initial_token())) {
+		 || addenv("AFB_TOKEN", token?:"")) {
 			ERROR("can't set HTTP environment");
 			goto error;
 		}
@@ -894,7 +897,7 @@ static void start(int signum, void *arg)
 
 	/* run the command */
 	afb_debug("start-exec");
-	if (execute_command() < 0)
+	if (execute_command(http_port, token) < 0)
 		goto error;
 
 	/* ready */
