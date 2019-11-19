@@ -109,6 +109,8 @@ mk $R/bin/test-session
 
 mk $R/bin/test-wrap-json
 
+mk $R/bin/test-u16id
+
 echo '
 ##########################################################
 # true life test: run parts as direct client

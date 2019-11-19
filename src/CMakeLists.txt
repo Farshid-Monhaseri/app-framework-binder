@@ -124,6 +124,7 @@ SET(AFB_LIB_SOURCES
 	sig-monitor.c
 	subpath.c
 	systemd.c
+	u16id.c
 	uuid.c
 	verbose.c
 	watchdog.c

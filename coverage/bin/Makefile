@@ -22,7 +22,8 @@ bugs = $(foreach i,\
 tests = \
 	test-apiset \
 	test-session \
-	test-wrap-json
+	test-wrap-json \
+	test-u16id
 
 targets = \
 	afb-daemon-nocov \
@@ -139,6 +140,10 @@ test-session: $(tstdir)/session/test-session.c $(afb_lib_obj)
 test-wrap-json: $(tstdir)/session/test-session.c $(afb_lib_obj)
 	@echo creation of $@
 	@gcc -o $@ $(tstdir)/wrap-json/test-wrap-json.c $(afb_lib_obj) --coverage $(tst_defs) $(tst_flags)
+
+test-u16id: $(tstdir)/u16id/test-u16id.c $(afb_lib_obj)
+	@echo creation of $@
+	@gcc -o $@ $(tstdir)/u16id/test-u16id.c $(afb_lib_obj) --coverage $(tst_defs) $(tst_flags)
 
 #======================================================================================
 # create bindings

@@ -9,6 +9,7 @@ bin/afb-daemon-nocov
 bin/test-apiset
 bin/test-session
 bin/test-wrap-json
+bin/test-u16id
 bin/*.o
 bin/*.so
 bin/*.gcda
