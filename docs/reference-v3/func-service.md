@@ -1,7 +1,7 @@
 Functions of class **afb_service**
 ==============================
 
-All the functions of the class **afb_daemon** use the default api.
+All the functions of the class **afb_service** use the default api.
 
 All these function are deprecated, try to use functions of class **afb_api** instead.
 
