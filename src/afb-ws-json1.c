@@ -47,7 +47,7 @@ struct afb_wsreq;
 /* predeclaration of websocket callbacks */
 static void aws_on_hangup_cb(void *closure, struct afb_wsj1 *wsj1);
 static void aws_on_call_cb(void *closure, const char *api, const char *verb, struct afb_wsj1_msg *msg);
-static void aws_on_push_cb(void *closure, const char *event, int eventid, struct json_object *object);
+static void aws_on_push_cb(void *closure, const char *event, uint16_t eventid, struct json_object *object);
 static void aws_on_broadcast_cb(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop);
 
 /* predeclaration of wsreq callbacks */
@@ -235,7 +235,7 @@ static void aws_on_event(struct afb_ws_json1 *aws, const char *event, struct jso
 	afb_wsj1_send_event_j(aws->wsj1, event, afb_msg_json_event(event, object));
 }
 
-static void aws_on_push_cb(void *closure, const char *event, int eventid, struct json_object *object)
+static void aws_on_push_cb(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	aws_on_event(closure, event, object);
 }

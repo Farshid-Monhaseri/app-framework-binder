@@ -316,7 +316,7 @@ static struct json_object *client_api_describe_cb(void * closure)
 
 /******************* server part: manage events **********************************/
 
-static void server_event_add_cb(void *closure, const char *event, int eventid)
+static void server_event_add_cb(void *closure, const char *event, uint16_t eventid)
 {
 	struct afb_stub_ws *stubws = closure;
 
@@ -324,7 +324,7 @@ static void server_event_add_cb(void *closure, const char *event, int eventid)
 		afb_proto_ws_server_event_create(stubws->proto, event, eventid);
 }
 
-static void server_event_remove_cb(void *closure, const char *event, int eventid)
+static void server_event_remove_cb(void *closure, const char *event, uint16_t eventid)
 {
 	struct afb_stub_ws *stubws = closure;
 
@@ -332,7 +332,7 @@ static void server_event_remove_cb(void *closure, const char *event, int eventid
 		afb_proto_ws_server_event_remove(stubws->proto, event, eventid);
 }
 
-static void server_event_push_cb(void *closure, const char *event, int eventid, struct json_object *object)
+static void server_event_push_cb(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	struct afb_stub_ws *stubws = closure;
 

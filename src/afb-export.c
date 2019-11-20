@@ -1206,7 +1206,7 @@ static const struct afb_api_x3_itf hooked_api_x3_itf = {
 /*
  * Propagates the event to the service
  */
-static void listener_of_events(void *closure, const char *event, int eventid, struct json_object *object)
+static void listener_of_events(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	const struct globset_handler *handler;
 	void (*callback)(void *, const char*, struct json_object*, struct afb_api_x3*);
@@ -1250,7 +1250,7 @@ static void listener_of_events(void *closure, const char *event, int eventid, st
 	json_object_put(object);
 }
 
-static void listener_of_pushed_events(void *closure, const char *event, int eventid, struct json_object *object)
+static void listener_of_pushed_events(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	listener_of_events(closure, event, eventid, object);
 }

@@ -56,7 +56,7 @@ struct afb_evt_listener {
 	pthread_rwlock_t rwlock;
 
 	/* count of reference to the listener */
-	int refcount;
+	uint16_t refcount;
 };
 
 /*
@@ -82,10 +82,10 @@ struct afb_evtid {
 #endif
 
 	/* refcount */
-	int refcount;
+	uint16_t refcount;
 
 	/* id of the event */
-	int id;
+	uint16_t id;
 
 	/* has client? */
 	int has_client;
@@ -176,8 +176,8 @@ static struct afb_evt_listener *listeners = NULL;
 /* handling id of events */
 static pthread_rwlock_t events_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 static struct afb_evtid *evtids = NULL;
-static int event_id_counter = 0;
-static int event_id_wrapped = 0;
+static uint16_t event_genid = 0;
+static uint16_t event_count = 0;
 
 /* head of uniqueness of events */
 #if !defined(EVENT_BROADCAST_HOP_MAX)
@@ -545,6 +545,7 @@ struct afb_evtid *afb_evt_evtid_create(const char *fullname)
 {
 	size_t len;
 	struct afb_evtid *evtid, *oevt;
+	uint16_t id;
 
 	/* allocates the event */
 	len = strlen(fullname);
@@ -554,15 +555,20 @@ struct afb_evtid *afb_evt_evtid_create(const char *fullname)
 
 	/* allocates the id */
 	pthread_rwlock_wrlock(&events_rwlock);
+	if (event_count == UINT16_MAX) {
+		pthread_rwlock_unlock(&events_rwlock);
+		free(evtid);
+		ERROR("Can't create more events");
+		return NULL;
+	}
+	event_count++;
 	do {
-		if (++event_id_counter < 0) {
-			event_id_wrapped = 1;
-			event_id_counter = 1024; /* heuristic: small numbers are not destroyed */
-		}
-		if (!event_id_wrapped)
-			break;
+		/* TODO add a guard (counting number of event created) */
+		id = ++event_genid;
+		if (!id)
+			id = event_genid = 1;
 		oevt = evtids;
-		while(oevt != NULL && oevt->id != event_id_counter)
+		while(oevt != NULL && oevt->id != id)
 			oevt = oevt->next;
 	} while (oevt != NULL);
 
@@ -571,7 +577,7 @@ struct afb_evtid *afb_evt_evtid_create(const char *fullname)
 	evtid->next = evtids;
 	evtid->refcount = 1;
 	evtid->watchs = NULL;
-	evtid->id = event_id_counter;
+	evtid->id = id;
 	evtid->has_client = 0;
 	pthread_rwlock_init(&evtid->rwlock, NULL);
 	evtids = evtid;
@@ -649,8 +655,10 @@ void afb_evt_evtid_unref(struct afb_evtid *evtid)
 		prv = &evtids;
 		while (*prv && !(found = (*prv == evtid)))
 			prv = &(*prv)->next;
-		if (found)
+		if (found) {
 			*prv = evtid->next;
+			event_count--;
+		}
 		pthread_rwlock_unlock(&events_rwlock);
 
 		/* destroys the event */
@@ -720,7 +728,7 @@ const char *afb_evt_evtid_hooked_name(struct afb_evtid *evtid)
 /*
  * Returns the id of the 'event'
  */
-int afb_evt_evtid_id(struct afb_evtid *evtid)
+uint16_t afb_evt_evtid_id(struct afb_evtid *evtid)
 {
 	return evtid->id;
 }
@@ -943,7 +951,7 @@ const char *afb_evt_event_x2_fullname(struct afb_event_x2 *eventid)
 /*
  * Returns the id of the 'eventid'
  */
-int afb_evt_event_x2_id(struct afb_event_x2 *eventid)
+uint16_t afb_evt_event_x2_id(struct afb_event_x2 *eventid)
 {
 	struct afb_evtid *evtid = afb_evt_event_x2_to_evtid(eventid);
 	return evtid ? evtid->id : 0;

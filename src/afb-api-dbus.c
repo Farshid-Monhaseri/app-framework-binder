@@ -636,9 +636,9 @@ error:
 
 /******************* event structures for server part **********************************/
 
-static void afb_api_dbus_server_event_add(void *closure, const char *event, int eventid);
-static void afb_api_dbus_server_event_remove(void *closure, const char *event, int eventid);
-static void afb_api_dbus_server_event_push(void *closure, const char *event, int eventid, struct json_object *object);
+static void afb_api_dbus_server_event_add(void *closure, const char *event, uint16_t eventid);
+static void afb_api_dbus_server_event_remove(void *closure, const char *event, uint16_t eventid);
+static void afb_api_dbus_server_event_push(void *closure, const char *event, uint16_t eventid, struct json_object *object);
 static void afb_api_dbus_server_event_broadcast(void *closure, const char *event, struct json_object *object, const uuid_binary_t uuid, uint8_t hop);
 
 /* the interface for events broadcasting */
@@ -904,17 +904,17 @@ end:
 	sd_bus_message_unref(msg);
 }
 
-static void afb_api_dbus_server_event_add(void *closure, const char *event, int eventid)
+static void afb_api_dbus_server_event_add(void *closure, const char *event, uint16_t eventid)
 {
 	afb_api_dbus_server_event_send(closure, '+', event, eventid, "", 0);
 }
 
-static void afb_api_dbus_server_event_remove(void *closure, const char *event, int eventid)
+static void afb_api_dbus_server_event_remove(void *closure, const char *event, uint16_t eventid)
 {
 	afb_api_dbus_server_event_send(closure, '-', event, eventid, "", 0);
 }
 
-static void afb_api_dbus_server_event_push(void *closure, const char *event, int eventid, struct json_object *object)
+static void afb_api_dbus_server_event_push(void *closure, const char *event, uint16_t eventid, struct json_object *object)
 {
 	const char *data = json_object_to_json_string_ext(object, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE);
 	afb_api_dbus_server_event_send(closure, '!', event, eventid, data, 0);
