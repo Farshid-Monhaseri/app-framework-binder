@@ -61,6 +61,9 @@ static const char short_key_for_token[] = "token";
 static const char long_key_for_reqid[] = "x-afb-reqid";
 static const char short_key_for_reqid[] = "reqid";
 
+static const char key_for_bearer[] = "Bearer";
+static const char key_for_access_token[] = "access_token";
+
 static char *cookie_name = NULL;
 static char *cookie_setter = NULL;
 static char *tmp_pattern = NULL;
@@ -738,11 +741,10 @@ const char *afb_hreq_get_header(struct afb_hreq *hreq, const char *name)
 
 const char *afb_hreq_get_authorization_bearer(struct afb_hreq *hreq)
 {
-	static const char bearer[] = "Bearer";
 	const char *value = afb_hreq_get_header(hreq, MHD_HTTP_HEADER_AUTHORIZATION);
 	if (value) {
-		if (strncasecmp(value, bearer, sizeof bearer - 1) == 0) {
-			value += sizeof bearer - 1;
+		if (strncasecmp(value, key_for_bearer, sizeof key_for_bearer - 1) == 0) {
+			value += sizeof key_for_bearer - 1;
 			if (isblank(*value++)) {
 				while (isblank(*value))
 					value++;
@@ -981,11 +983,14 @@ int afb_hreq_init_context(struct afb_hreq *hreq)
 	/* get the authorisation token */
 	token = afb_hreq_get_authorization_bearer(hreq);
 	if (token == NULL) {
-		token = afb_hreq_get_header(hreq, long_key_for_token);
+		token = afb_hreq_get_argument(hreq, key_for_access_token);
 		if (token == NULL) {
-			token = afb_hreq_get_argument(hreq, long_key_for_token);
-			if (token == NULL)
-				token = afb_hreq_get_argument(hreq, short_key_for_token);
+			token = afb_hreq_get_header(hreq, long_key_for_token);
+			if (token == NULL) {
+				token = afb_hreq_get_argument(hreq, long_key_for_token);
+				if (token == NULL)
+					token = afb_hreq_get_argument(hreq, short_key_for_token);
+			}
 		}
 	}
 
