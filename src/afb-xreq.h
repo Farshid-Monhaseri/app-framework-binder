@@ -96,8 +96,12 @@ extern struct json_object *afb_xreq_json(struct afb_xreq *xreq);
 extern void afb_xreq_reply(struct afb_xreq *xreq, struct json_object *obj, const char *error, const char *info);
 extern void afb_xreq_reply_f(struct afb_xreq *xreq, struct json_object *obj, const char *error, const char *info, ...);
 
-extern void afb_xreq_reply_unknown_api(struct afb_xreq *xreq);
-extern void afb_xreq_reply_unknown_verb(struct afb_xreq *xreq);
+extern int afb_xreq_reply_unknown_api(struct afb_xreq *xreq);
+extern int afb_xreq_reply_unknown_verb(struct afb_xreq *xreq);
+
+extern int afb_xreq_reply_invalid_token(struct afb_xreq *xreq);
+extern int afb_xreq_reply_insufficient_scope(struct afb_xreq *xreq, const char *scope);
+
 
 extern const char *afb_xreq_raw(struct afb_xreq *xreq, size_t *size);
 

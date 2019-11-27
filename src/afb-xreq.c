@@ -43,6 +43,7 @@
 #include "afb-hook.h"
 #include "afb-msg-json.h"
 #include "afb-xreq.h"
+#include "afb-error-text.h"
 
 #include "jobs.h"
 #include "verbose.h"
@@ -52,7 +53,7 @@
 static void xreq_finalize(struct afb_xreq *xreq)
 {
 	if (!xreq->replied)
-		afb_xreq_reply(xreq, NULL, "error", "no reply");
+		afb_xreq_reply(xreq, NULL, afb_error_text_not_replied, NULL);
 #if WITH_AFB_HOOK
 	if (xreq->hookflags)
 		afb_hook_xreq_end(xreq);
@@ -728,6 +729,34 @@ int afb_xreq_legacy_subcall_sync(struct afb_xreq *xreq, const char *api, const c
 	return afb_req_x2_subcall_sync_legacy(xreq_to_req_x2(xreq), api, verb, args, result);
 }
 
+int afb_xreq_reply_unknown_api(struct afb_xreq *xreq)
+{
+	afb_xreq_reply_f(xreq, NULL, afb_error_text_unknown_api, "api %s not found (for verb %s)", xreq->request.called_api, xreq->request.called_verb);
+	errno = EINVAL;
+	return -1;
+}
+
+int afb_xreq_reply_unknown_verb(struct afb_xreq *xreq)
+{
+	afb_xreq_reply_f(xreq, NULL, afb_error_text_unknown_verb, "verb %s unknown within api %s", xreq->request.called_verb, xreq->request.called_api);
+	errno = EINVAL;
+	return -1;
+}
+
+int afb_xreq_reply_invalid_token(struct afb_xreq *xreq)
+{
+	afb_xreq_reply(xreq, NULL, afb_error_text_invalid_token, "invalid token"); /* TODO: or "no token" */
+	errno = EINVAL;
+	return -1;
+}
+
+int afb_xreq_reply_insufficient_scope(struct afb_xreq *xreq, const char *scope)
+{
+	afb_xreq_reply(xreq, NULL, afb_error_text_insufficient_scope, scope ?: "insufficient scope");
+	errno = EPERM;
+	return -1;
+}
+
 #if WITH_LEGACY_BINDING_V1
 static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
 {
@@ -736,28 +765,20 @@ static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
 	if ((sessionflags & (AFB_SESSION_CLOSE_X1|AFB_SESSION_RENEW_X1|AFB_SESSION_CHECK_X1|AFB_SESSION_LOA_EQ_X1)) != 0) {
 		if (!afb_context_check(&xreq->context)) {
 			afb_context_close(&xreq->context);
-			afb_xreq_reply_f(xreq, NULL, "denied", "invalid token's identity");
-			errno = EINVAL;
-			return -1;
+			return afb_xreq_reply_invalid_token(xreq);
 		}
 	}
 
 	if ((sessionflags & AFB_SESSION_LOA_GE_X1) != 0) {
 		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
-		if (!afb_context_check_loa(&xreq->context, loa)) {
-			afb_xreq_reply_f(xreq, NULL, "denied", "invalid LOA");
-			errno = EPERM;
-			return -1;
-		}
+		if (!afb_context_check_loa(&xreq->context, loa))
+			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
 	}
 
 	if ((sessionflags & AFB_SESSION_LOA_LE_X1) != 0) {
 		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
-		if (afb_context_check_loa(&xreq->context, loa + 1)) {
-			afb_xreq_reply_f(xreq, NULL, "denied", "invalid LOA");
-			errno = EPERM;
-			return -1;
-		}
+		if (afb_context_check_loa(&xreq->context, loa + 1))
+			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
 	}
 
 	if ((sessionflags & AFB_SESSION_CLOSE_X1) != 0) {
@@ -776,28 +797,19 @@ static int xreq_session_check_apply_v2(struct afb_xreq *xreq, uint32_t sessionfl
 	if (sessionflags != 0) {
 		if (!afb_context_check(&xreq->context)) {
 			afb_context_close(&xreq->context);
-			afb_xreq_reply_f(xreq, NULL, "denied", "invalid token's identity");
-			errno = EINVAL;
-			return -1;
+			return afb_xreq_reply_invalid_token(xreq);
 		}
 	}
 
 	loa = (int)(sessionflags & AFB_SESSION_LOA_MASK_X2);
-	if (loa && !afb_context_check_loa(&xreq->context, loa)) {
-		afb_xreq_reply_f(xreq, NULL, "denied", "invalid LOA");
-		errno = EPERM;
-		return -1;
-	}
+	if (loa && !afb_context_check_loa(&xreq->context, loa))
+		return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
 
-	if (auth && !afb_auth_check(xreq, auth)) {
-		afb_xreq_reply_f(xreq, NULL, "denied", "authorisation refused");
-		errno = EPERM;
-		return -1;
-	}
+	if (auth && !afb_auth_check(xreq, auth))
+		return afb_xreq_reply_insufficient_scope(xreq, NULL /* TODO */);
 
-	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0) {
+	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0)
 		afb_context_close(&xreq->context);
-	}
 
 	return 0;
 }
@@ -841,16 +853,6 @@ void afb_xreq_init(struct afb_xreq *xreq, const struct afb_xreq_query_itf *query
 	xreq->queryitf = queryitf;
 }
 
-void afb_xreq_reply_unknown_api(struct afb_xreq *xreq)
-{
-	afb_xreq_reply_f(xreq, NULL, "unknown-api", "api %s not found (for verb %s)", xreq->request.called_api, xreq->request.called_verb);
-}
-
-void afb_xreq_reply_unknown_verb(struct afb_xreq *xreq)
-{
-	afb_xreq_reply_f(xreq, NULL, "unknown-verb", "verb %s unknown within api %s", xreq->request.called_verb, xreq->request.called_api);
-}
-
 #if WITH_AFB_HOOK
 static void init_hooking(struct afb_xreq *xreq)
 {
@@ -872,7 +874,7 @@ static void process_async(int signum, void *arg)
 
 	if (signum != 0) {
 		/* emit the error (assumes that hooking is initialised) */
-		afb_xreq_reply_f(xreq, NULL, "aborted", "signal %s(%d) caught", strsignal(signum), signum);
+		afb_xreq_reply_f(xreq, NULL, afb_error_text_aborted, "signal %s(%d) caught", strsignal(signum), signum);
 	} else {
 #if WITH_AFB_HOOK
 		/* init hooking */

@@ -49,6 +49,7 @@
 #include "afb-session.h"
 #include "afb-xreq.h"
 #include "afb-calls.h"
+#include "afb-error-text.h"
 
 #include "systemd.h"
 #include "jobs.h"
@@ -1818,7 +1819,7 @@ static void api_call_cb(void *closure, struct afb_xreq *xreq)
 		afb_api_v3_process_call(export->desc.v3, xreq);
 		break;
 	default:
-		afb_xreq_reply(xreq, NULL, "bad-api-type", NULL);
+		afb_xreq_reply(xreq, NULL, afb_error_text_internal_error, NULL);
 		break;
 	}
 }

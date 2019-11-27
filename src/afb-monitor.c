@@ -31,6 +31,7 @@
 #include "afb-xreq.h"
 #include "afb-trace.h"
 #include "afb-session.h"
+#include "afb-error-text.h"
 #include "verbose.h"
 #include "wrap-json.h"
 
@@ -449,7 +450,7 @@ end:
 #else
 static void f_trace(afb_req_t req)
 {
-	afb_req_reply(req, NULL, "not-available", NULL);
+	afb_req_reply(req, NULL, afb_error_text_not_available, NULL);
 }
 #endif
 

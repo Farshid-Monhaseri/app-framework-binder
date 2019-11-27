@@ -44,6 +44,7 @@
 #include "afb-evt.h"
 #include "afb-xreq.h"
 #include "afb-token.h"
+#include "afb-error-text.h"
 #include "verbose.h"
 #include "fdev.h"
 #include "jobs.h"
@@ -262,7 +263,7 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 
 	proto = client_get_proto(stubws);
 	if (proto == NULL) {
-		afb_xreq_reply(xreq, NULL, "disconnected", "server hung up");
+		afb_xreq_reply(xreq, NULL, afb_error_text_disconnected, NULL);
 		return;
 	}
 
@@ -279,7 +280,7 @@ static void client_api_call_cb(void * closure, struct afb_xreq *xreq)
 				xreq_on_behalf_cred_export(xreq));
 	}
 	if (rc < 0) {
-		afb_xreq_reply(xreq, NULL, "internal", "can't send message");
+		afb_xreq_reply(xreq, NULL, afb_error_text_internal_error, "can't send message");
 		afb_xreq_unhooked_unref(xreq);
 	}
 }
@@ -539,7 +540,7 @@ out_of_memory:
 no_session:
 	json_object_put(args);
 	afb_stub_ws_unref(stubws);
-	afb_proto_ws_call_reply(call, NULL, "internal-error", NULL);
+	afb_proto_ws_call_reply(call, NULL, afb_error_text_internal_error, NULL);
 	afb_proto_ws_call_unref(call);
 }
 

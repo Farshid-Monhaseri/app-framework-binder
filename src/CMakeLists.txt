@@ -88,6 +88,7 @@ SET(AFB_LIB_SOURCES
 	afb-context.c
 	afb-cred.c
 	afb-debug.c
+	afb-error-text.c
 	afb-evt.c
 	afb-export.c
 	afb-fdev.c

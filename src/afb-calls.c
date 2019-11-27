@@ -34,6 +34,7 @@
 #include "afb-msg-json.h"
 #include "afb-session.h"
 #include "afb-xreq.h"
+#include "afb-error-text.h"
 
 #include "jobs.h"
 #include "verbose.h"
@@ -110,10 +111,6 @@ struct callreq
 
 /******************************************************************************/
 
-static const char _internal_error_[] = "internal-error";
-
-/******************************************************************************/
-
 static int store_reply(
 		struct json_object *iobject, const char *ierror, const char *iinfo,
 		struct json_object **sobject, char **serror, char **sinfo)
@@ -160,7 +157,7 @@ static void sync_enter(int signum, void *closure, struct jobloop *jobloop)
 		callreq->jobloop = jobloop;
 		afb_export_process_xreq(callreq->export, &callreq->xreq);
 	} else {
-		afb_xreq_reply(&callreq->xreq, NULL, _internal_error_, NULL);
+		afb_xreq_reply(&callreq->xreq, NULL, afb_error_text_internal_error, NULL);
 	}
 }
 
@@ -350,7 +347,7 @@ static int do_sync(
 
 	afb_xreq_unhooked_unref(&callreq->xreq);
 interr:
-	return store_reply(NULL, _internal_error_, NULL, object, error, info);
+	return store_reply(NULL, afb_error_text_internal_error, NULL, object, error, info);
 }
 
 /******************************************************************************/
@@ -372,7 +369,7 @@ static void do_async(
 	callreq = callreq_create(export, caller, api, verb, args, flags, mode);
 
 	if (!callreq)
-		final(closure, NULL, _internal_error_, NULL, (union callback){ .any = callback }, export, caller);
+		final(closure, NULL, afb_error_text_internal_error, NULL, (union callback){ .any = callback }, export, caller);
 	else {
 		callreq->callback.any = callback;
 		callreq->closure = closure;
@@ -559,7 +556,7 @@ static int do_legacy_sync(
 	afb_xreq_unhooked_unref(&callreq->xreq);
 interr:
 	if (object)
-		*object = afb_msg_json_reply(NULL, _internal_error_, NULL, NULL);
+		*object = afb_msg_json_reply(NULL, afb_error_text_internal_error, NULL, NULL);
 	return -1;
 }
 
@@ -583,7 +580,7 @@ static void do_legacy_async(
 	callreq = callreq_create(export, caller, api, verb, args, flags, mode);
 
 	if (!callreq) {
-		ie = afb_msg_json_reply(NULL, _internal_error_, NULL, NULL);
+		ie = afb_msg_json_reply(NULL, afb_error_text_internal_error, NULL, NULL);
 		final(closure, -1, ie, (union callback){ .any = callback }, export, caller);
 		json_object_put(ie);
 	} else {

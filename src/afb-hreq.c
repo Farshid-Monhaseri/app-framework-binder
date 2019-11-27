@@ -44,6 +44,7 @@
 #include "afb-session.h"
 #include "afb-cred.h"
 #include "afb-token.h"
+#include "afb-error-text.h"
 #include "verbose.h"
 #include "locale-root.h"
 
@@ -921,9 +922,13 @@ static struct json_object *req_json(struct afb_xreq *xreq)
 	return obj;
 }
 
+static inline const char *get_json_string(json_object *obj)
+{
+	return json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE);
+}
 static ssize_t send_json_cb(json_object *obj, uint64_t pos, char *buf, size_t max)
 {
-	ssize_t len = stpncpy(buf, json_object_to_json_string_ext(obj, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE)+pos, max) - buf;
+	ssize_t len = stpncpy(buf, get_json_string(obj)+pos, max) - buf;
 	return len ? : (ssize_t)MHD_CONTENT_READER_END_OF_STREAM;
 }
 
@@ -944,8 +949,20 @@ static void req_reply(struct afb_xreq *xreq, struct json_object *object, const c
 	if (reqid != NULL && json_object_object_get_ex(reply, "request", &sub))
 		json_object_object_add(sub, "reqid", json_object_new_string(reqid));
 
-	response = MHD_create_response_from_callback((uint64_t)strlen(json_object_to_json_string_ext(reply, JSON_C_TO_STRING_PLAIN|JSON_C_TO_STRING_NOSLASHESCAPE)), SIZE_RESPONSE_BUFFER, (void*)send_json_cb, reply, (void*)json_object_put);
-	afb_hreq_reply(hreq, MHD_HTTP_OK, response, NULL);
+	response = MHD_create_response_from_callback(
+			(uint64_t)strlen(get_json_string(reply)),
+			SIZE_RESPONSE_BUFFER,
+			(void*)send_json_cb,
+			reply,
+			(void*)json_object_put);
+
+	/* handle authorisation feedback */
+	if (error == afb_error_text_invalid_token)
+		afb_hreq_reply(hreq, MHD_HTTP_UNAUTHORIZED, response, MHD_HTTP_HEADER_WWW_AUTHENTICATE, "error=\"invalid_token\"", NULL);
+	else if (error == afb_error_text_insufficient_scope)
+		afb_hreq_reply(hreq, MHD_HTTP_FORBIDDEN, response, MHD_HTTP_HEADER_WWW_AUTHENTICATE, "error=\"insufficient_scope\"", NULL);
+	else
+		afb_hreq_reply(hreq, MHD_HTTP_OK, response, NULL);
 }
 
 void afb_hreq_call(struct afb_hreq *hreq, struct afb_apiset *apiset, const char *api, size_t lenapi, const char *verb, size_t lenverb)

@@ -47,6 +47,7 @@
 #include "afb-stub-ws.h"
 #include "afb-debug.h"
 #include "afb-fdev.h"
+#include "afb-error-text.h"
 #include "verbose.h"
 #include "wrap-json.h"
 #include "jobs.h"
@@ -340,11 +341,11 @@ static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 		if (wrap_json_unpack(args, "s", &uuid))
 			wrap_json_unpack(args, "{ss}", "uuid", &uuid);
 		if (!uuid)
-			afb_xreq_reply(xreq, NULL, "invalid", NULL);
+			afb_xreq_reply(xreq, NULL, afb_error_text_invalid_request, NULL);
 		else {
 			session = afb_session_search(uuid);
 			if (!session)
-				afb_xreq_reply(xreq, NULL, "not-found", NULL);
+				afb_xreq_reply(xreq, NULL, afb_error_text_unknown_session, NULL);
 			else {
 				afb_session_close(session);
 				afb_session_unref(session);
@@ -381,13 +382,13 @@ static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 		}
 		afb_req_success(req, NULL, NULL);
 #else
-		afb_req_reply(req, NULL, "not-available", NULL);
+		afb_req_reply(req, NULL, afb_error_text_not_available, NULL);
 #endif
 		break;
 	case Do:
 		sub = NULL;
 		if (wrap_json_unpack(args, "{ss ss s?o*}", "api", &api, "verb", &verb, "args", &sub))
-			afb_xreq_reply(xreq, NULL, "error", "bad request");
+			afb_xreq_reply(xreq, NULL, afb_error_text_invalid_request, NULL);
 		else {
 			xapi = afb_apiset_lookup_started(global.apiset, api, 1);
 			if (!xapi)
