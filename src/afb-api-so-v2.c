@@ -106,7 +106,7 @@ struct json_object *afb_api_so_v2_make_description_openAPIv3(const struct afb_bi
 		g = json_object_new_object();
 		json_object_object_add(f, "get", g);
 
-		a = afb_auth_json_v2(verb->auth, verb->session);
+		a = afb_auth_json_x2(verb->auth, verb->session);
 		if (a)
 			json_object_object_add(g, "x-permissions", a);
 

@@ -23,6 +23,9 @@
 #include <json-c/json.h>
 #include <afb/afb-auth.h>
 #include <afb/afb-session-x2.h>
+#if WITH_LEGACY_BINDING_V1
+#include <afb/afb-session-x1.h>
+#endif
 
 #include "afb-auth.h"
 #include "afb-context.h"
@@ -63,6 +66,63 @@ int afb_auth_check(struct afb_xreq *xreq, const struct afb_auth *auth)
 int afb_auth_has_permission(struct afb_xreq *xreq, const char *permission)
 {
 	return afb_cred_has_permission(xreq->cred, permission, &xreq->context);
+}
+
+#if WITH_LEGACY_BINDING_V1
+int afb_auth_check_and_set_session_x1(struct afb_xreq *xreq, int sessionflags)
+{
+	int loa;
+
+	if ((sessionflags & (AFB_SESSION_CLOSE_X1|AFB_SESSION_RENEW_X1|AFB_SESSION_CHECK_X1|AFB_SESSION_LOA_EQ_X1)) != 0) {
+		if (!afb_context_check(&xreq->context)) {
+			afb_context_close(&xreq->context);
+			return afb_xreq_reply_invalid_token(xreq);
+		}
+	}
+
+	if ((sessionflags & AFB_SESSION_LOA_GE_X1) != 0) {
+		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
+		if (!afb_context_check_loa(&xreq->context, loa))
+			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
+	}
+
+	if ((sessionflags & AFB_SESSION_LOA_LE_X1) != 0) {
+		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
+		if (afb_context_check_loa(&xreq->context, loa + 1))
+			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
+	}
+
+	if ((sessionflags & AFB_SESSION_CLOSE_X1) != 0) {
+		afb_context_change_loa(&xreq->context, 0);
+		afb_context_close(&xreq->context);
+	}
+
+	return 0;
+}
+#endif
+
+int afb_auth_check_and_set_session_x2(struct afb_xreq *xreq, uint32_t sessionflags, const struct afb_auth *auth)
+{
+	int loa;
+
+	if (sessionflags != 0) {
+		if (!afb_context_check(&xreq->context)) {
+			afb_context_close(&xreq->context);
+			return afb_xreq_reply_invalid_token(xreq);
+		}
+	}
+
+	loa = (int)(sessionflags & AFB_SESSION_LOA_MASK_X2);
+	if (loa && !afb_context_check_loa(&xreq->context, loa))
+		return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
+
+	if (auth && !afb_auth_check(xreq, auth))
+		return afb_xreq_reply_insufficient_scope(xreq, NULL /* TODO */);
+
+	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0)
+		afb_context_close(&xreq->context);
+
+	return 0;
 }
 
 /*********************************************************************************/
@@ -130,7 +190,7 @@ static struct json_object *addauth_or_array(struct json_object *o, const struct 
 	return o;
 }
 
-struct json_object *afb_auth_json_v2(const struct afb_auth *auth, int session)
+struct json_object *afb_auth_json_x2(const struct afb_auth *auth, uint32_t session)
 {
 	struct json_object *result = NULL;
 
@@ -152,3 +212,21 @@ struct json_object *afb_auth_json_v2(const struct afb_auth *auth, int session)
 	return result;
 }
 
+ 
+#if WITH_LEGACY_BINDING_V1
+struct json_object *afb_auth_json_x1(int session)
+{
+	struct json_object *result = NULL;
+
+	if (session & AFB_SESSION_CLOSE_X1)
+		result = addperm_key_valstr(result, "session", "close");
+	if (session & AFB_SESSION_CHECK_X1)
+		result = addperm_key_valstr(result, "session", "check");
+	if (session & AFB_SESSION_RENEW_X1)
+		result = addperm_key_valstr(result, "token", "refresh");
+	if (session & AFB_SESSION_LOA_MASK_X1)
+		result = addperm_key_valint(result, "LOA", (session >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1);
+
+	return result;
+}
+#endif

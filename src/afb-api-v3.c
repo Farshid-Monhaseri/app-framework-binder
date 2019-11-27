@@ -134,7 +134,7 @@ static struct json_object *describe_verb_v3(const struct afb_verb_v3 *verb)
 	g = json_object_new_object();
 	json_object_object_add(f, "get", g);
 
-	a = afb_auth_json_v2(verb->auth, verb->session);
+	a = afb_auth_json_x2(verb->auth, verb->session);
 	if (a)
 		json_object_object_add(g, "x-permissions", a);
 

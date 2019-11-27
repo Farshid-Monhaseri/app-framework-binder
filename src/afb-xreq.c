@@ -758,69 +758,12 @@ int afb_xreq_reply_insufficient_scope(struct afb_xreq *xreq, const char *scope)
 }
 
 #if WITH_LEGACY_BINDING_V1
-static int xreq_session_check_apply_v1(struct afb_xreq *xreq, int sessionflags)
-{
-	int loa;
-
-	if ((sessionflags & (AFB_SESSION_CLOSE_X1|AFB_SESSION_RENEW_X1|AFB_SESSION_CHECK_X1|AFB_SESSION_LOA_EQ_X1)) != 0) {
-		if (!afb_context_check(&xreq->context)) {
-			afb_context_close(&xreq->context);
-			return afb_xreq_reply_invalid_token(xreq);
-		}
-	}
-
-	if ((sessionflags & AFB_SESSION_LOA_GE_X1) != 0) {
-		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
-		if (!afb_context_check_loa(&xreq->context, loa))
-			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
-	}
-
-	if ((sessionflags & AFB_SESSION_LOA_LE_X1) != 0) {
-		loa = (sessionflags >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1;
-		if (afb_context_check_loa(&xreq->context, loa + 1))
-			return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
-	}
-
-	if ((sessionflags & AFB_SESSION_CLOSE_X1) != 0) {
-		afb_context_change_loa(&xreq->context, 0);
-		afb_context_close(&xreq->context);
-	}
-
-	return 0;
-}
-#endif
-
-static int xreq_session_check_apply_v2(struct afb_xreq *xreq, uint32_t sessionflags, const struct afb_auth *auth)
-{
-	int loa;
-
-	if (sessionflags != 0) {
-		if (!afb_context_check(&xreq->context)) {
-			afb_context_close(&xreq->context);
-			return afb_xreq_reply_invalid_token(xreq);
-		}
-	}
-
-	loa = (int)(sessionflags & AFB_SESSION_LOA_MASK_X2);
-	if (loa && !afb_context_check_loa(&xreq->context, loa))
-		return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
-
-	if (auth && !afb_auth_check(xreq, auth))
-		return afb_xreq_reply_insufficient_scope(xreq, NULL /* TODO */);
-
-	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0)
-		afb_context_close(&xreq->context);
-
-	return 0;
-}
-
-#if WITH_LEGACY_BINDING_V1
 void afb_xreq_call_verb_v1(struct afb_xreq *xreq, const struct afb_verb_desc_v1 *verb)
 {
 	if (!verb)
 		afb_xreq_reply_unknown_verb(xreq);
 	else
-		if (!xreq_session_check_apply_v1(xreq, verb->session))
+		if (afb_auth_check_and_set_session_x1(xreq, verb->session) >= 0)
 			verb->callback(xreq_to_req_x1(xreq));
 }
 #endif
@@ -831,7 +774,7 @@ void afb_xreq_call_verb_v2(struct afb_xreq *xreq, const struct afb_verb_v2 *verb
 	if (!verb)
 		afb_xreq_reply_unknown_verb(xreq);
 	else
-		if (!xreq_session_check_apply_v2(xreq, verb->session, verb->auth))
+		if (afb_auth_check_and_set_session_x2(xreq, verb->session, verb->auth) >= 0)
 			verb->callback(xreq_to_req_x1(xreq));
 }
 #endif
@@ -841,7 +784,7 @@ void afb_xreq_call_verb_v3(struct afb_xreq *xreq, const struct afb_verb_v3 *verb
 	if (!verb)
 		afb_xreq_reply_unknown_verb(xreq);
 	else
-		if (xreq_session_check_apply_v2(xreq, verb->session, verb->auth) >= 0)
+		if (afb_auth_check_and_set_session_x2(xreq, verb->session, verb->auth) >= 0)
 			verb->callback(xreq_to_req_x2(xreq));
 }
 

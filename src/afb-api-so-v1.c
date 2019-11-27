@@ -36,6 +36,7 @@
 #include "afb-context.h"
 #include "afb-api-so.h"
 #include "afb-xreq.h"
+#include "afb-auth.h"
 #include "verbose.h"
 
 /*
@@ -61,40 +62,6 @@ void afb_api_so_v1_process_call(struct afb_binding_v1 *binding, struct afb_xreq 
 
 	verb = search(binding, xreq->request.called_verb);
 	afb_xreq_call_verb_v1(xreq, verb);
-}
-
-static struct json_object *addperm(struct json_object *o, struct json_object *x)
-{
-	struct json_object *a;
-
-	if (!o)
-		return x;
-
-	if (!json_object_object_get_ex(o, "allOf", &a)) {
-		a = json_object_new_array();
-		json_object_array_add(a, o);
-		o = json_object_new_object();
-		json_object_object_add(o, "allOf", a);
-	}
-	json_object_array_add(a, x);
-	return o;
-}
-
-static struct json_object *addperm_key_val(struct json_object *o, const char *key, struct json_object *val)
-{
-	struct json_object *x = json_object_new_object();
-	json_object_object_add(x, key, val);
-	return addperm(o, x);
-}
-
-static struct json_object *addperm_key_valstr(struct json_object *o, const char *key, const char *val)
-{
-	return addperm_key_val(o, key, json_object_new_string(val));
-}
-
-static struct json_object *addperm_key_valint(struct json_object *o, const char *key, int val)
-{
-	return addperm_key_val(o, key, json_object_new_int(val));
 }
 
 struct json_object *afb_api_so_v1_make_description_openAPIv3(struct afb_binding_v1 *binding, const char *apiname)
@@ -124,15 +91,7 @@ struct json_object *afb_api_so_v1_make_description_openAPIv3(struct afb_binding_
 		g = json_object_new_object();
 		json_object_object_add(f, "get", g);
 
-		a = NULL;
-		if (verb->session & AFB_SESSION_CLOSE_X1)
-			a = addperm_key_valstr(a, "session", "close");
-		if (verb->session & AFB_SESSION_CHECK_X1)
-			a = addperm_key_valstr(a, "session", "check");
-		if (verb->session & AFB_SESSION_RENEW_X1)
-			a = addperm_key_valstr(a, "token", "refresh");
-		if (verb->session & AFB_SESSION_LOA_MASK_X1)
-			a = addperm_key_valint(a, "LOA", (verb->session >> AFB_SESSION_LOA_SHIFT_X1) & AFB_SESSION_LOA_MASK_X1);
+		a = afb_auth_json_x1(verb->session);
 		if (a)
 			json_object_object_add(g, "x-permissions", a);
 

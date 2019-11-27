@@ -24,4 +24,10 @@ struct json_object;
 extern int afb_auth_check(struct afb_xreq *xreq, const struct afb_auth *auth);
 extern int afb_auth_has_permission(struct afb_xreq *xreq, const char *permission);
 
-extern struct json_object *afb_auth_json_v2(const struct afb_auth *auth, int session);
+extern int afb_auth_check_and_set_session_x2(struct afb_xreq *xreq, uint32_t session, const struct afb_auth *auth);
+extern struct json_object *afb_auth_json_x2(const struct afb_auth *auth, uint32_t session);
+
+#if WITH_LEGACY_BINDING_V1
+extern int afb_auth_check_and_set_session_x1(struct afb_xreq *xreq, int session);
+extern struct json_object *afb_auth_json_x1(int session);
+#endif
