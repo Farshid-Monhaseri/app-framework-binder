@@ -28,8 +28,6 @@
 #include <sys/socket.h>
 
 #include "afb-cred.h"
-#include "afb-context.h"
-#include "afb-token.h"
 #include "verbose.h"
 
 #define MAX_LABEL_LENGTH  1024
@@ -219,61 +217,3 @@ struct afb_cred *afb_cred_import(const char *string)
 	}
 	return cred;
 }
-
-/*********************************************************************************/
-static const char *token_of_context(struct afb_context *context)
-{
-	return context && context->token ? afb_token_string(context->token) : "X";
-}
-
-/*********************************************************************************/
-#ifdef BACKEND_PERMISSION_IS_CYNARA
-
-#include <pthread.h>
-#include <cynara-client.h>
-
-static cynara *handle;
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-int afb_cred_has_permission(struct afb_cred *cred, const char *permission, struct afb_context *context)
-{
-	int rc;
-
-	if (!cred) {
-		/* case of permission for self */
-		return 1;
-	}
-	if (!permission) {
-		ERROR("Got a null permission!");
-		return 0;
-	}
-
-	/* cynara isn't reentrant */
-	pthread_mutex_lock(&mutex);
-
-	/* lazy initialisation */
-	if (!handle) {
-		rc = cynara_initialize(&handle, NULL);
-		if (rc != CYNARA_API_SUCCESS) {
-			handle = NULL;
-			ERROR("cynara initialisation failed with code %d", rc);
-			return 0;
-		}
-	}
-
-	/* query cynara permission */
-	rc = cynara_check(handle, cred->label, token_of_context(context), cred->user, permission);
-
-	pthread_mutex_unlock(&mutex);
-	return rc == CYNARA_API_ACCESS_ALLOWED;
-}
-
-/*********************************************************************************/
-#else
-int afb_cred_has_permission(struct afb_cred *cred, const char *permission, struct afb_context *context)
-{
-	WARNING("Granting permission %s by default of backend", permission ?: "(null)");
-	return !!permission;
-}
-#endif
-

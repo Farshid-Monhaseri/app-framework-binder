@@ -21,23 +21,11 @@
 
 struct afb_context;
 
-struct afb_cred
-{
-	int refcount;
-	uid_t uid;
-	gid_t gid;
-	pid_t pid;
-	const char *user;
-	const char *label;
-	const char *id;
-	const char *exported;
-};
+extern int afb_perm_check(struct afb_context *context, const char *permission);
 
-extern struct afb_cred *afb_cred_current();
-extern struct afb_cred *afb_cred_create(uid_t uid, gid_t gid, pid_t pid, const char *label);
-extern struct afb_cred *afb_cred_create_for_socket(int fd);
-extern struct afb_cred *afb_cred_addref(struct afb_cred *cred);
-extern void afb_cred_unref(struct afb_cred *cred);
-
-extern const char *afb_cred_export(struct afb_cred *cred);
-extern struct afb_cred *afb_cred_import(const char *string);
+extern void afb_perm_check_async(
+	struct afb_context *context,
+	const char *permission,
+	void (*callback)(void *closure, int status),
+	void *closure
+);

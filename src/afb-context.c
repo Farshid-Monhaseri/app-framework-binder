@@ -27,6 +27,7 @@
 #include "afb-context.h"
 #include "afb-token.h"
 #include "afb-cred.h"
+#include "afb-perm.h"
 #include "afb-permission-text.h"
 #include "verbose.h"
 
@@ -160,7 +161,17 @@ void afb_context_on_behalf_other_context(struct afb_context *context, struct afb
 
 int afb_context_has_permission(struct afb_context *context, const char *permission)
 {
-	return afb_cred_has_permission(context->credentials, permission, context);
+	return afb_perm_check(context, permission);
+}
+
+void afb_context_has_permission_async(
+	struct afb_context *context,
+	const char *permission,
+	void (*callback)(void *_closure, int _status),
+	void *closure
+)
+{
+	return afb_perm_check_async(context, permission, callback, closure);
 }
 
 const char *afb_context_uuid(struct afb_context *context)
@@ -191,9 +202,34 @@ void afb_context_close(struct afb_context *context)
 	context->closing = 1;
 }
 
-int afb_context_check(struct afb_context *context)
+struct chkctx {
+	struct afb_context *context;
+	void (*callback)(void *_closure, int _status);
+	void *closure;
+};
+
+static void check_context_cb(void *closure_chkctx, int status)
 {
+	struct chkctx *cc = closure_chkctx;
+	struct afb_context *context = cc->context;
+	void (*callback)(void*,int) = cc->callback;
+	void *closure = cc->closure;
+
+	free(cc);
+	if (status)
+		context->validated = 1;
+	else
+		context->invalidated = 1;
+	callback(closure, status);
+}
+
+static int check_context(
+	struct afb_context *context,
+	void (*callback)(void *_closure, int _status),
+	void *closure
+) {
 	int r;
+	struct chkctx *cc;
 
 	if (context->validated)
 		r = 1;
@@ -201,15 +237,42 @@ int afb_context_check(struct afb_context *context)
 		r = 0;
 	else {
 		if (context->super)
-			r = afb_context_check(context->super);
-		else
+			r = check_context(context->super, callback, closure);
+		else if (!callback)
 			r = afb_context_has_permission(context, afb_permission_token_valid);
+		else {
+			cc = malloc(sizeof *cc);
+			if (cc) {
+				cc->context = context;
+				cc->callback = callback;
+				cc->closure = closure;
+				afb_context_has_permission_async(context, afb_permission_token_valid, check_context_cb, cc);
+				return -1;
+			}
+			ERROR("out-of-memory");
+			r = 0;
+		}
 		if (r)
 			context->validated = 1;
 		else
 			context->invalidated = 1;
 	}
 	return r;
+}
+
+int afb_context_check(struct afb_context *context)
+{
+	return check_context(context, 0, 0);
+}
+
+void afb_context_check_async(
+	struct afb_context *context,
+	void (*callback)(void *_closure, int _status),
+	void *closure
+) {
+	int r = check_context(context, callback, closure);
+	if (r >= 0)
+		callback(closure, r);
 }
 
 static inline const void *loa_key(struct afb_context *context)

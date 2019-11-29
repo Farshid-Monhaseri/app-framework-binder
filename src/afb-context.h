@@ -59,10 +59,23 @@ extern void afb_context_change_cred(struct afb_context *context, struct afb_cred
 extern int afb_context_on_behalf_import(struct afb_context *context, const char *exported);
 extern const char *afb_context_on_behalf_export(struct afb_context *context);
 extern void afb_context_on_behalf_other_context(struct afb_context *context, struct afb_context *other);
+
 extern int afb_context_has_permission(struct afb_context *context, const char *permission);
+extern void afb_context_has_permission_async(
+	struct afb_context *context,
+	const char *permission,
+	void (*callback)(void *_closure, int _status),
+	void *closure
+);
+
+extern int afb_context_check(struct afb_context *context);
+extern void afb_context_check_async(
+	struct afb_context *context,
+	void (*callback)(void *_closure, int _status),
+	void *closure
+);
 
 extern void afb_context_close(struct afb_context *context);
-extern int afb_context_check(struct afb_context *context);
 extern int afb_context_check_loa(struct afb_context *context, unsigned loa);
 extern int afb_context_change_loa(struct afb_context *context, unsigned loa);
 extern unsigned afb_context_get_loa(struct afb_context *context);
