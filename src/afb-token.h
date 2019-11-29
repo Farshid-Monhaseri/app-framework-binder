@@ -23,6 +23,5 @@ extern int afb_token_get(struct afb_token **token, const char *tokenstring);
 extern struct afb_token *afb_token_addref(struct afb_token *token);
 extern void afb_token_unref(struct afb_token *token);
 
-extern int afb_token_check(struct afb_token *token);
 extern const char *afb_token_string(const struct afb_token *token);
 extern uint16_t afb_token_id(const struct afb_token *token);

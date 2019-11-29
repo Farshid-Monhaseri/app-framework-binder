@@ -148,18 +148,6 @@ void afb_token_unref(struct afb_token *token)
 }
 
 /**
- * Check whether the token is valid or not
- *
- * @param token the token to check
- * @return a boolean value: 0 if not valid, 1 if valid
- */
-int afb_token_check(struct afb_token *token)
-{
-	/* TODO */
-	return 1;
-}
-
-/**
  * Get the string value of the token
  *
  * @param token the token whose string value is queried

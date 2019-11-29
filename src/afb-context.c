@@ -41,25 +41,6 @@ static void init_context(struct afb_context *context, struct afb_session *sessio
 	context->api_key = NULL;
 	context->token = afb_token_addref(token);
 	context->credentials = afb_cred_addref(cred);
-
-	/* check the token */
-	if (token != NULL) {
-		if (afb_token_check(token))
-			context->validated = 1;
-		else
-			context->invalidated = 1;
-	}
-}
-
-void afb_context_init(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred)
-{
-	init_context(context, afb_session_addref(session), token, cred);
-}
-
-void afb_context_init_validated(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred)
-{
-	afb_context_init(context, session, token, cred);
-	context->validated = 1;
 }
 
 void afb_context_subinit(struct afb_context *context, struct afb_context *super)
@@ -70,6 +51,11 @@ void afb_context_subinit(struct afb_context *context, struct afb_context *super)
 	context->api_key = NULL;
 	context->token = afb_token_addref(super->token);
 	context->credentials = afb_cred_addref(super->credentials);
+}
+
+void afb_context_init(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred)
+{
+	init_context(context, afb_session_addref(session), token, cred);
 }
 
 int afb_context_connect(struct afb_context *context, const char *uuid, struct afb_token *token, struct afb_cred *cred)
@@ -93,6 +79,12 @@ int afb_context_connect_validated(struct afb_context *context, const char *uuid,
 	if (!rc)
 		context->validated = 1;
 	return rc;
+}
+
+void afb_context_init_validated(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred)
+{
+	afb_context_init(context, session, token, cred);
+	context->validated = 1;
 }
 
 void afb_context_disconnect(struct afb_context *context)
@@ -123,8 +115,6 @@ void afb_context_change_token(struct afb_context *context, struct afb_token *tok
 {
 	struct afb_token *otoken = context->token;
 	if (otoken != token) {
-		context->validated = 0;
-		context->invalidated = 0;
 		context->token = afb_token_addref(token);
 		afb_token_unref(otoken);
 	}
@@ -203,14 +193,23 @@ void afb_context_close(struct afb_context *context)
 
 int afb_context_check(struct afb_context *context)
 {
-	if (context->super)
-		return afb_context_check(context);
-	return context->validated;
-}
+	int r;
 
-int afb_context_check_loa(struct afb_context *context, unsigned loa)
-{
-	return afb_context_get_loa(context) >= loa;
+	if (context->validated)
+		r = 1;
+	else if (context->invalidated)
+		r = 0;
+	else {
+		if (context->super)
+			r = afb_context_check(context->super);
+		else
+			r = afb_context_has_permission(context, afb_permission_token_valid);
+		if (r)
+			context->validated = 1;
+		else
+			context->invalidated = 1;
+	}
+	return r;
 }
 
 static inline const void *loa_key(struct afb_context *context)
@@ -230,8 +229,12 @@ static inline unsigned ptr2loa(void *ptr)
 
 int afb_context_change_loa(struct afb_context *context, unsigned loa)
 {
-	if (!context->validated || loa > 7) {
+	if (loa > 7) {
 		errno = EINVAL;
+		return -1;
+	}
+	if (!afb_context_check(context)) {
+		errno = EPERM;
 		return -1;
 	}
 
@@ -242,4 +245,9 @@ unsigned afb_context_get_loa(struct afb_context *context)
 {
 	assert(context->session != NULL);
 	return ptr2loa(afb_session_get_cookie(context->session, loa_key(context)));
+}
+
+int afb_context_check_loa(struct afb_context *context, unsigned loa)
+{
+	return afb_context_get_loa(context) >= loa;
 }

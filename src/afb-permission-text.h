@@ -18,3 +18,4 @@
 #pragma once
 
 extern const char afb_permission_on_behalf_credential[];
+extern const char afb_permission_token_valid[];

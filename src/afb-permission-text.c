@@ -18,3 +18,4 @@
 #include "afb-permission-text.h"
 
 const char afb_permission_on_behalf_credential[] = "urn:AGL:permission:*:partner:on-behalf-credentials";
+const char afb_permission_token_valid[]          = "urn:AGL:token:valid";
