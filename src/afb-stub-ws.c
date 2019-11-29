@@ -145,7 +145,6 @@ static void server_req_destroy_cb(struct afb_xreq *xreq)
 	struct server_req *wreq = CONTAINER_OF_XREQ(struct server_req, xreq);
 
 	afb_context_disconnect(&wreq->xreq.context);
-	afb_cred_unref(wreq->xreq.cred);
 	json_object_put(wreq->xreq.json);
 	afb_proto_ws_call_unref(wreq->call);
 	afb_stub_ws_unref(wreq->stubws);
@@ -526,10 +525,10 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 	wreq->call = call;
 
 	/* init the context */
-	afb_context_init(&wreq->xreq.context, session, token);
+	afb_context_init(&wreq->xreq.context, session, token, stubws->cred);
+	afb_context_on_behalf_import(&wreq->xreq.context, user_creds);
 
 	/* makes the call */
-	wreq->xreq.cred = afb_cred_mixed_on_behalf_import(stubws->cred, &wreq->xreq.context, user_creds);
 	wreq->xreq.request.called_api = stubws->apiname;
 	wreq->xreq.request.called_verb = verb;
 	wreq->xreq.json = args;

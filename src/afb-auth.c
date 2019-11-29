@@ -30,10 +30,9 @@
 #include "afb-auth.h"
 #include "afb-context.h"
 #include "afb-xreq.h"
-#include "afb-cred.h"
 #include "verbose.h"
 
-int afb_auth_check(struct afb_xreq *xreq, const struct afb_auth *auth)
+int afb_auth_check(struct afb_context *context, const struct afb_auth *auth)
 {
 	switch (auth->type) {
 	default:
@@ -41,39 +40,35 @@ int afb_auth_check(struct afb_xreq *xreq, const struct afb_auth *auth)
 		return 0;
 
 	case afb_auth_Token:
-		return afb_context_check(&xreq->context);
+		return afb_context_check(context);
 
 	case afb_auth_LOA:
-		return afb_context_check_loa(&xreq->context, auth->loa);
+		return afb_context_check_loa(context, auth->loa);
 
 	case afb_auth_Permission:
-		return afb_auth_has_permission(xreq, auth->text);
+		return afb_context_has_permission(context, auth->text);
 
 	case afb_auth_Or:
-		return afb_auth_check(xreq, auth->first) || afb_auth_check(xreq, auth->next);
+		return afb_auth_check(context, auth->first) || afb_auth_check(context, auth->next);
 
 	case afb_auth_And:
-		return afb_auth_check(xreq, auth->first) && afb_auth_check(xreq, auth->next);
+		return afb_auth_check(context, auth->first) && afb_auth_check(context, auth->next);
 
 	case afb_auth_Not:
-		return !afb_auth_check(xreq, auth->first);
+		return !afb_auth_check(context, auth->first);
 
 	case afb_auth_Yes:
 		return 1;
 	}
 }
 
-int afb_auth_has_permission(struct afb_xreq *xreq, const char *permission)
-{
-	return afb_cred_has_permission(xreq->cred, permission, &xreq->context);
-}
 
 #if WITH_LEGACY_BINDING_V1
 int afb_auth_check_and_set_session_x1(struct afb_xreq *xreq, int sessionflags)
 {
 	int loa;
 
-	if ((sessionflags & (AFB_SESSION_CLOSE_X1|AFB_SESSION_RENEW_X1|AFB_SESSION_CHECK_X1|AFB_SESSION_LOA_EQ_X1)) != 0) {
+	if ((sessionflags & (AFB_SESSION_CLOSE_X1|AFB_SESSION_CHECK_X1|AFB_SESSION_LOA_EQ_X1)) != 0) {
 		if (!afb_context_check(&xreq->context)) {
 			afb_context_close(&xreq->context);
 			return afb_xreq_reply_invalid_token(xreq);
@@ -97,11 +92,11 @@ int afb_auth_check_and_set_session_x1(struct afb_xreq *xreq, int sessionflags)
 		afb_context_close(&xreq->context);
 	}
 
-	return 0;
+	return 1;
 }
 #endif
 
-int afb_auth_check_and_set_session_x2(struct afb_xreq *xreq, uint32_t sessionflags, const struct afb_auth *auth)
+int afb_auth_check_and_set_session_x2(struct afb_xreq *xreq, const struct afb_auth *auth, uint32_t sessionflags)
 {
 	int loa;
 
@@ -116,13 +111,13 @@ int afb_auth_check_and_set_session_x2(struct afb_xreq *xreq, uint32_t sessionfla
 	if (loa && !afb_context_check_loa(&xreq->context, loa))
 		return afb_xreq_reply_insufficient_scope(xreq, "invalid LOA");
 
-	if (auth && !afb_auth_check(xreq, auth))
+	if (auth && !afb_auth_check(&xreq->context, auth))
 		return afb_xreq_reply_insufficient_scope(xreq, NULL /* TODO */);
 
 	if ((sessionflags & AFB_SESSION_CLOSE_X2) != 0)
 		afb_context_close(&xreq->context);
 
-	return 0;
+	return 1;
 }
 
 /*********************************************************************************/

@@ -682,6 +682,7 @@ static void init_origin_creds(struct origin *origin)
 	gid_t gid;
 	pid_t pid;
 	const char *context;
+	struct afb_cred *ocred;
 
 	rc = sd_bus_get_name_creds(origin->api->sdbus, origin->name,
 			SD_BUS_CREDS_PID|SD_BUS_CREDS_UID|SD_BUS_CREDS_GID|SD_BUS_CREDS_SELINUX_CONTEXT,
@@ -689,13 +690,14 @@ static void init_origin_creds(struct origin *origin)
 	if (rc < 0)
 		origin->cred = NULL;
 	else {
-		afb_cred_unref(origin->cred);
 		sd_bus_creds_get_uid(c, &uid);
 		sd_bus_creds_get_gid(c, &gid);
 		sd_bus_creds_get_pid(c, &pid);
 		sd_bus_creds_get_selinux_context(c, &context);
+		ocred = origin->cred;
 		origin->cred = afb_cred_create(uid, gid, pid, context);
 		sd_bus_creds_unref(c);
+		afb_cred_unref(ocred);
 	}
 }
 
@@ -970,7 +972,7 @@ static int api_dbus_server_on_object_called(sd_bus_message *message, void *userd
 
 	/* connect to the context */
 	afb_xreq_init(&dreq->xreq, &afb_api_dbus_xreq_itf);
-	if (afb_context_connect(&dreq->xreq.context, uuid, NULL) < 0)
+	if (afb_context_connect(&dreq->xreq.context, uuid, NULL, NULL) < 0)
 		goto out_of_memory;
 	session = dreq->xreq.context.session;
 
@@ -980,8 +982,8 @@ static int api_dbus_server_on_object_called(sd_bus_message *message, void *userd
 		goto out_of_memory;
 
 	/* fulfill the request and emit it */
-	dreq->xreq.context.flags = flags;
-	dreq->xreq.cred = afb_cred_mixed_on_behalf_import(listener->origin->cred, &dreq->xreq.context, creds && creds[0] ? creds : NULL);
+	afb_context_change_cred(&dreq->xreq.context, listener->origin->cred);
+	afb_context_on_behalf_import(&dreq->xreq.context, creds);
 	dreq->message = sd_bus_message_ref(message);
 	dreq->json = json_tokener_parse_verbose(dreq->request, &jerr);
 	if (jerr != json_tokener_success) {

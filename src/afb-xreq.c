@@ -287,13 +287,14 @@ static struct afb_stored_req *xreq_legacy_store_cb(struct afb_req_x2 *closure)
 static int xreq_has_permission_cb(struct afb_req_x2 *closure, const char *permission)
 {
 	struct afb_xreq *xreq = xreq_from_req_x2(closure);
-	return afb_auth_has_permission(xreq, permission);
+	return afb_context_has_permission(&xreq->context, permission);
 }
 
 static char *xreq_get_application_id_cb(struct afb_req_x2 *closure)
 {
 	struct afb_xreq *xreq = xreq_from_req_x2(closure);
-	return xreq->cred && xreq->cred->id ? strdup(xreq->cred->id) : NULL;
+	struct afb_cred *cred = xreq->context.credentials;
+	return cred && cred->id ? strdup(cred->id) : NULL;
 }
 
 static void *xreq_context_make_cb(struct afb_req_x2 *closure, int replace, void *(*create_value)(void*), void (*free_value)(void*), void *create_closure)
@@ -305,20 +306,22 @@ static void *xreq_context_make_cb(struct afb_req_x2 *closure, int replace, void 
 static int xreq_get_uid_cb(struct afb_req_x2 *closure)
 {
 	struct afb_xreq *xreq = xreq_from_req_x2(closure);
-	return xreq->cred && xreq->cred->id ? (int)xreq->cred->uid : -1;
+	struct afb_cred *cred = xreq->context.credentials;
+	return cred && cred->id ? (int)cred->uid : -1;
 }
 
 static struct json_object *xreq_get_client_info_cb(struct afb_req_x2 *closure)
 {
 	struct afb_xreq *xreq = xreq_from_req_x2(closure);
+	struct afb_cred *cred = xreq->context.credentials;
 	struct json_object *r = json_object_new_object();
-	if (xreq->cred && xreq->cred->id) {
-		json_object_object_add(r, "uid", json_object_new_int(xreq->cred->uid));
-		json_object_object_add(r, "gid", json_object_new_int(xreq->cred->gid));
-		json_object_object_add(r, "pid", json_object_new_int(xreq->cred->pid));
-		json_object_object_add(r, "user", json_object_new_string(xreq->cred->user));
-		json_object_object_add(r, "label", json_object_new_string(xreq->cred->label));
-		json_object_object_add(r, "id", json_object_new_string(xreq->cred->id));
+	if (cred && cred->id) {
+		json_object_object_add(r, "uid", json_object_new_int(cred->uid));
+		json_object_object_add(r, "gid", json_object_new_int(cred->gid));
+		json_object_object_add(r, "pid", json_object_new_int(cred->pid));
+		json_object_object_add(r, "user", json_object_new_string(cred->user));
+		json_object_object_add(r, "label", json_object_new_string(cred->label));
+		json_object_object_add(r, "id", json_object_new_string(cred->id));
 	}
 	if (xreq->context.session) {
 		json_object_object_add(r, "uuid", json_object_new_string(afb_context_uuid(&xreq->context)?:""));
@@ -774,7 +777,7 @@ void afb_xreq_call_verb_v2(struct afb_xreq *xreq, const struct afb_verb_v2 *verb
 	if (!verb)
 		afb_xreq_reply_unknown_verb(xreq);
 	else
-		if (afb_auth_check_and_set_session_x2(xreq, verb->session, verb->auth) >= 0)
+		if (afb_auth_check_and_set_session_x2(xreq, verb->auth, verb->session) > 0)
 			verb->callback(xreq_to_req_x1(xreq));
 }
 #endif
@@ -784,7 +787,7 @@ void afb_xreq_call_verb_v3(struct afb_xreq *xreq, const struct afb_verb_v3 *verb
 	if (!verb)
 		afb_xreq_reply_unknown_verb(xreq);
 	else
-		if (afb_auth_check_and_set_session_x2(xreq, verb->session, verb->auth) >= 0)
+		if (afb_auth_check_and_set_session_x2(xreq, verb->auth, verb->session) > 0)
 			verb->callback(xreq_to_req_x2(xreq));
 }
 
@@ -901,6 +904,6 @@ end:
 
 const char *xreq_on_behalf_cred_export(struct afb_xreq *xreq)
 {
-	return xreq->caller ? afb_cred_export(xreq->cred) : NULL;
+	return afb_context_on_behalf_export(&xreq->context);
 }
 

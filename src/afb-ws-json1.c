@@ -213,14 +213,11 @@ static void aws_on_call_cb(void *closure, const char *api, const char *verb, str
 
 	/* init the context */
 	afb_xreq_init(&wsreq->xreq, &afb_ws_json1_xreq_itf);
-	afb_context_init(&wsreq->xreq.context, ws->session, ws->token);
-	if (!wsreq->xreq.context.invalidated)
-		wsreq->xreq.context.validated = 1;
+	afb_context_init(&wsreq->xreq.context, ws->session, ws->token, ws->cred);
 
 	/* fill and record the request */
 	afb_wsj1_msg_addref(msg);
 	wsreq->msgj1 = msg;
-	wsreq->xreq.cred = afb_cred_addref(ws->cred);
 	wsreq->xreq.request.called_api = api;
 	wsreq->xreq.request.called_verb = verb;
 	wsreq->xreq.json = afb_wsj1_msg_object_j(wsreq->msgj1);
@@ -259,7 +256,6 @@ static void wsreq_destroy(struct afb_xreq *xreq)
 
 	afb_context_disconnect(&wsreq->xreq.context);
 	afb_wsj1_msg_unref(wsreq->msgj1);
-	afb_cred_unref(wsreq->xreq.cred);
 	afb_ws_json1_unref(wsreq->aws);
 	free(wsreq);
 }

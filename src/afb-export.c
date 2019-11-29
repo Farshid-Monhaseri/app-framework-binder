@@ -41,7 +41,6 @@
 #endif
 #include "afb-api-v3.h"
 #include "afb-common.h"
-#include "afb-cred.h"
 #include "afb-evt.h"
 #include "afb-export.h"
 #include "afb-hook.h"
@@ -1953,6 +1952,6 @@ void afb_export_process_xreq(struct afb_export *export, struct afb_xreq *xreq)
 
 void afb_export_context_init(struct afb_export *export, struct afb_context *context)
 {
-	afb_context_init_validated(context, export->session);
+	afb_context_init_validated(context, export->session, NULL, NULL);
 }
 

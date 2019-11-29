@@ -42,7 +42,6 @@
 #include "afb-hreq.h"
 #include "afb-hsrv.h"
 #include "afb-session.h"
-#include "afb-cred.h"
 #include "afb-token.h"
 #include "afb-error-text.h"
 #include "verbose.h"
@@ -345,7 +344,6 @@ static void req_destroy(struct afb_xreq *xreq)
 	json_object_put(hreq->json);
 	free((char*)hreq->xreq.request.called_api);
 	free((char*)hreq->xreq.request.called_verb);
-	afb_cred_unref(hreq->xreq.cred);
 	free(hreq);
 }
 
@@ -1017,7 +1015,7 @@ int afb_hreq_init_context(struct afb_hreq *hreq)
 	if (token)
 		afb_token_get(&tok, token);
 
-	return afb_context_connect(&hreq->xreq.context, uuid, tok);
+	return afb_context_connect(&hreq->xreq.context, uuid, tok, NULL);
 }
 
 int afb_hreq_init_cookie(int port, const char *path, int maxage)

@@ -217,16 +217,18 @@ static void _hook_xreq_(const struct afb_xreq *xreq, const char *format, ...)
 
 static void hook_xreq_begin_cb(void *closure, const struct afb_hookid *hookid, const struct afb_xreq *xreq)
 {
-	if (!xreq->cred)
+	struct afb_cred *cred = xreq->context.credentials;
+
+	if (!cred)
 		_hook_xreq_(xreq, "BEGIN");
 	else
 		_hook_xreq_(xreq, "BEGIN uid=%d=%s gid=%d pid=%d label=%s id=%s",
-			(int)xreq->cred->uid,
-			xreq->cred->user,
-			(int)xreq->cred->gid,
-			(int)xreq->cred->pid,
-			xreq->cred->label?:"(null)",
-			xreq->cred->id?:"(null)"
+			(int)cred->uid,
+			cred->user,
+			(int)cred->gid,
+			(int)cred->pid,
+			cred->label?:"(null)",
+			cred->id?:"(null)"
 		);
 }
 

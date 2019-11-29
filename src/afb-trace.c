@@ -199,21 +199,23 @@ static void emit(void *closure, const struct afb_hookid *hookid, const char *typ
 
 static void hook_xreq(void *closure, const struct afb_hookid *hookid, const struct afb_xreq *xreq, const char *action, const char *format, ...)
 {
-	struct json_object *cred = NULL;
+	struct afb_cred *cred;
+	struct json_object *jcred = NULL;
 	const char *session = NULL;
 	va_list ap;
 
 	if (xreq->context.session)
 		session = afb_session_uuid(xreq->context.session);
 
-	if (xreq->cred)
-		wrap_json_pack(&cred, "{si ss si si ss* ss*}",
-						"uid", (int)xreq->cred->uid,
-						"user", xreq->cred->user,
-						"gid", (int)xreq->cred->gid,
-						"pid", (int)xreq->cred->pid,
-						"label", xreq->cred->label,
-						"id", xreq->cred->id
+	cred = xreq->context.credentials;
+	if (cred)
+		wrap_json_pack(&jcred, "{si ss si si ss* ss*}",
+						"uid", (int)cred->uid,
+						"user", cred->user,
+						"gid", (int)cred->gid,
+						"pid", (int)cred->pid,
+						"label", cred->label,
+						"id", cred->id
 					);
 	va_start(ap, format);
 	emit(closure, hookid, "request", "{si ss ss ss so* ss*}", format, ap,
@@ -221,7 +223,7 @@ static void hook_xreq(void *closure, const struct afb_hookid *hookid, const stru
 					"api", xreq->request.called_api,
 					"verb", xreq->request.called_verb,
 					"action", action,
-					"credentials", cred,
+					"credentials", jcred,
 					"session", session);
 	va_end(ap);
 }

@@ -43,6 +43,3 @@ extern int afb_cred_has_permission(struct afb_cred *cred, const char *permission
 
 extern const char *afb_cred_export(struct afb_cred *cred);
 extern struct afb_cred *afb_cred_import(const char *string);
-
-extern struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, struct afb_context *context, const char *exported);
-

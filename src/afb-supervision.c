@@ -34,7 +34,6 @@
 #define AFB_BINDING_VERSION 3
 #include <afb/afb-binding.h>
 
-#include "afb-cred.h"
 #include "afb-api.h"
 #include "afb-apiset.h"
 #include "afb-api-so-v2.h"
@@ -394,8 +393,7 @@ static void on_supervision_call(void *closure, struct afb_xreq *xreq)
 			if (!xapi)
 				afb_xreq_reply_unknown_api(xreq);
 			else {
-				afb_cred_unref(xreq->cred);
-				xreq->cred = NULL;
+				afb_context_change_cred(&xreq->context, NULL);
 				xreq->request.called_api = api;
 				xreq->request.called_verb = verb;
 				xreq->json = json_object_get(sub);

@@ -32,7 +32,6 @@
 #include "afb-token.h"
 #include "verbose.h"
 
-
 #define MAX_LABEL_LENGTH  1024
 
 #if !defined(NO_DEFAULT_PEERCRED) && !defined(ADD_DEFAULT_PEERCRED)
@@ -52,7 +51,6 @@
 #  define DEFAULT_PEERCRED_PID 0  /* no process */
 #endif
 
-static char on_behalf_credential_permission[] = "urn:AGL:permission:*:partner:on-behalf-credentials";
 static char export_format[] = "%x:%x:%x-%s";
 static char import_format[] = "%x:%x:%x-%n";
 
@@ -220,23 +218,6 @@ struct afb_cred *afb_cred_import(const char *string)
 		cred = NULL;
 	}
 	return cred;
-}
-
-struct afb_cred *afb_cred_mixed_on_behalf_import(struct afb_cred *cred, struct afb_context *context, const char *exported)
-
-{
-	struct afb_cred *imported;
-	if (exported) {
-		if (afb_cred_has_permission(cred, on_behalf_credential_permission, context)) {
-			imported = afb_cred_import(exported);
-			if (imported)
-				return imported;
-			ERROR("Can't import on behalf credentials: %m");
-		} else {
-			ERROR("On behalf credentials refused");
-		}
-	}
-	return afb_cred_addref(cred);
 }
 
 /*********************************************************************************/

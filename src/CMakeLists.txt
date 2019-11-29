@@ -100,6 +100,7 @@ SET(AFB_LIB_SOURCES
 	afb-method.c
 	afb-monitor.c
 	afb-msg-json.c
+	afb-permission-text.c
 	afb-proto-ws.c
 	afb-session.c
 	afb-socket.c

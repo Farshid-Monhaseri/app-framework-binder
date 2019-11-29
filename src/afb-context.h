@@ -19,11 +19,14 @@
 
 struct afb_session;
 struct afb_token;
+struct afb_cred;
 
 struct afb_context
 {
-	struct afb_session *session;
-	struct afb_token *token;
+	struct afb_session *session;	/**< session */
+	struct afb_token *token;	/**< token */
+	struct afb_cred *credentials;	/**< credential */
+
 	const void *api_key;
 	struct afb_context *super;
 	union {
@@ -38,17 +41,25 @@ struct afb_context
 	};
 };
 
-extern void afb_context_init(struct afb_context *context, struct afb_session *session, struct afb_token *token);
-extern void afb_context_init_validated(struct afb_context *context, struct afb_session *session);
+extern void afb_context_init(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred);
+extern void afb_context_init_validated(struct afb_context *context, struct afb_session *session, struct afb_token *token, struct afb_cred *cred);
 extern void afb_context_subinit(struct afb_context *context, struct afb_context *super);
-extern int afb_context_connect(struct afb_context *context, const char *uuid, struct afb_token *token);
-extern int afb_context_connect_validated(struct afb_context *context, const char *uuid);
+extern int afb_context_connect(struct afb_context *context, const char *uuid, struct afb_token *token, struct afb_cred *cred);
+extern int afb_context_connect_validated(struct afb_context *context, const char *uuid, struct afb_token *token, struct afb_cred *cred);
 extern void afb_context_disconnect(struct afb_context *context);
 extern const char *afb_context_uuid(struct afb_context *context);
 
 extern void *afb_context_get(struct afb_context *context);
 extern int afb_context_set(struct afb_context *context, void *value, void (*free_value)(void*));
 extern void *afb_context_make(struct afb_context *context, int replace, void *(*make_value)(void *closure), void (*free_value)(void *item), void *closure);
+
+extern void afb_context_change_token(struct afb_context *context, struct afb_token *token);
+extern void afb_context_change_cred(struct afb_context *context, struct afb_cred *cred);
+
+extern int afb_context_on_behalf_import(struct afb_context *context, const char *exported);
+extern const char *afb_context_on_behalf_export(struct afb_context *context);
+extern void afb_context_on_behalf_other_context(struct afb_context *context, struct afb_context *other);
+extern int afb_context_has_permission(struct afb_context *context, const char *permission);
 
 extern void afb_context_close(struct afb_context *context);
 extern int afb_context_check(struct afb_context *context);

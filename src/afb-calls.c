@@ -27,7 +27,6 @@
 #include <afb/afb-binding.h>
 
 #include "afb-calls.h"
-#include "afb-cred.h"
 #include "afb-evt.h"
 #include "afb-export.h"
 #include "afb-hook.h"
@@ -169,7 +168,6 @@ static void callreq_destroy_cb(struct afb_xreq *xreq)
 
 	afb_context_disconnect(&callreq->xreq.context);
 	json_object_put(callreq->xreq.json);
-	afb_cred_unref(callreq->xreq.cred);
 	free(callreq);
 }
 
@@ -282,24 +280,25 @@ static struct callreq *callreq_create(
 		errno = ENOMEM;
 	} else {
 		afb_xreq_init(&callreq->xreq, &afb_calls_xreq_itf);
-		callreq->xreq.context.validated = 1;
 		api2 = (char*)&callreq[1];
 		callreq->xreq.request.called_api = memcpy(api2, api, lenapi);;
 		verb2 = &api2[lenapi];
 		callreq->xreq.request.called_verb = memcpy(verb2, verb, lenverb);
 		callreq->xreq.json = args;
 		callreq->mode = mode;
-		if (caller) {
-			export = afb_export_from_api_x3(caller->request.api);
+		if (!caller)
+			afb_export_context_init(export, &callreq->xreq.context);
+		else {
+			if (flags & afb_req_x2_subcall_api_session)
+				afb_export_context_init(export, &callreq->xreq.context);
+			else
+				afb_context_subinit(&callreq->xreq.context, &caller->context);
 			if (flags & afb_req_x2_subcall_on_behalf)
-				callreq->xreq.cred = afb_cred_addref(caller->cred);
+				afb_context_on_behalf_other_context(&callreq->xreq.context, &caller->context);
 			callreq->xreq.caller = caller;
 			afb_xreq_unhooked_addref(caller);
+			export = afb_export_from_api_x3(caller->request.api);
 		}
-		if (caller && (flags & afb_req_x2_subcall_api_session))
-			afb_context_subinit(&callreq->xreq.context, &caller->context);
-		else
-			afb_export_context_init(export, &callreq->xreq.context);
 		callreq->export = export;
 		callreq->flags = flags;
 	}
