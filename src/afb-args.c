@@ -119,6 +119,7 @@
 #define SET_DAEMON         'D'
 #define SET_EXEC           'e'
 #define GET_HELP           'h'
+#define ADD_INTERFACE      'i'
 #define SET_LOG            'l'
 #if defined(WITH_MONITORING_OPTION)
 #define SET_MONITORING     'M'
@@ -158,7 +159,8 @@ static struct option_desc optdefs[] = {
 
 	{SET_NAME,            1, "name",        "Set the visible name"},
 
-	{SET_PORT,            1, "port",        "HTTP listening TCP port  [default " d2s(DEFAULT_HTTP_PORT) "]"},
+	{SET_PORT,            1, "port",        "HTTP listening TCP port of all interfaces [default " d2s(DEFAULT_HTTP_PORT) "]"},
+	{ADD_INTERFACE,       1, "interface",   "Add HTTP listening interface (ex: tcp:localhost:8080)"},
 	{SET_ROOT_HTTP,       1, "roothttp",    "HTTP Root Directory [default no root http (files not served but apis still available)]"},
 	{SET_ROOT_BASE,       1, "rootbase",    "Angular Base Root URL [default /opa]"},
 	{SET_ROOT_API,        1, "rootapi",     "HTML Root API URL [default /api]"},
@@ -241,7 +243,6 @@ static const struct {
 	int optid;
 	int valdef;
 } default_optint_values[] = {
-	{ SET_PORT,		DEFAULT_HTTP_PORT },
 	{ SET_API_TIMEOUT,	DEFAULT_API_TIMEOUT },
 	{ SET_CACHE_TIMEOUT,	DEFAULT_CACHE_TIMEOUT },
 	{ SET_SESSION_TIMEOUT,	DEFAULT_SESSION_TIMEOUT },
@@ -841,6 +842,7 @@ static void parse_arguments_inner(int argc, char **argv, struct json_object *con
 		case ADD_WS_CLIENT:
 		case ADD_WS_SERVICE:
 		case ADD_AUTO_API:
+		case ADD_INTERFACE:
 			config_add_optstr(config, optid);
 			break;
 
@@ -984,6 +986,9 @@ static void fulfill_config(struct json_object *config)
 	for (i = 0 ; i < sizeof default_optstr_values / sizeof * default_optstr_values ; i++)
 		if (!config_has(config, default_optstr_values[i].optid))
 			config_set_str(config, default_optstr_values[i].optid, default_optstr_values[i].valdef);
+
+	if (!config_has(config, SET_PORT) && !config_has(config, ADD_INTERFACE) && !config_has_bool(config, SET_NO_HTTPD))
+		config_set_int(config, SET_PORT, DEFAULT_HTTP_PORT);
 
 	// default AUTH_TOKEN
 	if (config_has_bool(config, SET_RANDOM_TOKEN))

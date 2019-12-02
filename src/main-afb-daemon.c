@@ -340,14 +340,25 @@ static int init_http_server(struct afb_hsrv *hsrv)
 	return 1;
 }
 
+static int add_interface(void *closure, const char *value)
+{
+	struct afb_hsrv *hsrv = closure;
+	int rc;
+
+	rc = afb_hsrv_add_interface(hsrv, value);
+	return rc > 0;
+}
+
 static struct afb_hsrv *start_http_server()
 {
 	int rc;
-	const char *uploaddir, *rootdir;
+	const char *uploaddir, *rootdir, *errs;
 	struct afb_hsrv *hsrv;
 	int cache_timeout, http_port;
+	struct json_object *junk;
 
-	rc = wrap_json_unpack(main_config, "{ss ss si si}",
+	http_port = -1;
+	rc = wrap_json_unpack(main_config, "{ss ss si s?i}",
 				"uploaddir", &uploaddir,
 				"rootdir", &rootdir,
 				"cache-eol", &cache_timeout,
@@ -364,6 +375,7 @@ static struct afb_hsrv *start_http_server()
 			ERROR("unable to fallback to upload directory %s", fallback_uploaddir);
 			return NULL;
 		}
+		uploaddir = fallback_uploaddir;
 	}
 
 	hsrv = afb_hsrv_create();
@@ -379,9 +391,6 @@ static struct afb_hsrv *start_http_server()
 		return NULL;
 	}
 
-	NOTICE("Waiting port=%d rootdir=%s", http_port, rootdir);
-	NOTICE("Browser URL= http://localhost:%d", http_port);
-
 	rc = afb_hsrv_start(hsrv, 15);
 	if (!rc) {
 		ERROR("starting of httpd failed");
@@ -389,9 +398,27 @@ static struct afb_hsrv *start_http_server()
 		return NULL;
 	}
 
-	rc = afb_hsrv_add_interface_tcp(hsrv, DEFAULT_BINDER_INTERFACE, (uint16_t) http_port);
-	if (!rc) {
-		ERROR("setting interface failed");
+	NOTICE("Serving rootdir=%s uploaddir=%s", rootdir, uploaddir);
+
+	/* check if port is set */
+	if (http_port < 0) {
+		/* not set, check existing interfaces */
+		if (!json_object_object_get_ex(main_config, "interface", &junk)) {
+			ERROR("No port and no interface ");
+		}
+	} else {
+		rc = afb_hsrv_add_interface_tcp(hsrv, DEFAULT_BINDER_INTERFACE, (uint16_t) http_port);
+		if (!rc) {
+			ERROR("setting interface failed");
+			afb_hsrv_put(hsrv);
+			return NULL;
+		}
+		NOTICE("Browser URL= http://localhost:%d", http_port);
+	}
+
+	errs = run_for_config_array_opt("interface", add_interface, hsrv);
+	if (errs) {
+		ERROR("setting interface %s failed", errs);
 		afb_hsrv_put(hsrv);
 		return NULL;
 	}

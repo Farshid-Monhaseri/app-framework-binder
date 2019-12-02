@@ -533,7 +533,7 @@ static int hsrv_itf_connect(struct hsrv_itf *itf)
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 	int rgni;
 
-	itf->fdev = afb_socket_open_fdev(itf->uri, 1);
+	itf->fdev = afb_socket_open_fdev_scheme(itf->uri, 1, "tcp");
 	if (!itf->fdev) {
 		ERROR("can't create socket %s", itf->uri);
 		return 0;
