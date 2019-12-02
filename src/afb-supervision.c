@@ -161,14 +161,14 @@ static void try_connect_supervisor()
 
 	/* check existing path */
 	if (supervisor_socket_path[0] != '@' && access(supervisor_socket_path, F_OK)) {
-		NOTICE("Can't acces socket path %s: %m", supervisor_socket_path);
+		INFO("Can't acces socket path %s: %m", supervisor_socket_path);
 		goto end;
 	}
 
 	/* socket connection */
 	fd = open_supervisor_socket(supervisor_socket_path);
 	if (fd < 0) {
-		NOTICE("Can't connect supervision socket to %s: %m", supervisor_socket_path);
+		INFO("Can't connect supervision socket to %s: %m", supervisor_socket_path);
 		goto end;
 	}
 
