@@ -298,7 +298,7 @@ static int init_alias(void *closure, const char *spec)
 	*path++ = 0;
 	INFO("Alias for url=%s to path=%s", spec, path);
 	return afb_hsrv_add_alias(hsrv, spec, afb_common_rootdir_get_fd(), path,
-				  0, 0);
+				  0, 1);
 }
 
 static int init_http_server(struct afb_hsrv *hsrv)
