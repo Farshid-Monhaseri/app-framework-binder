@@ -19,8 +19,18 @@
 
 struct fdev;
 
-extern int afb_socket_open(const char *uri, int server);
+extern int afb_socket_open_scheme(const char *uri, int server, const char *scheme);
 
-extern struct fdev *afb_socket_open_fdev(const char *uri, int server);
+extern struct fdev *afb_socket_open_fdev_scheme(const char *uri, int server, const char *scheme);
 
 extern const char *afb_socket_api(const char *uri);
+
+static inline int afb_socket_open(const char *uri, int server)
+{
+	return afb_socket_open_scheme(uri, server, 0);
+}
+
+static inline struct fdev *afb_socket_open_fdev(const char *uri, int server)
+{
+	return afb_socket_open_fdev_scheme(uri, server, 0);
+}

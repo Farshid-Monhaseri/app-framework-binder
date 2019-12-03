@@ -240,25 +240,41 @@ static int open_systemd(const char *spec)
  *
  * @param uri the searched uri
  * @param offset where to store the prefix length
+ * @param scheme the default scheme to use if none is set in uri (can be NULL)
  *
  * @return the found entry or the default one
  */
-static struct entry *get_entry(const char *uri, int *offset)
+static struct entry *get_entry(const char *uri, int *offset, const char *scheme)
 {
-	int l, i = (int)(sizeof entries / sizeof * entries);
+	int len, i, deflen;
 
-	for (;;) {
-		if (!i) {
-			l = 0;
-			break;
-		}
+	/* search as prefix of URI */
+	i = (int)(sizeof entries / sizeof * entries);
+	while (i) {
 		i--;
-		l = (int)strlen(entries[i].prefix);
-		if (!strncmp(uri, entries[i].prefix, l))
-			break;
+		len = (int)strlen(entries[i].prefix);
+		if (!strncmp(uri, entries[i].prefix, len))
+			goto end; /* found */
 	}
 
-	*offset = l;
+	/* not a prefix of uri */
+	len = 0;
+
+	/* search default scheme if given and valid */
+	if (scheme && *scheme) {
+		deflen = (int)strlen(scheme);
+		deflen += (scheme[deflen - 1] != ':'); /* add virtual trailing colon */
+		i = (int)(sizeof entries / sizeof * entries);
+		while (i) {
+			i--;
+			if (deflen == (int)strlen(entries[i].prefix)
+			 && !strncmp(scheme, entries[i].prefix, deflen - 1))
+				goto end; /* found */
+		}
+	}
+
+end:
+	*offset = len;
 	return &entries[i];
 }
 
@@ -267,17 +283,18 @@ static struct entry *get_entry(const char *uri, int *offset)
  *
  * @param uri the specification of the socket
  * @param server 0 for client, server otherwise
+ * @param scheme the default scheme to use if none is set in uri (can be NULL)
  *
  * @return the file descriptor number of the socket or -1 in case of error
  */
-static int open_uri(const char *uri, int server)
+static int open_uri(const char *uri, int server, const char *scheme)
 {
 	int fd, offset;
 	struct entry *e;
 	const char *api;
 
 	/* search for the entry */
-	e = get_entry(uri, &offset);
+	e = get_entry(uri, &offset, scheme);
 
 	/* get the names */
 	uri += offset;
@@ -324,12 +341,13 @@ static int open_uri(const char *uri, int server)
  *
  * @param uri the specification of the socket
  * @param server 0 for client, server otherwise
+ * @param scheme the default scheme to use if none is set in uri (can be NULL)
  *
  * @return the file descriptor number of the socket or -1 in case of error
  */
-int afb_socket_open(const char *uri, int server)
+int afb_socket_open_scheme(const char *uri, int server, const char *scheme)
 {
-	int fd = open_uri(uri, server);
+	int fd = open_uri(uri, server, scheme);
 	if (fd < 0)
 		ERROR("can't open %s socket for %s", server ? "server" : "client", uri);
 	return fd;
@@ -340,15 +358,16 @@ int afb_socket_open(const char *uri, int server)
  *
  * @param uri the specification of the socket
  * @param server 0 for client, server otherwise
+ * @param scheme the default scheme to use if none is set in uri (can be NULL)
  *
  * @return the fdev of the socket or NULL in case of error
  */
-struct fdev *afb_socket_open_fdev(const char *uri, int server)
+struct fdev *afb_socket_open_fdev_scheme(const char *uri, int server, const char *scheme)
 {
 	struct fdev *fdev;
 	int fd;
 
-	fd = afb_socket_open(uri, server);
+	fd = afb_socket_open_scheme(uri, server, scheme);
 	if (fd < 0)
 		fdev = NULL;
 	else {
@@ -374,7 +393,7 @@ const char *afb_socket_api(const char *uri)
 	const char *api;
 	struct entry *entry;
 
-	entry = get_entry(uri, &offset);
+	entry = get_entry(uri, &offset, NULL);
 	uri += offset;
 	uri += (entry->type == Type_Unix && *uri == '@');
 	api = strstr(uri, as_api);
