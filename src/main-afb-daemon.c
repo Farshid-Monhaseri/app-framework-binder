@@ -474,9 +474,9 @@ static void on_sigchld(int signum, siginfo_t *info, void *uctx)
 #define SUBST_CHAR  '@'
 #define SUBST_STR   "@"
 
-static char *instanciate_string(const char *arg, const char *port, const char *token)
+static char *instanciate_string(char *arg, const char *port, const char *token)
 {
-	char *resu, *it, *wr;
+	char *resu, *it, *wr, c;
 	int chg, dif;
 
 	/* get the changes */
@@ -484,18 +484,24 @@ static char *instanciate_string(const char *arg, const char *port, const char *t
 	dif = 0;
 	it = strchrnul(arg, SUBST_CHAR);
 	while (*it) {
-		switch(*++it) {
-		case 'p': chg++; dif += (int)strlen(port) - 2; break;
-		case 't': chg++; dif += (int)strlen(token) - 2; break;
-		case SUBST_CHAR: it++; chg++; dif--; break;
-		default: break;
+		c = *++it;
+		if (c == 'p' && port) {
+			chg++;
+			dif += (int)strlen(port) - 2;
+		} else if (c == 't' && token) {
+			chg++;
+			dif += (int)strlen(token) - 2;
+		} else if (c == SUBST_CHAR) {
+			it++;
+			chg++;
+			dif--;
 		}
 		it = strchrnul(it, SUBST_CHAR);
 	}
 
 	/* return arg when no change */
 	if (!chg)
-		return strdup(arg);
+		return arg;
 
 	/* allocates the result */
 	resu = malloc((it - arg) + dif + 1);
@@ -511,11 +517,15 @@ static char *instanciate_string(const char *arg, const char *port, const char *t
 		wr = mempcpy(wr, arg, it - arg);
 		if (!*it)
 			break;
-		switch(*++it) {
-		case 'p': wr = stpcpy(wr, port); break;
-		case 't': wr = stpcpy(wr, token); break;
-		default: *wr++ = SUBST_CHAR; /*@fallthrough@*/
-		case SUBST_CHAR: *wr++ = *it;
+		c = *++it;
+		if (c == 'p' && port)
+			wr = stpcpy(wr, port);
+		else if (c == 't' && token)
+			wr = stpcpy(wr, token);
+		else {
+			if (c != SUBST_CHAR)
+				*wr++ = SUBST_CHAR;
+			*wr++ = *it;
 		}
 		arg = ++it;
 	}
@@ -543,7 +553,7 @@ static int instanciate_environ(const char *port, const char *token)
 static char **instanciate_command_args(struct json_object *exec, const char *port, const char *token)
 {
 	char **result;
-	char *repl;
+	char *repl, *item;
 	int i, n;
 
 	/* allocates the result */
@@ -556,10 +566,9 @@ static char **instanciate_command_args(struct json_object *exec, const char *por
 
 	/* instanciate the arguments */
 	for (i = 0 ; i < n ; i++) {
-		repl = instanciate_string(json_object_get_string(json_object_array_get_idx(exec, i)), port, token);
+		item = (char*)json_object_get_string(json_object_array_get_idx(exec, i));
+		repl = instanciate_string(item, port, token);
 		if (!repl) {
-			while(i)
-				free(result[--i]);
 			free(result);
 			return NULL;
 		}
@@ -573,10 +582,8 @@ static int execute_command()
 {
 	struct json_object *exec, *oport, *otok;
 	struct sigaction siga;
-	char port[20];
-	const char *token;
+	const char *token, *port;
 	char **args;
-	int rc;
 
 	/* check whether a command is to execute or not */
 	if (!json_object_object_get_ex(main_config, "exec", &exec))
@@ -598,26 +605,21 @@ static int execute_command()
 
 	/* compute the string for port */
 	if (json_object_object_get_ex(main_config, "port", &oport))
-		rc = snprintf(port, sizeof port, "%s", json_object_get_string(oport));
+		port = json_object_get_string(oport);
 	else
-		rc = snprintf(port, sizeof port, "%cp", SUBST_CHAR);
-	if (rc < 0 || rc >= (int)(sizeof port)) {
-		ERROR("port->txt failed");
-	}
-	else {
-		/* instantiate arguments and environment */
-		if (json_object_object_get_ex(main_config, "token", &otok))
-			token = json_object_get_string(otok);
-		else
-			token = SUBST_STR"p";
-		args = instanciate_command_args(exec, port, token);
-		if (args && instanciate_environ(port, token) >= 0) {
-			/* run */
-			if (!SELF_PGROUP)
-				setpgid(0, 0);
-			execv(args[0], args);
-			ERROR("can't launch %s: %m", args[0]);
-		}
+		port = 0;
+	/* instantiate arguments and environment */
+	if (json_object_object_get_ex(main_config, "token", &otok))
+		token = json_object_get_string(otok);
+	else
+		token = 0;
+	args = instanciate_command_args(exec, port, token);
+	if (args && instanciate_environ(port, token) >= 0) {
+		/* run */
+		if (!SELF_PGROUP)
+			setpgid(0, 0);
+		execv(args[0], args);
+		ERROR("can't launch %s: %m", args[0]);
 	}
 	exit(1);
 	return -1;
@@ -759,12 +761,6 @@ static void start(int signum, void *arg)
 			"ss ss s?s"
 			"si si si"
 			"s?b s?i s?s"
-#if WITH_AFB_HOOK
-#if !defined(REMOVE_LEGACY_TRACE)
-			"s?s s?s"
-#endif
-			"s?s s?s s?s s?s s?s"
-#endif
 			"s?o"
 			"}",
 
@@ -780,7 +776,21 @@ static void start(int signum, void *arg)
 			"port", &http_port,
 			"rootapi", &rootapi,
 
+			"set", &settings
+			);
+	if (rc < 0) {
+		ERROR("Unable to get start config");
+		exit(1);
+	}
+
 #if WITH_AFB_HOOK
+	rc = wrap_json_unpack(main_config, "{"
+#if !defined(REMOVE_LEGACY_TRACE)
+			"s?s s?s"
+#endif
+			"s?s s?s s?s s?s s?s"
+			"}",
+
 #if !defined(REMOVE_LEGACY_TRACE)
 			"tracesvc", &tracesvc,
 			"traceditf", &traceditf,
@@ -789,14 +799,13 @@ static void start(int signum, void *arg)
 			"traceapi", &traceapi,
 			"traceevt", &traceevt,
 			"traceses",  &traceses,
-			"traceglob", &traceglob,
-#endif
-			"set", &settings
+			"traceglob", &traceglob
 			);
 	if (rc < 0) {
-		ERROR("Unable to get start config");
+		ERROR("Unable to get hook config");
 		exit(1);
 	}
+#endif
 
 	/* initialize session handling */
 	if (afb_session_init(max_session_count, session_timeout)) {
@@ -822,16 +831,12 @@ static void start(int signum, void *arg)
 
 	/* setup HTTP */
 	if (!no_httpd) {
-		if (http_port < 0) {
-			ERROR("no port is defined");
-			goto error;
-		}
 		if (http_port == 0) {
 			ERROR("random port is not implemented");
 			goto error;
 		}
-		if (addenv_int("AFB_PORT", http_port)
-		 || addenv("AFB_TOKEN", token?:"")) {
+		if ((http_port > 0 && addenv_int("AFB_PORT", http_port))
+		 || (token && addenv("AFB_TOKEN", token))) {
 			ERROR("can't set HTTP environment");
 			goto error;
 		}
