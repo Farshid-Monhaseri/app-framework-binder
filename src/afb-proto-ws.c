@@ -70,22 +70,22 @@ For the purpose of handling events the server can:
 */
 /************** constants for protocol definition *************************/
 
-#define CHAR_FOR_CALL             'K'
-#define CHAR_FOR_REPLY            'k'
-#define CHAR_FOR_EVT_BROADCAST    'B'
-#define CHAR_FOR_EVT_ADD          'E'
-#define CHAR_FOR_EVT_DEL          'e'
-#define CHAR_FOR_EVT_PUSH         'P'
-#define CHAR_FOR_EVT_SUBSCRIBE    'X'
-#define CHAR_FOR_EVT_UNSUBSCRIBE  'x'
-#define CHAR_FOR_DESCRIBE         'D'
-#define CHAR_FOR_DESCRIPTION      'd'
-#define CHAR_FOR_TOKEN_ADD        'T'
-#define CHAR_FOR_TOKEN_DROP       't'
-#define CHAR_FOR_SESSION_ADD      'S'
-#define CHAR_FOR_SESSION_DROP     's'
-#define CHAR_FOR_VERSION_OFFER    'V'
-#define CHAR_FOR_VERSION_SET      'v'
+#define CHAR_FOR_CALL             'K'	/* client -> server */
+#define CHAR_FOR_REPLY            'k'	/* server -> client */
+#define CHAR_FOR_EVT_BROADCAST    'B'	/* server -> client */
+#define CHAR_FOR_EVT_ADD          'E'	/* server -> client */
+#define CHAR_FOR_EVT_DEL          'e'	/* server -> client */
+#define CHAR_FOR_EVT_PUSH         'P'	/* server -> client */
+#define CHAR_FOR_EVT_SUBSCRIBE    'X'	/* server -> client */
+#define CHAR_FOR_EVT_UNSUBSCRIBE  'x'	/* server -> client */
+#define CHAR_FOR_DESCRIBE         'D'	/* client -> server */
+#define CHAR_FOR_DESCRIPTION      'd'	/* server -> client */
+#define CHAR_FOR_TOKEN_ADD        'T'	/* client -> server */
+#define CHAR_FOR_TOKEN_DROP       't'	/* client -> server */
+#define CHAR_FOR_SESSION_ADD      'S'	/* client -> server */
+#define CHAR_FOR_SESSION_DROP     's'	/* client -> server */
+#define CHAR_FOR_VERSION_OFFER    'V'	/* client -> server */
+#define CHAR_FOR_VERSION_SET      'v'	/* server -> client */
 
 /******************* manage versions *****************************/
 
@@ -757,7 +757,7 @@ static void client_on_binary(void *closure, char *data, size_t size)
 	queue_message_processing(protows, data, size, client_on_binary_job);
 }
 
-static int client_send_idstr_add_drop(struct afb_proto_ws *protows, char order, uint16_t id, const char *value)
+static int client_send_cmd_id16_optstr(struct afb_proto_ws *protows, char order, uint16_t id, const char *value)
 {
 	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 	int rc = -1;
@@ -771,23 +771,23 @@ static int client_send_idstr_add_drop(struct afb_proto_ws *protows, char order, 
 
 int afb_proto_ws_client_session_create(struct afb_proto_ws *protows, uint16_t sessionid, const char *sessionstr)
 {
-	return client_send_idstr_add_drop(protows, CHAR_FOR_SESSION_ADD, sessionid, sessionstr);
+	return client_send_cmd_id16_optstr(protows, CHAR_FOR_SESSION_ADD, sessionid, sessionstr);
 }
 
 int afb_proto_ws_client_session_remove(struct afb_proto_ws *protows, uint16_t sessionid)
 {
-	return client_send_idstr_add_drop(protows, CHAR_FOR_SESSION_DROP, sessionid, NULL);
+	return client_send_cmd_id16_optstr(protows, CHAR_FOR_SESSION_DROP, sessionid, NULL);
 }
 
 int afb_proto_ws_client_token_create(struct afb_proto_ws *protows, uint16_t tokenid, const char *tokenstr)
 {
-	return client_send_idstr_add_drop(protows, CHAR_FOR_TOKEN_ADD, tokenid, tokenstr);
+	return client_send_cmd_id16_optstr(protows, CHAR_FOR_TOKEN_ADD, tokenid, tokenstr);
 
 }
 
 int afb_proto_ws_client_token_remove(struct afb_proto_ws *protows, uint16_t tokenid)
 {
-	return client_send_idstr_add_drop(protows, CHAR_FOR_TOKEN_DROP, tokenid, NULL);
+	return client_send_cmd_id16_optstr(protows, CHAR_FOR_TOKEN_DROP, tokenid, NULL);
 }
 
 int afb_proto_ws_client_call(
