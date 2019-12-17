@@ -414,9 +414,11 @@ static void client_on_event_push_cb(void *closure, uint16_t event_id, struct jso
 
 	rc = u16id2ptr_get(stubws->event_proxies, event_id, (void**)&event);
 	if (rc >= 0 && event)
-		afb_evt_event_x2_push(event, data);
+		rc = afb_evt_event_x2_push(event, data);
 	else
 		ERROR("unreadable push event");
+	if (rc <= 0)
+		afb_proto_ws_client_event_unexpected(stubws->proto, event_id);
 }
 
 static void client_on_event_broadcast_cb(void *closure, const char *event_name, struct json_object *data, const uuid_binary_t uuid, uint8_t hop)
@@ -491,6 +493,13 @@ static void server_on_token_remove_cb(void *closure, uint16_t tokenid)
 	rc = u16id2ptr_drop(&stubws->event_proxies, tokenid, (void**)&token);
 	if (rc == 0 && token)
 		afb_token_unref(token);
+}
+
+static void server_on_event_unexpected_cb(void *closure, uint16_t eventid)
+{
+	struct afb_stub_ws *stubws = closure;
+
+	afb_evt_watch_sub_eventid(stubws->listener, eventid);
 }
 
 static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, const char *user_creds)
@@ -583,7 +592,8 @@ static const struct afb_proto_ws_server_itf server_itf =
 	.on_token_create = server_on_token_create_cb,
 	.on_token_remove = server_on_token_remove_cb,
 	.on_call = server_on_call_cb,
-	.on_describe = server_on_describe_cb
+	.on_describe = server_on_describe_cb,
+	.on_event_unexpected = server_on_event_unexpected_cb
 };
 
 /* the interface for events pushing */

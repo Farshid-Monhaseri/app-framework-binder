@@ -67,6 +67,8 @@ For the purpose of handling events the server can:
 
   - push or broadcast data as an event
 
+  - signal unexpected event
+
 */
 /************** constants for protocol definition *************************/
 
@@ -78,6 +80,7 @@ For the purpose of handling events the server can:
 #define CHAR_FOR_EVT_PUSH         'P'	/* server -> client */
 #define CHAR_FOR_EVT_SUBSCRIBE    'X'	/* server -> client */
 #define CHAR_FOR_EVT_UNSUBSCRIBE  'x'	/* server -> client */
+#define CHAR_FOR_EVT_UNEXPECTED   'U'	/* client -> server */
 #define CHAR_FOR_DESCRIBE         'D'	/* client -> server */
 #define CHAR_FOR_DESCRIPTION      'd'	/* server -> client */
 #define CHAR_FOR_TOKEN_ADD        'T'	/* client -> server */
@@ -790,6 +793,11 @@ int afb_proto_ws_client_token_remove(struct afb_proto_ws *protows, uint16_t toke
 	return client_send_cmd_id16_optstr(protows, CHAR_FOR_TOKEN_DROP, tokenid, NULL);
 }
 
+int afb_proto_ws_client_event_unexpected(struct afb_proto_ws *protows, uint16_t eventid)
+{
+	return client_send_cmd_id16_optstr(protows, CHAR_FOR_EVT_UNEXPECTED, eventid, NULL);
+}
+
 int afb_proto_ws_client_call(
 		struct afb_proto_ws *protows,
 		const char *verb,
@@ -1039,6 +1047,14 @@ static void server_on_token_drop(struct afb_proto_ws *protows, struct readbuf *r
 		protows->server_itf->on_token_remove(protows->closure, tokenid);
 }
 
+static void server_on_event_unexpected(struct afb_proto_ws *protows, struct readbuf *rb)
+{
+	uint16_t eventid;
+
+	if (readbuf_uint16(rb, &eventid))
+		protows->server_itf->on_event_unexpected(protows->closure, eventid);
+}
+
 /* on version offer */
 static void server_on_version_offer(struct afb_proto_ws *protows, struct readbuf *rb)
 {
@@ -1096,6 +1112,9 @@ static void server_on_binary_job(int sig, void *closure)
 			break;
 		case CHAR_FOR_TOKEN_DROP:
 			server_on_token_drop(binary->protows, &binary->rb);
+			break;
+		case CHAR_FOR_EVT_UNEXPECTED:
+			server_on_event_unexpected(binary->protows, &binary->rb);
 			break;
 		case CHAR_FOR_VERSION_OFFER:
 			server_on_version_offer(binary->protows, &binary->rb);

@@ -57,6 +57,7 @@ struct afb_proto_ws_server_itf
 	void (*on_token_remove)(void *closure, uint16_t tokenid);
 	void (*on_call)(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, const char *user_creds);
 	void (*on_describe)(void *closure, struct afb_proto_ws_describe *describe);
+	void (*on_event_unexpected)(void *closure, uint16_t eventid);
 };
 
 extern struct afb_proto_ws *afb_proto_ws_create_client(struct fdev *fdev, const struct afb_proto_ws_client_itf *itf, void *closure);
@@ -80,6 +81,7 @@ extern int afb_proto_ws_client_token_create(struct afb_proto_ws *protows, uint16
 extern int afb_proto_ws_client_token_remove(struct afb_proto_ws *protows, uint16_t tokenid);
 extern int afb_proto_ws_client_call(struct afb_proto_ws *protows, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, void *request, const char *user_creds);
 extern int afb_proto_ws_client_describe(struct afb_proto_ws *protows, void (*callback)(void*, struct json_object*), void *closure);
+extern int afb_proto_ws_client_event_unexpected(struct afb_proto_ws *protows, uint16_t eventid);
 
 extern int afb_proto_ws_server_event_create(struct afb_proto_ws *protows, uint16_t event_id, const char *event_name);
 extern int afb_proto_ws_server_event_remove(struct afb_proto_ws *protows, uint16_t event_id);

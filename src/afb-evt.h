@@ -60,6 +60,7 @@ extern int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *
 
 extern int afb_evt_watch_add_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
 extern int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
+extern int afb_evt_watch_sub_eventid(struct afb_evt_listener *listener, uint16_t eventid);
 
 
 extern struct afb_event_x2 *afb_evt_event_x2_create(const char *fullname);

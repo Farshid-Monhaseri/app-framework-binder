@@ -894,6 +894,36 @@ int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid 
 	return -1;
 }
 
+/*
+ * Avoids the 'listener' to watch 'eventid'
+ * Returns 0 in case of success or else -1.
+ */
+int afb_evt_watch_sub_eventid(struct afb_evt_listener *listener, uint16_t eventid)
+{
+	struct afb_evt_watch *watch;
+	struct afb_evtid *evtid;
+
+	/* search the existing watch */
+	pthread_rwlock_wrlock(&listener->rwlock);
+	watch = listener->watchs;
+	while(watch != NULL) {
+		evtid = watch->evtid;
+		if (evtid->id == eventid) {
+			if (watch->activity != 0) {
+				watch->activity--;
+				if (watch->activity == 0 && listener->itf->remove != NULL)
+					listener->itf->remove(listener->closure, evtid->fullname, evtid->id);
+			}
+			pthread_rwlock_unlock(&listener->rwlock);
+			return 0;
+		}
+		watch = watch->next_by_listener;
+	}
+	pthread_rwlock_unlock(&listener->rwlock);
+	errno = ENOENT;
+	return -1;
+}
+
 #if WITH_AFB_HOOK
 /*
  * update the hooks for events
