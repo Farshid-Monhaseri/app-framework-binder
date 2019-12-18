@@ -818,7 +818,7 @@ void afb_evt_listener_unref(struct afb_evt_listener *listener)
  * Makes the 'listener' watching 'evtid'
  * Returns 0 in case of success or else -1.
  */
-int afb_evt_watch_add_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid)
+int afb_evt_listener_watch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid)
 {
 	struct afb_evt_watch *watch;
 
@@ -870,7 +870,7 @@ found:
  * Avoids the 'listener' to watch 'evtid'
  * Returns 0 in case of success or else -1.
  */
-int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid)
+int afb_evt_listener_unwatch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid)
 {
 	struct afb_evt_watch *watch;
 
@@ -898,7 +898,7 @@ int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid 
  * Avoids the 'listener' to watch 'eventid'
  * Returns 0 in case of success or else -1.
  */
-int afb_evt_watch_sub_eventid(struct afb_evt_listener *listener, uint16_t eventid)
+int afb_evt_listener_unwatch_id(struct afb_evt_listener *listener, uint16_t eventid)
 {
 	struct afb_evt_watch *watch;
 	struct afb_evtid *evtid;
@@ -991,7 +991,7 @@ uint16_t afb_evt_event_x2_id(struct afb_event_x2 *eventid)
  * Makes the 'listener' watching 'eventid'
  * Returns 0 in case of success or else -1.
  */
-int afb_evt_event_x2_add_watch(struct afb_evt_listener *listener, struct afb_event_x2 *eventid)
+int afb_evt_listener_watch_x2(struct afb_evt_listener *listener, struct afb_event_x2 *eventid)
 {
 	struct afb_evtid *evtid = afb_evt_event_x2_to_evtid(eventid);
 
@@ -1002,14 +1002,14 @@ int afb_evt_event_x2_add_watch(struct afb_evt_listener *listener, struct afb_eve
 	}
 
 	/* search the existing watch for the listener */
-	return afb_evt_watch_add_evtid(listener, evtid);
+	return afb_evt_listener_watch_evt(listener, evtid);
 }
 
 /*
  * Avoids the 'listener' to watch 'eventid'
  * Returns 0 in case of success or else -1.
  */
-int afb_evt_event_x2_remove_watch(struct afb_evt_listener *listener, struct afb_event_x2 *eventid)
+int afb_evt_listener_unwatch_x2(struct afb_evt_listener *listener, struct afb_event_x2 *eventid)
 {
 	struct afb_evtid *evtid = afb_evt_event_x2_to_evtid(eventid);
 
@@ -1020,7 +1020,7 @@ int afb_evt_event_x2_remove_watch(struct afb_evt_listener *listener, struct afb_
 	}
 
 	/* search the existing watch */
-	return afb_evt_watch_sub_evtid(listener, evtid);
+	return afb_evt_listener_unwatch_evt(listener, evtid);
 }
 
 int afb_evt_event_x2_push(struct afb_event_x2 *eventid, struct json_object *object)

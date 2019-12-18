@@ -58,10 +58,9 @@ extern int afb_evt_evtid_push(struct afb_evtid *evtid, struct json_object *obj);
 
 extern int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *object);
 
-extern int afb_evt_watch_add_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
-extern int afb_evt_watch_sub_evtid(struct afb_evt_listener *listener, struct afb_evtid *evtid);
-extern int afb_evt_watch_sub_eventid(struct afb_evt_listener *listener, uint16_t eventid);
-
+extern int afb_evt_listener_watch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid);
+extern int afb_evt_listener_unwatch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid);
+extern int afb_evt_listener_unwatch_id(struct afb_evt_listener *listener, uint16_t eventid);
 
 extern struct afb_event_x2 *afb_evt_event_x2_create(const char *fullname);
 extern struct afb_event_x2 *afb_evt_event_x2_create2(const char *prefix, const char *name);
@@ -73,8 +72,8 @@ extern void afb_evt_event_x2_unref(struct afb_event_x2 *eventid);
 extern int afb_evt_event_x2_push(struct afb_event_x2 *eventid, struct json_object *object);
 extern int afb_evt_event_x2_unhooked_push(struct afb_event_x2 *eventid, struct json_object *object);
 
-extern int afb_evt_event_x2_add_watch(struct afb_evt_listener *listener, struct afb_event_x2 *eventid);
-extern int afb_evt_event_x2_remove_watch(struct afb_evt_listener *listener, struct afb_event_x2 *eventid);
+extern int afb_evt_listener_watch_x2(struct afb_evt_listener *listener, struct afb_event_x2 *eventid);
+extern int afb_evt_listener_unwatch_x2(struct afb_evt_listener *listener, struct afb_event_x2 *eventid);
 
 extern struct afb_evtid *afb_evt_event_x2_to_evtid(struct afb_event_x2 *eventid);
 extern struct afb_event_x2 *afb_evt_event_x2_from_evtid(struct afb_evtid *evtid);

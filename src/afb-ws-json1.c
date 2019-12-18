@@ -279,13 +279,13 @@ static int wsreq_subscribe(struct afb_xreq *xreq, struct afb_event_x2 *event)
 {
 	struct afb_wsreq *wsreq = CONTAINER_OF_XREQ(struct afb_wsreq, xreq);
 
-	return afb_evt_event_x2_add_watch(wsreq->aws->listener, event);
+	return afb_evt_listener_watch_x2(wsreq->aws->listener, event);
 }
 
 static int wsreq_unsubscribe(struct afb_xreq *xreq, struct afb_event_x2 *event)
 {
 	struct afb_wsreq *wsreq = CONTAINER_OF_XREQ(struct afb_wsreq, xreq);
 
-	return afb_evt_event_x2_remove_watch(wsreq->aws->listener, event);
+	return afb_evt_listener_unwatch_x2(wsreq->aws->listener, event);
 }
 

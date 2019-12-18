@@ -167,7 +167,7 @@ static int server_req_subscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 *e
 	int rc;
 	struct server_req *wreq = CONTAINER_OF_XREQ(struct server_req, xreq);
 
-	rc = afb_evt_event_x2_add_watch(wreq->stubws->listener, event);
+	rc = afb_evt_listener_watch_x2(wreq->stubws->listener, event);
 	if (rc >= 0)
 		rc = afb_proto_ws_call_subscribe(wreq->call,  afb_evt_event_x2_id(event));
 	if (rc < 0)
@@ -181,7 +181,7 @@ static int server_req_unsubscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 
 	struct server_req *wreq = CONTAINER_OF_XREQ(struct server_req, xreq);
 
 	rc = afb_proto_ws_call_unsubscribe(wreq->call,  afb_evt_event_x2_id(event));
-	rc2 = afb_evt_event_x2_remove_watch(wreq->stubws->listener, event);
+	rc2 = afb_evt_listener_unwatch_x2(wreq->stubws->listener, event);
 	if (rc >= 0 && rc2 < 0)
 		rc = rc2;
 	if (rc < 0)
@@ -499,7 +499,7 @@ static void server_on_event_unexpected_cb(void *closure, uint16_t eventid)
 {
 	struct afb_stub_ws *stubws = closure;
 
-	afb_evt_watch_sub_eventid(stubws->listener, eventid);
+	afb_evt_listener_unwatch_id(stubws->listener, eventid);
 }
 
 static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, const char *user_creds)

@@ -1937,12 +1937,12 @@ void afb_export_undeclare(struct afb_export *export)
 
 int afb_export_subscribe(struct afb_export *export, struct afb_event_x2 *event)
 {
-	return afb_evt_event_x2_add_watch(export->listener, event);
+	return afb_evt_listener_watch_x2(export->listener, event);
 }
 
 int afb_export_unsubscribe(struct afb_export *export, struct afb_event_x2 *event)
 {
-	return afb_evt_event_x2_remove_watch(export->listener, event);
+	return afb_evt_listener_unwatch_x2(export->listener, event);
 }
 
 void afb_export_process_xreq(struct afb_export *export, struct afb_xreq *xreq)
