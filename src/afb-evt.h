@@ -61,6 +61,7 @@ extern int afb_evt_evtid_broadcast(struct afb_evtid *evtid, struct json_object *
 extern int afb_evt_listener_watch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid);
 extern int afb_evt_listener_unwatch_evt(struct afb_evt_listener *listener, struct afb_evtid *evtid);
 extern int afb_evt_listener_unwatch_id(struct afb_evt_listener *listener, uint16_t eventid);
+extern void afb_evt_listener_unwatch_all(struct afb_evt_listener *listener, int remove);
 
 extern struct afb_event_x2 *afb_evt_event_x2_create(const char *fullname);
 extern struct afb_event_x2 *afb_evt_event_x2_create2(const char *prefix, const char *name);

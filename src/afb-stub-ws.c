@@ -177,13 +177,10 @@ static int server_req_subscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 *e
 
 static int server_req_unsubscribe_cb(struct afb_xreq *xreq, struct afb_event_x2 *event)
 {
-	int rc, rc2;
+	int rc;
 	struct server_req *wreq = CONTAINER_OF_XREQ(struct server_req, xreq);
 
 	rc = afb_proto_ws_call_unsubscribe(wreq->call,  afb_evt_event_x2_id(event));
-	rc2 = afb_evt_listener_unwatch_x2(wreq->stubws->listener, event);
-	if (rc >= 0 && rc2 < 0)
-		rc = rc2;
 	if (rc < 0)
 		ERROR("error while unsubscribing event");
 	return rc;
