@@ -125,16 +125,16 @@ var AFB_websocket;
 	function fire(awaitens, name, data) {
 		var a = awaitens[name];
 		if (a)
-			a.forEach(function(handler){handler(data);});
+			a.forEach(function(handler){handler(data, name);});
 		var i = name.indexOf("/");
 		if (i >= 0) {
 			a = awaitens[name.substring(0,i)];
 			if (a)
-				a.forEach(function(handler){handler(data);});
+				a.forEach(function(handler){handler(data, name);});
 		}
 		a = awaitens["*"];
 		if (a)
-			a.forEach(function(handler){handler(data);});
+			a.forEach(function(handler){handler(data, name);});
 	}
 
 	function reply(pendings, id, ans, offset) {
