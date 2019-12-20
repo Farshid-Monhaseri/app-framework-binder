@@ -86,7 +86,7 @@ int afb_token_get(struct afb_token **token, const char *tokenstring)
 
 	/* search the token */
 	tok = tokenset.first;
-	while (tok && memcmp(tokenstring, tok->text, length))
+	while (tok && (memcmp(tokenstring, tok->text, length) || tokenstring[length]))
 		tok = tok->next;
 
 	/* search done */
@@ -96,7 +96,7 @@ int afb_token_get(struct afb_token **token, const char *tokenstring)
 		rc = 0;
 	} else {
 		/* not found, create */
-		tok = malloc(length + sizeof *tok);
+		tok = malloc(length + 1 + sizeof *tok);
 		if (!tok)
 			/* creation failed */
 			rc = -ENOMEM;
@@ -106,7 +106,7 @@ int afb_token_get(struct afb_token **token, const char *tokenstring)
 			tokenset.first = tok;
 			tok->id = tokenset.idgen;
 			tok->refcount = 1;
-			memcpy(tok->text, tokenstring, length);
+			memcpy(tok->text, tokenstring, length + 1);
 			rc = 0;
 		}
 	}
@@ -140,6 +140,7 @@ void afb_token_unref(struct afb_token *token)
 		pthread_mutex_lock(&tokenset.mutex);
 		pt = &tokenset.first;
 		while (*pt && *pt != token)
+			pt = &(*pt)->next;
 		if (*pt)
 			*pt = token->next;
 		pthread_mutex_unlock(&tokenset.mutex);

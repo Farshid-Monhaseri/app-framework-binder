@@ -102,7 +102,11 @@ static int synchro;
 static int usein;
 static sd_event *loop;
 static sd_event_source *evsrc;
-static char *sessionid = "afb-client-demo";
+static char *uuid;
+static char *token;
+static uint16_t numuuid;
+static uint16_t numtoken;
+static char *url;
 static int exitcode = 0;
 
 /* print usage of the program */
@@ -110,19 +114,21 @@ static void usage(int status, char *arg0)
 {
 	char *name = strrchr(arg0, '/');
 	name = name ? name + 1 : arg0;
-	fprintf(status ? stderr : stdout, "usage: %s [-H [-r]] [-b] [-e] uri [api verb [data]]\n", name);
-	fprintf(status ? stderr : stdout, "       %s -d [-H [-r]] [-b] [-e] uri [verb [data]]\n", name);
+	fprintf(status ? stderr : stdout, "usage: %s [options]... uri [api verb [data]]\n", name);
+	fprintf(status ? stderr : stdout, "       %s -d [options]... uri [verb [data]]\n", name);
 	fprintf(status ? stderr : stdout, "\n"
 		"allowed options\n"
-		"  --break, -b         Break connection just after event/call has been emitted.\n"
-		"  --direct, -d        Direct api\n"
-		"  --echo, -e          Echo inputs\n"
-		"  --help, -h          Display this help\n"
-		"  --human, -H         Display human readable JSON\n"
-		"  --raw, -r           Raw output (default)\n"
-		"  --sync, -s          Synchronous: wait for answers (like -p 1)\n"
-		"  --keep-running, -k  Keep running until disconnect, even if input closed\n"
-		"  --pipe, -p COUNT    Allow to pipe COUNT requests\n"
+		"  -b, --break         Break connection just after event/call has been emitted.\n"
+		"  -d, --direct        Direct api\n"
+		"  -e, --echo          Echo inputs\n"
+		"  -h, --help          Display this help\n"
+		"  -H, --human         Display human readable JSON\n"
+		"  -k, --keep-running  Keep running until disconnect, even if input closed\n"
+		"  -p, --pipe COUNT    Allow to pipe COUNT requests\n"
+		"  -r, --raw           Raw output (default)\n"
+		"  -s, --sync          Synchronous: wait for answers (like -p 1)\n"
+		"  -t, --token TOKEN   The token to use"
+		"  -u, --uuid UUID     The identifier of session to use"
 		"Example:\n"
 		" %s --human 'localhost:1234/api?token=HELLO&uuid=magic' hello ping\n"
 		"\n", name
@@ -171,7 +177,16 @@ int main(int ac, char **av, char **env)
 				av++;
 				ac--;
 			}
-
+			else if (!strcmp(an, "--token") && av[2]) { /* token to use */
+				token = av[2];
+				av++;
+				ac--;
+			}
+			else if (!strcmp(an, "--uuid") && av[2]) { /* session id to join */
+				uuid = av[2];
+				av++;
+				ac--;
+			}
 			/* emit usage and exit */
 			else
 				usage(strcmp(an, "--help") ? Exit_Bad_Arg : Exit_Success, a0);
@@ -186,8 +201,12 @@ int main(int ac, char **av, char **env)
 				case 'k': keeprun = 1; break;
 				case 's': synchro = 1; break;
 				case 'e': echo = 1; break;
+				case 't': if (!av[2]) usage(Exit_Bad_Arg, a0); token = av[2]; av++; ac--; break;
+				case 'u': if (!av[2]) usage(Exit_Bad_Arg, a0); uuid = av[2]; av++; ac--; break;
 				case 'p': if (av[2] && atoi(av[2]) > 0) { synchro = atoi(av[2]); av++; ac--; break; } /*@fallthrough@*/
-				default: usage(an[rc] != 'h' ? Exit_Bad_Arg : Exit_Success, a0);
+				default:
+					usage(an[rc] != 'h' ? Exit_Bad_Arg : Exit_Success, a0);
+					break;
 				}
 		}
 		av++;
@@ -217,8 +236,25 @@ int main(int ac, char **av, char **env)
 			return Exit_Cant_Connect;
 		}
 		afb_proto_ws_on_hangup(pws, on_pws_hangup);
+		if (uuid) {
+			numuuid = 1;
+			afb_proto_ws_client_session_create(pws, numuuid, uuid);
+		}
+		if (token) {
+			numtoken = 1;
+			afb_proto_ws_client_token_create(pws, numtoken, token);
+		}
 	} else {
-		wsj1 = afb_ws_client_connect_wsj1(loop, av[1], &wsj1_itf, NULL);
+		rc = asprintf(&url, "%s%s%s%s%s%s%s",
+			av[1],
+			uuid || token ? "?" : "",
+			uuid ? "uuid=" : "",
+			uuid ?: "",
+			uuid && token ? "&" : "",
+			token ? "token=" : "",
+			token ?: ""
+		);
+		wsj1 = afb_ws_client_connect_wsj1(loop, url, &wsj1_itf, NULL);
 		if (wsj1 == NULL) {
 			fprintf(stderr, "connection to %s failed: %m\n", av[1]);
 			return Exit_Cant_Connect;
@@ -564,7 +600,7 @@ static void pws_call(const char *verb, const char *object)
 		if (jerr != json_tokener_success)
 			o = json_object_new_string(object);
 	}
-	rc = afb_proto_ws_client_call(pws, verb, o, 0, 0, key, NULL);
+	rc = afb_proto_ws_client_call(pws, verb, o, numuuid, numtoken, key, NULL);
 	json_object_put(o);
 	if (rc < 0) {
 		fprintf(stderr, "calling %s(%s) failed: %m\n", verb, object?:"");
