@@ -127,8 +127,8 @@ static void usage(int status, char *arg0)
 		"  -p, --pipe COUNT    Allow to pipe COUNT requests\n"
 		"  -r, --raw           Raw output (default)\n"
 		"  -s, --sync          Synchronous: wait for answers (like -p 1)\n"
-		"  -t, --token TOKEN   The token to use"
-		"  -u, --uuid UUID     The identifier of session to use"
+		"  -t, --token TOKEN   The token to use\n"
+		"  -u, --uuid UUID     The identifier of session to use\n"
 		"Example:\n"
 		" %s --human 'localhost:1234/api?token=HELLO&uuid=magic' hello ping\n"
 		"\n", name
