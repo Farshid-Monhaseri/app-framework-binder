@@ -30,7 +30,8 @@
 #include "afb-xreq.h"
 #include "jobs.h"
 
-#define INCR 8		/* CAUTION: must be a power of 2 */
+#define INCR		8	/* CAUTION: must be a power of 2 */
+#define NOT_STARTED	-1
 
 struct afb_apiset;
 struct api_desc;
@@ -59,7 +60,10 @@ struct api_desc
 {
 	struct api_desc *next;
 	const char *name;		/**< name of the api */
-	int status;			/**< initialisation status */
+	int status;			/**< initialisation status:
+						- NOT_STARTED not started,
+						- 0 started without error,
+						- greater than 0, error number of start */
 	struct afb_api_item api;	/**< handler of the api */
 	struct {
 		struct api_array classes;
@@ -490,7 +494,7 @@ int afb_apiset_add(struct afb_apiset *set, const char *name, struct afb_api_item
 	if (!desc)
 		goto oom;
 
-	desc->status = -1;
+	desc->status = NOT_STARTED;
 	desc->api = api;
 	desc->name = name;
 
@@ -710,11 +714,18 @@ static int start_array_apis(struct api_array *array)
 {
 	int i, rc = 0, rc2;
 
-	i = array->count;
-	while (i) {
-		rc2 = start_api(array->apis[--i]);
-		if (rc2 < 0) {
-			rc = rc2;
+	i = 0;
+	while (i < array->count) {
+		rc2 = array->apis[i]->status;
+		if (rc2 == NOT_STARTED) {
+			rc2 = start_api(array->apis[i]);
+			if (rc2 < 0)
+				rc = rc2;
+			i = 0;
+		} else {
+			if (rc2)
+				rc = -1;
+			i++;
 		}
 	}
 	return rc;
@@ -753,36 +764,45 @@ static int start_array_depends(struct api_array *array)
 	struct api_desc *api;
 	int i, rc = 0, rc2;
 
-	i = array->count;
-	while (i) {
-		i--;
+	i = 0;
+	while (i < array->count) {
 		api = searchrec(array->depends[i]->set, array->depends[i]->name);
-		if (!api)
+		if (!api) {
 			rc = -1;
-		else {
-			rc2 = start_api(api);
-			if (rc2 < 0) {
-				rc = rc2;
+			i++;
+		} else {
+			rc2 = api->status;
+			if (rc2 == NOT_STARTED) {
+				rc2 = start_api(api);
+				if (rc2 < 0)
+					rc = rc2;
+				i = 0;
+			} else {
+				if (rc2)
+					rc = -1;
+				i++;
 			}
 		}
 	}
+
 	return rc;
 }
 
 /**
  * Starts the service 'api'.
  * @param api the api
- * @return a positive number on success
+ * @return zero on success, -1 on error
  */
 static int start_api(struct api_desc *api)
 {
 	int rc;
 
-	if (api->status == 0)
+	if (api->status != NOT_STARTED) {
+		if (api->status > 0) {
+			errno = api->status;
+			return -1;
+		}
 		return 0;
-	else if (api->status > 0) {
-		errno = api->status;
-		return -1;
 	}
 
 	NOTICE("API %s starting...", api->name);
@@ -814,24 +834,29 @@ static int start_api(struct api_desc *api)
  * @param set the set of API
  * @param name the name of the API to get
  * @param rec if not zero look also recursively in subsets
- * @return 0 in case of success or -1 in case of error
+ * @return a pointer to the API item in case of success or NULL in case of error
  */
 const struct afb_api_item *afb_apiset_lookup_started(struct afb_apiset *set, const char *name, int rec)
 {
-	struct api_desc *i;
+	struct api_desc *desc;
 
-	i = lookup(set, name, rec);
-	if (i)
-		return i->status && start_api(i) ? NULL : &i->api;
-	errno = ENOENT;
-	return NULL;
+	desc = lookup(set, name, rec);
+	if (!desc) {
+		errno = ENOENT;
+		return NULL;
+	}
+	if (start_api(desc)) {
+		errno = desc->status;
+		return NULL;
+	}
+	return &desc->api;
 }
 
 /**
  * Starts a service by its 'api' name.
  * @param set the api set
  * @param name name of the service to start
- * @return a positive number on success
+ * @return zero on success, -1 on error
  */
 int afb_apiset_start_service(struct afb_apiset *set, const char *name)
 {
@@ -854,17 +879,27 @@ int afb_apiset_start_service(struct afb_apiset *set, const char *name)
  */
 int afb_apiset_start_all_services(struct afb_apiset *set)
 {
+	struct afb_apiset *rootset;
 	int rc, ret;
 	int i;
 
+	rootset = set;
 	ret = 0;
 	while (set) {
 		i = 0;
 		while (i < set->apis.count) {
-			rc = start_api(set->apis.apis[i]);
-			if (rc < 0)
-				ret = rc;
-			i++;
+			rc = set->apis.apis[i]->status;
+			if (rc == NOT_STARTED) {
+				rc = start_api(set->apis.apis[i]);
+				if (rc < 0)
+					ret = rc;
+				set = rootset;
+				i = 0;
+			} else {
+				if (rc)
+					ret = -1;
+				i++;
+			}
 		}
 		set = set->subset;
 	}
