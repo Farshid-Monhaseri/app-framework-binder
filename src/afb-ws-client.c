@@ -443,12 +443,12 @@ static int get_socket_inet(const char *uri)
 	struct addrinfo hint, *rai, *iai;
 
 	/* scan the uri */
-	api = strrchr(uri, '/');
 	service = strrchr(uri, ':');
-	if (api == NULL || service == NULL || api < service) {
+	if (service == NULL) {
 		errno = EINVAL;
 		return -1;
 	}
+	api = strchrnul(service, '/');
 	host = strndupa(uri, service++ - uri);
 	service = strndupa(service, api - service);
 
@@ -488,6 +488,9 @@ static int get_socket(const char *uri)
 	if (0 == strncmp(uri, "unix:", 5))
 		/* unix socket */
 		fd = get_socket_unix(uri + 5);
+	else if (0 == strncmp(uri, "tcp:", 4))
+		/* unix socket */
+		fd = get_socket_inet(uri + 4);
 	else
 		/* inet socket */
 		fd = get_socket_inet(uri);
