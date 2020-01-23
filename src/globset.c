@@ -227,20 +227,15 @@ static struct pathndl *search(
 		pph = &set->globs;
 	else if (set->exacts)
 		pph = &set->exacts[hash & set->gmask];
-	else
+	else {
+		*pprev = NULL;
 		return NULL;
+	}
 	while ((ph = *pph) && strcmp(normal, ph->handler.pattern))
 		pph = &ph->next;
 	*pprev = pph;
 	return ph;
 }
-
-
-
-
-
-
-
 
 /**
  * Allocates a new set of handlers
