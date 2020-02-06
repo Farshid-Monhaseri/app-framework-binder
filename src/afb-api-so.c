@@ -20,6 +20,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
 #include <dirent.h>
@@ -74,10 +75,23 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 	int obsolete = 0;
 	int rc;
 	void *handle;
+	static int dlopen_flags = 0;
 
-	// This is a loadable library let's check if it's a binding
+	/* compute the dlopen flags */
+	if (dlopen_flags == 0) {
+		/* For ASan mode, export AFB_NO_RTLD_DEEPBIND=1, to disable RTLD_DEEPBIND */
+		char *string = secure_getenv("AFB_NO_RTLD_DEEPBIND");
+		if (string && string[0] == '1' && string[1] == 0)
+			dlopen_flags = RTLD_NOW | RTLD_LOCAL;
+		else
+			dlopen_flags = RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND;
+	}
+
+	/* set default return code rc according to force */
 	rc = -!!force;
-	handle = safe_dlopen(path, RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
+
+	/* try to open the library */
+	handle = safe_dlopen(path, dlopen_flags);
 	if (handle == NULL) {
 		if (force)
 			ERROR("binding [%s] not loadable: %s", path, dlerror());
@@ -85,6 +99,9 @@ static int load_binding(const char *path, int force, struct afb_apiset *declare_
 			WARNING("binding [%s] not loadable: %s", path, dlerror());
 		goto error;
 	}
+	/*
+	 * This is a loadable library let's check if it's a binding ...
+	 */
 
 	/* try the version 3 */
 	rc = afb_api_so_v3_add(path, handle, declare_set, call_set);

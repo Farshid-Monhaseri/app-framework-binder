@@ -30,6 +30,7 @@
 #include <json-c/json.h>
 
 #define AFB_BINDING_VERSION 3
+#define AFB_BINDING_NO_ROOT
 #include <afb/afb-binding.h>
 
 #include "afb-cred.h"

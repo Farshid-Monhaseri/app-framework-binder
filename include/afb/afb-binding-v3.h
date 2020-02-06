@@ -139,10 +139,12 @@ struct afb_binding_v3
  * @see afbBindingV3
  * @see @ref validity-v3
  */
+#if !defined(AFB_BINDING_NO_ROOT) /* use with caution, see @ref validity-v3 */
 #if AFB_BINDING_VERSION != 3
 extern
 #endif
 struct afb_api_x3 *afbBindingV3root __attribute__((weak));
+#endif
 
 /**
  * Pre-initialization function.
