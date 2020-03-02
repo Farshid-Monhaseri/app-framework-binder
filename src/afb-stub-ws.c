@@ -458,7 +458,7 @@ static void server_on_session_remove_cb(void *closure, uint16_t sessionid)
 	struct afb_session *session;
 	int rc;
 	
-	rc = u16id2ptr_drop(&stubws->event_proxies, sessionid, (void**)&session);
+	rc = u16id2ptr_drop(&stubws->session_proxies, sessionid, (void**)&session);
 	if (rc == 0 && session)
 		afb_session_unref(session);
 }
@@ -487,7 +487,7 @@ static void server_on_token_remove_cb(void *closure, uint16_t tokenid)
 	struct afb_token *token;
 	int rc;
 	
-	rc = u16id2ptr_drop(&stubws->event_proxies, tokenid, (void**)&token);
+	rc = u16id2ptr_drop(&stubws->token_proxies, tokenid, (void**)&token);
 	if (rc == 0 && token)
 		afb_token_unref(token);
 }
@@ -501,6 +501,7 @@ static void server_on_event_unexpected_cb(void *closure, uint16_t eventid)
 
 static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, const char *verb, struct json_object *args, uint16_t sessionid, uint16_t tokenid, const char *user_creds)
 {
+	const char *errstr = afb_error_text_internal_error;
 	struct afb_stub_ws *stubws = closure;
 	struct server_req *wreq;
 	struct afb_session *session;
@@ -541,11 +542,12 @@ static void server_on_call_cb(void *closure, struct afb_proto_ws_call *call, con
 	afb_xreq_process(&wreq->xreq, stubws->apiset);
 	return;
 
-out_of_memory:
 no_session:
+	errstr = afb_error_text_unknown_session;
+out_of_memory:
 	json_object_put(args);
 	afb_stub_ws_unref(stubws);
-	afb_proto_ws_call_reply(call, NULL, afb_error_text_internal_error, NULL);
+	afb_proto_ws_call_reply(call, NULL, errstr, NULL);
 	afb_proto_ws_call_unref(call);
 }
 
