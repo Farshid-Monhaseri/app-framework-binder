@@ -782,7 +782,7 @@ constexpr afb_verb_t verb(
 		session,
 		auth,
 		glob,
-		(void*)(&callback)
+		*(void**)(&callback)
 	);
 }
 
