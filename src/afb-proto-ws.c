@@ -670,11 +670,11 @@ static void client_on_reply(struct afb_proto_ws *protows, struct readbuf *rb)
 
 static void client_on_description(struct afb_proto_ws *protows, struct readbuf *rb)
 {
-	uint32_t descid;
+	uint16_t descid;
 	struct client_describe *desc, **prv;
 	struct json_object *object;
 
-	if (readbuf_uint32(rb, &descid)) {
+	if (readbuf_uint16(rb, &descid)) {
 		pthread_mutex_lock(&protows->mutex);
 		prv = &protows->describes;
 		while ((desc = *prv) && desc->descid != descid)
@@ -970,13 +970,13 @@ overflow:
 	afb_proto_ws_unref(protows);
 }
 
-static int server_send_description(struct afb_proto_ws *protows, uint32_t descid, struct json_object *descobj)
+static int server_send_description(struct afb_proto_ws *protows, uint16_t descid, struct json_object *descobj)
 {
 	int rc = -1;
 	struct writebuf wb = { .iovcount = 0, .bufcount = 0 };
 
 	if (writebuf_char(&wb, CHAR_FOR_DESCRIPTION)
-	 && writebuf_uint32(&wb, descid)
+	 && writebuf_uint16(&wb, descid)
 	 && writebuf_object(&wb, descobj))
 		rc = proto_write(protows, &wb);
 	return rc;
