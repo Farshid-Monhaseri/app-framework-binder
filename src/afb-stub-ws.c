@@ -204,7 +204,7 @@ static struct afb_proto_ws *client_get_proto(struct afb_stub_ws *stubws)
 	if (proto == NULL && stubws->robust.reopen) {
 		fdev = stubws->robust.reopen(stubws->robust.closure);
 		if (fdev != NULL)
-			proto = afb_stub_ws_create_proto(stubws, fdev, 0);
+			proto = afb_stub_ws_create_proto(stubws, fdev, 1);
 	}
 	return proto;
 }
