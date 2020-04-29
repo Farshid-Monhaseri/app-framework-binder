@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <functional>
+#include <string>
 
 /* ensure version */
 #ifndef AFB_BINDING_VERSION
