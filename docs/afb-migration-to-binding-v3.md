@@ -156,7 +156,7 @@ These functions are now implemented as the following macros:
 
 This is a decision of the developer to switch to the new family
 **afb_req_reply** or to keep the good old functions **afb_req_fail**
-adn **afb_req_success**.
+and **afb_req_success**.
 
 Consider use of the new (sub)call
 ---------------------------------
