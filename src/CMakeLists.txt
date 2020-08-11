@@ -172,6 +172,7 @@ TARGET_LINK_LIBRARIES(afbwsc
 	${libsystemd_LDFLAGS}
 	${json-c_LDFLAGS}
 	-lpthread
+	-latomic
 	-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export-afbwsc.map
 	-Wl,--as-needed
 	-Wl,--gc-sections

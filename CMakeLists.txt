@@ -155,6 +155,7 @@ SET(link_libraries
 	${LIBMAGIC_LDFLAGS}
 	-ldl
 	-lrt
+	-latomic
 	)
 
 ADD_SUBDIRECTORY(src/devtools)
