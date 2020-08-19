@@ -48,6 +48,7 @@ s:\<afb_api_call\>:afb_api_call_legacy:g
 s:\<afb_api_call_sync\>:afb_api_call_sync_legacy:g
 s:\<afb_req_store\>:afb_req_addref:g
 s:\<afb_req_unstore\> *( *\(.*\) *):\1:g
+s:\<afb_event_drop\>:afb_event_unref:g
 
 # optional but activated by default
 # ---------------------------------
