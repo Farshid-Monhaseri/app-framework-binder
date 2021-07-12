@@ -201,7 +201,7 @@ static void _hook_(const char *fmt1, const char *fmt2, va_list arg2, ...)
 	iov[4].iov_base = (void*)&chars[9];
 	iov[4].iov_len = 1;
 
-	(void)writev(2, iov, 5);
+	(void)!writev(2, iov, 5);
 
 	free(mem1);
 	free(mem2);

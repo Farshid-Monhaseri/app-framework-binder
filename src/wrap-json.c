@@ -200,7 +200,7 @@ static int decode_base64(
 		size_t *decodedlen,
 		int url)
 {
-	uint16_t u16;
+	uint16_t u16 = 0;
 	uint8_t u8, *result;
 	size_t in, out, iin;
 	char c;
